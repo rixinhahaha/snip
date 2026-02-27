@@ -1,21 +1,42 @@
+# Dependencies
 node_modules/
+
+# Build output
 dist/
 build/
 out/
+release/
+*.asar
+*.node
+*.dmg
+*.tgz
+
+# Screenshots (user data, not source)
 screenshots/
 
-.DS_Store
-Thumbs.db
-*.log
-*.asar
-
+# Environment / secrets
 .env
 .env.local
 .env.*.local
 
+# IDE / editor
 .vscode/
 .idea/
 *.swp
 *.swo
 
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Claude Code (user-specific session data)
+.claude/
+
+# Build scripts temp
 scripts/icon.iconset/
+
+# Lint cache
+.eslintcache
