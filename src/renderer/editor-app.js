@@ -1,4 +1,4 @@
-/* global EditorCanvasManager, Toolbar, RectangleTool, TextTool, ArrowTool, BlurBrushTool, SegmentTool, ToolUtils */
+/* global EditorCanvasManager, Toolbar, RectangleTool, TextTool, ArrowTool, TagTool, BlurBrushTool, SegmentTool, ToolUtils */
 
 (function() {
   'use strict';
@@ -46,6 +46,7 @@
       opt.value = font;
       opt.textContent = font;
       opt.style.fontFamily = font;
+      if (font === 'Plus Jakarta Sans') opt.selected = true;
       fontSelect.appendChild(opt);
     });
 
@@ -88,6 +89,7 @@
     tools[TOOLS.RECT] = RectangleTool.attach(canvas, Toolbar.getActiveColor, Toolbar.getActiveStrokeWidth, Toolbar.getRectMode);
     tools[TOOLS.TEXT] = TextTool.attach(canvas, Toolbar.getActiveColor, Toolbar.getActiveFont, Toolbar.getActiveFontSize);
     tools[TOOLS.ARROW] = ArrowTool.attach(canvas, Toolbar.getActiveColor, Toolbar.getActiveStrokeWidth);
+    tools[TOOLS.TAG] = TagTool.attach(canvas, Toolbar.getActiveTagColor, Toolbar.getActiveFont, Toolbar.getActiveFontSize);
     tools[TOOLS.BLUR_BRUSH] = BlurBrushTool.attach(canvas, Toolbar.getActiveBrushSize);
     tools[TOOLS.SEGMENT] = SegmentTool.attach(canvas, {
       replaceBackground: EditorCanvasManager.replaceBackground,
@@ -100,8 +102,22 @@
       onColorChange: function(color) {
         var active = canvas.getActiveObject();
         if (active) {
+          if (active._snipTagType) return; // tags use their own color swatches
           if (active.type === 'textbox') active.set('fill', color);
           else active.set('stroke', color);
+          canvas.renderAll();
+        }
+      },
+      onTagColorChange: function(color) {
+        var active = canvas.getActiveObject();
+        if (active && active._snipTagType) {
+          active.getObjects().forEach(function(obj) {
+            if (obj.type === 'textbox') obj.set({ fill: '#FFFFFF', cursorColor: '#FFFFFF' });
+            else if (obj.type === 'circle') obj.set({ fill: color, stroke: color });
+            else if (obj.type === 'line') obj.set({ stroke: color });
+            else if (obj.type === 'rect') obj.set({ stroke: color, fill: color });
+          });
+          active._snipTagColor = color;
           canvas.renderAll();
         }
       },
@@ -114,14 +130,24 @@
       },
       onFontChange: function(font) {
         var active = canvas.getActiveObject();
-        if (active && active.type === 'textbox') {
+        if (active && active._snipTagType) {
+          active.getObjects().forEach(function(obj) {
+            if (obj.type === 'textbox') obj.set('fontFamily', font);
+          });
+          canvas.renderAll();
+        } else if (active && active.type === 'textbox') {
           active.set('fontFamily', font);
           canvas.renderAll();
         }
       },
       onFontSizeChange: function(size) {
         var active = canvas.getActiveObject();
-        if (active && active.type === 'textbox') {
+        if (active && active._snipTagType) {
+          active.getObjects().forEach(function(obj) {
+            if (obj.type === 'textbox') obj.set('fontSize', size);
+          });
+          canvas.renderAll();
+        } else if (active && active.type === 'textbox') {
           active.set('fontSize', size);
           canvas.renderAll();
         }
@@ -213,6 +239,40 @@
         }
         EditorCanvasManager.resetToOriginal();
         Toolbar.setTool(TOOLS.SELECT);
+      }
+    });
+
+    // Global double-click handler for editing tag text
+    canvas.on('mouse:dblclick', function(opt) {
+      var target = opt.target;
+      if (!target || !target._snipTagType) return;
+      TagTool.enterTagEditing(canvas, target);
+    });
+
+    // Show tag color swatches when a tag group is selected (even in select mode)
+    function onSelectionChange() {
+      var active = canvas.getActiveObject();
+      var tagColorGroup = document.getElementById('tag-color-group');
+      var colorPicker = document.getElementById('color-picker');
+      if (active && active._snipTagType) {
+        tagColorGroup.classList.remove('hidden');
+        colorPicker.classList.add('hidden');
+        if (active._snipTagColor) {
+          Toolbar.setActiveTagColor(active._snipTagColor);
+        }
+      } else if (Toolbar.getActiveTool() !== TOOLS.TAG) {
+        tagColorGroup.classList.add('hidden');
+        colorPicker.classList.remove('hidden');
+      }
+    }
+    canvas.on('selection:created', onSelectionChange);
+    canvas.on('selection:updated', onSelectionChange);
+    canvas.on('selection:cleared', function() {
+      var tagColorGroup = document.getElementById('tag-color-group');
+      var colorPicker = document.getElementById('color-picker');
+      if (Toolbar.getActiveTool() !== TOOLS.TAG) {
+        tagColorGroup.classList.add('hidden');
+        colorPicker.classList.remove('hidden');
       }
     });
   }

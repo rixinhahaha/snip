@@ -33,8 +33,10 @@ On first launch macOS will prompt for **Screen Recording** permission. Grant it,
 |---------|-------------|
 | `npm start` | Launch Snip |
 | `npm run dev` | Launch with verbose Electron logging |
-| `npm run build` | Package as macOS DMG via electron-builder |
+| `npm run build` | Compile native addon + package as macOS DMG via electron-builder |
 | `npm run rebuild` | Recompile native modules for current Electron ABI |
+| `npm run prebuild` | Compile `window_utils.node` native addon via node-gyp |
+| `./scripts/build-signed.sh` | Load `.env` credentials and build a signed + notarized DMG |
 
 ## Usage
 
@@ -59,6 +61,7 @@ On first launch macOS will prompt for **Screen Recording** permission. Grant it,
 | R | Rectangle | Drag to draw. Modes: Outline, Highlight, Blur |
 | T | Text | Click to place editable text. Click outside to deselect. Font and size selectors |
 | A | Arrow | Drag to draw an arrow |
+| G | Tag | Two-click callout: first click places a tip, second click places a text bubble |
 | B | Blur Brush | Paint to pixelate/blur sensitive areas |
 | S | Segment | AI-powered object selection (click on an object) |
 
@@ -152,7 +155,7 @@ src/
 
 `src/native/window_utils.mm` exposes `setMoveToActiveSpace(handle)` which sets `NSWindowCollectionBehaviorMoveToActiveSpace` on the overlay window. Combined with `app.dock.hide()` (and `LSUIElement: true` in production), this ensures the capture overlay appears on the user's active Space without switching desktops.
 
-Built via `node-gyp` (triggered by `npm run rebuild`). Requires Xcode CLT.
+Built via `node-gyp` (triggered by `npm run rebuild`). In the packaged DMG, the addon is bundled via `extraResources` to `Snip.app/Contents/Resources/native/window_utils.node`. Requires Xcode CLT.
 
 ## Tech Stack
 
@@ -173,7 +176,29 @@ Built via `node-gyp` (triggered by `npm run rebuild`). Requires Xcode CLT.
 npm run build
 ```
 
-Produces a universal `.dmg` (arm64 + x86_64) in the `dist/` folder.
+Produces an arm64 `.dmg` in the `dist/` folder. The build script compiles the native `window_utils.node` addon first, then packages the app. Without Apple Developer credentials, the app is ad-hoc signed (enough for local use but not for distribution).
+
+### Signed + Notarized Build
+
+To build a properly signed and notarized DMG for distribution, create a `.env` file in the project root with your Apple Developer credentials:
+
+```
+CSC_LINK=<base64-encoded .p12 certificate>
+CSC_KEY_PASSWORD=<certificate password>
+APPLE_ID=<your Apple ID email>
+APPLE_ID_PASSWORD=<app-specific password>
+APPLE_TEAM_ID=<your team ID>
+```
+
+**Important:** The `.p12` must contain a **"Developer ID Application"** certificate (not "Apple Development" or "Apple Distribution"). Create one at [developer.apple.com/account/resources/certificates](https://developer.apple.com/account/resources/certificates/list). To base64-encode: `base64 -i certificate.p12 | tr -d '\n' | pbcopy`.
+
+Then run:
+
+```bash
+./scripts/build-signed.sh
+```
+
+This loads the credentials, validates the certificate type, and runs the full build pipeline (native addon → electron-builder → sign → notarize). The `afterPack` hook automatically excludes unused native modules (`canvas`, `sharp`) and pre-signs remaining binaries for notarization.
 
 ## License
 

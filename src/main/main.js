@@ -191,9 +191,12 @@ async function triggerCapture() {
   try {
     await captureScreen(createOverlayWindow, getOverlayWindow);
   } catch (err) {
-    console.error('[Snip] Capture failed, restoring window:', err.message);
-    // Re-show dock and home window so the app doesn't appear dead
-    showHomeWindow();
+    console.error('[Snip] Capture failed:', err.message);
+    // Permission errors show their own dialog from capturer.js —
+    // only restore the home window for unexpected failures.
+    if (!err.message.includes('permission') && !err.message.includes('Permission')) {
+      showHomeWindow();
+    }
   }
 }
 

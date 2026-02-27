@@ -60,7 +60,12 @@ function findNodeBinary() {
 function getWorker() {
   if (worker && worker.connected && !worker.killed) return worker;
 
-  const workerScript = path.join(__dirname, 'segmentation-worker.js');
+  let workerScript = path.join(__dirname, 'segmentation-worker.js');
+  // System Node.js can't read from inside an asar archive —
+  // use the unpacked path in the packaged app.
+  if (workerScript.includes('app.asar')) {
+    workerScript = workerScript.replace('app.asar', 'app.asar.unpacked');
+  }
   const nodeBin = findNodeBinary();
 
   const forkOptions = {

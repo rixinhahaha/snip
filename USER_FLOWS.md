@@ -99,9 +99,16 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 | Step | Action | Expected Result |
 |------|--------|-----------------|
 | 1 | Revoke Screen Recording permission for the app | -- |
-| 2 | Press Cmd+Shift+2 | `desktopCapturer.getSources()` throws |
-| 3 | -- | Error logged: `[Snip] Screen capture failed: ...` |
-| 4 | -- | Home window re-shows via `showHomeWindow()` in catch block |
+| 2 | Press Cmd+Shift+2 | Permission pre-check detects `denied` status |
+| 3 | -- | Dialog appears: "Snip needs Screen Recording permission to capture snips." |
+| 4 | -- | Dialog buttons: "Open System Settings" and "Cancel" |
+| 5 | Click "Open System Settings" | macOS System Settings opens to Privacy > Screen Recording |
+| 6 | -- | Home window does NOT re-show (permission errors skip home window restore) |
+
+**Edge cases:**
+- First launch (`not-determined` status): capture proceeds, macOS shows its native permission prompt
+- Blank thumbnails (macOS 15+): secondary check detects blank capture and shows the same dialog
+- After granting permission: user must restart Snip for the change to take effect
 
 ---
 
@@ -149,7 +156,38 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 | 3 | -- | Thickness dropdown visible |
 | 4 | Change color via picker | Next arrow uses new color |
 
-### 3.4 Blur Brush Tool
+### 3.4 Tag Tool
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Press G (or click Tag in toolbar) | Tag tool active, cursor becomes crosshair |
+| 2 | -- | Font and font size dropdowns visible in toolbar |
+| 3 | Click on canvas (first click) | Tip dot placed at click position |
+| 4 | -- | Dashed preview line follows cursor from tip to mouse |
+| 5 | -- | Ghost bubble rectangle follows cursor |
+| 6 | Move mouse away from tip | Preview line and bubble update in real-time |
+| 7 | Click on canvas (second click) | Final tag created: tip dot + leader line + text bubble |
+| 8 | -- | Text editing mode entered immediately with "Label" selected |
+| 9 | Type label text | Text appears in bubble, bubble auto-sizes on editing exit |
+| 10 | Click outside or press Escape | Text editing exits, all parts grouped as one object |
+
+**Double-click editing:**
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Switch to Select tool (V) | -- |
+| 2 | Double-click an existing tag | Tag ungroups, text enters editing mode |
+| 3 | Edit the text | -- |
+| 4 | Click outside or press Escape | Tag re-groups with updated text, bubble auto-sized |
+
+**Edge cases:**
+- Second click too close to first (< 20px): placement cancelled, returns to idle
+- Press Escape during placement (after first click): preview objects removed, returns to idle
+- Switching tools mid-placement: preview objects cleaned up automatically
+- Undo (Cmd+Z) removes the entire tag group in one step
+- Color/font/size changes apply to selected tag group
+
+### 3.5 Blur Brush Tool
 
 | Step | Action | Expected Result |
 |------|--------|-----------------|
@@ -157,7 +195,7 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 | 2 | Drag/paint on canvas | Pixelated mosaic effect applied |
 | 3 | -- | Brush size dropdown: Small (10px), Medium (20px), Large (40px) |
 
-### 3.5 Segment Tool (AI)
+### 3.6 Segment Tool (AI)
 
 **Preconditions:** System has 4GB+ RAM and a system Node.js binary available.
 
@@ -176,7 +214,7 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 - Image resized to max 1024px before sending to SAM
 - BGRA to RGBA conversion handled for Electron's native image format
 
-### 3.6 Select Tool
+### 3.7 Select Tool
 
 | Step | Action | Expected Result |
 |------|--------|-----------------|
@@ -186,7 +224,7 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 | 4 | Drag handles | Object resizes |
 | 5 | Press Delete/Backspace | Selected object removed |
 
-### 3.7 Color Picker
+### 3.8 Color Picker
 
 | Step | Action | Expected Result |
 |------|--------|-----------------|
@@ -194,7 +232,7 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 | 2 | Select a color | Active color updates |
 | 3 | Draw new annotation | Uses newly selected color |
 
-### 3.8 Undo / Redo
+### 3.9 Undo / Redo
 
 | Step | Action | Expected Result |
 |------|--------|-----------------|
@@ -203,7 +241,7 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 | 3 | Press Cmd+Shift+Z | Object restored (redo) |
 | 4 | Draw after undo | Redo stack cleared |
 
-### 3.9 Toolbar Minimum Width
+### 3.10 Toolbar Minimum Width
 
 **Preconditions:** Capture a very small region (e.g. 50x50px).
 
@@ -530,7 +568,8 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 
 | Condition | Expected Behavior |
 |-----------|-------------------|
-| `build/Release/window_utils.node` missing | Warning logged, capture still works but overlay may appear on wrong Space |
+| `build/Release/window_utils.node` missing (dev) | Warning logged, capture still works but overlay may appear on wrong Space |
+| `Resources/native/window_utils.node` missing (packaged) | Same behavior — addon loaded from `extraResources` path in packaged app, `build/Release/` path in dev |
 
 ### 12.4 SAM Model Not Available
 
@@ -552,3 +591,40 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 |-----------|-------------------|
 | Press Cmd+Shift+2 while overlay is already showing | No action (overlay already visible) |
 | Press Cmd+Shift+2 while editor is open | Editor window focuses, no new capture |
+
+---
+
+## 13. Build & Distribution
+
+### 13.1 Local Build (Unsigned / Ad-Hoc)
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Run `npm run build` | `node-gyp rebuild` compiles `window_utils.node` |
+| 2 | -- | `electron-builder --mac` packages the app |
+| 3 | -- | `afterPack` hook removes unused native modules (canvas, sharp) and non-macOS onnxruntime binaries |
+| 4 | -- | No `CSC_LINK` detected — `sign:adhoc` runs `codesign --force --deep --sign -` |
+| 5 | -- | DMG output in `dist/` (ad-hoc signed, not notarized) |
+
+### 13.2 Signed + Notarized Build
+
+**Preconditions:** `.env` file with `CSC_LINK` (base64 .p12 of "Developer ID Application" cert), `CSC_KEY_PASSWORD`, `APPLE_ID`, `APPLE_ID_PASSWORD`, `APPLE_TEAM_ID`.
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Run `./scripts/build-signed.sh` | Credentials loaded from `.env` |
+| 2 | -- | Certificate validated — must be "Developer ID Application" |
+| 3 | -- | `npm run prebuild` compiles native addon |
+| 4 | -- | `electron-builder --mac` assembles app directory |
+| 5 | -- | `afterPack` hook runs: removes canvas/sharp/@img, strips non-macOS onnxruntime binaries, pre-signs remaining `.node`/`.dylib` files |
+| 6 | -- | electron-builder signs the full app bundle with Developer ID cert |
+| 7 | -- | App submitted to Apple notary service, stapled on success |
+| 8 | -- | Signed + notarized DMG output in `dist/` |
+
+**Edge cases:**
+
+| Condition | Expected Behavior |
+|-----------|-------------------|
+| Wrong cert type (Apple Development) | Build script exits early with clear error message |
+| Missing env vars | Build script exits early listing missing vars |
+| Notarization rejected | electron-builder shows Apple's error log with specific binary paths |

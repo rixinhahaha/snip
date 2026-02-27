@@ -130,5 +130,25 @@ const ToolUtils = (() => {
     return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
   }
 
-  return { clampedScenePoint, createMosaicImage, showToast, hideToast, getAccentColor, hexToRgba };
+  /**
+   * Measure the width of text without wrapping.
+   * Returns the width of the widest line (splitting on newlines).
+   * Caches the measurement canvas for performance.
+   */
+  var _measureCtx = null;
+  function measureTextWidth(text, fontSize, fontFamily) {
+    if (!_measureCtx) {
+      _measureCtx = document.createElement('canvas').getContext('2d');
+    }
+    _measureCtx.font = fontSize + 'px ' + fontFamily;
+    var lines = text.split('\n');
+    var maxW = 0;
+    for (var i = 0; i < lines.length; i++) {
+      var w = _measureCtx.measureText(lines[i]).width;
+      if (w > maxW) maxW = w;
+    }
+    return maxW;
+  }
+
+  return { clampedScenePoint, createMosaicImage, showToast, hideToast, getAccentColor, hexToRgba, measureTextWidth };
 })();

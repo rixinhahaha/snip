@@ -11,7 +11,6 @@ mac:
     - target: dmg
       arch:
         - arm64
-        - x64
   darkModeSupport: true
   hardenedRuntime: true
   gatekeeperAssess: false
@@ -33,10 +32,26 @@ dmg:
       type: link
       path: /Applications
 
+afterPack: scripts/afterPack.js
+
 files:
   - src/**/*
   - assets/**/*
   - "!**/*.map"
+  - "!**/node_modules/canvas{,/**}"
+  - "!**/node_modules/sharp{,/**}"
+  - "!**/node_modules/@img{,/**}"
+
+asarUnpack:
+  - "src/main/organizer/segmentation-worker.js"
+  - "node_modules/@huggingface/transformers/**"
+  - "node_modules/onnxruntime-node/**"
+  - "node_modules/onnxruntime-common/**"
+  - "node_modules/onnxruntime-web/**"
+
+extraResources:
+  - from: "build/Release/window_utils.node"
+    to: "native/window_utils.node"
 
 extraMetadata:
   main: src/main/main.js

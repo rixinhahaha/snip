@@ -241,6 +241,33 @@ select:hover {
   opacity: 1;
 }
 
+/* Tag color swatches */
+.tag-color-swatches {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.tag-color-swatch {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.tag-color-swatch:hover {
+  transform: scale(1.15);
+}
+
+.tag-color-swatch.active {
+  border-color: white;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.3);
+}
+
 .hidden {
   display: none !important;
 }

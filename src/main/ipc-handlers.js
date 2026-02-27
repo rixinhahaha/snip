@@ -79,7 +79,7 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn) {
   // Get system fonts
   ipcMain.handle('get-system-fonts', async () => {
     return [
-      'SF Pro', 'Helvetica Neue', 'Arial', 'Menlo', 'Monaco',
+      'Plus Jakarta Sans', 'SF Pro', 'Helvetica Neue', 'Arial', 'Menlo', 'Monaco',
       'Courier New', 'Georgia', 'Times New Roman', 'Verdana',
       'Comic Sans MS', 'Impact', 'Futura', 'Avenir'
     ];

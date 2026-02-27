@@ -1,15 +1,16 @@
 /* exported Toolbar */
 
 const Toolbar = (() => {
-  const TOOLS = { SELECT: 'select', RECT: 'rect', TEXT: 'text', ARROW: 'arrow', BLUR_BRUSH: 'blur-brush', SEGMENT: 'segment' };
+  const TOOLS = { SELECT: 'select', RECT: 'rect', TEXT: 'text', ARROW: 'arrow', TAG: 'tag', BLUR_BRUSH: 'blur-brush', SEGMENT: 'segment' };
 
   let activeTool = TOOLS.SELECT;
   let activeColor = '#ff3b30';
   let activeStrokeWidth = 4;
-  let activeFont = 'Helvetica Neue';
+  let activeFont = 'Plus Jakarta Sans';
   let activeFontSize = 24;
   let activeBrushSize = 20;
   let rectMode = 'outline';
+  let activeTagColor = '#64748B';
   let toolChangeCallback = null;
 
   function initToolbar(callbacks) {
@@ -19,6 +20,7 @@ const Toolbar = (() => {
     document.getElementById('tool-rect').addEventListener('click', () => setTool(TOOLS.RECT));
     document.getElementById('tool-text').addEventListener('click', () => setTool(TOOLS.TEXT));
     document.getElementById('tool-arrow').addEventListener('click', () => setTool(TOOLS.ARROW));
+    document.getElementById('tool-tag').addEventListener('click', () => setTool(TOOLS.TAG));
     document.getElementById('tool-blur-brush').addEventListener('click', () => setTool(TOOLS.BLUR_BRUSH));
     var segmentBtn = document.getElementById('tool-segment');
     if (segmentBtn) segmentBtn.addEventListener('click', () => setTool(TOOLS.SEGMENT));
@@ -52,6 +54,15 @@ const Toolbar = (() => {
       activeBrushSize = parseInt(e.target.value);
     });
 
+    document.querySelectorAll('.tag-color-swatch').forEach((swatch) => {
+      swatch.addEventListener('click', () => {
+        activeTagColor = swatch.dataset.color;
+        document.querySelectorAll('.tag-color-swatch').forEach(s => s.classList.remove('active'));
+        swatch.classList.add('active');
+        if (callbacks.onTagColorChange) callbacks.onTagColorChange(activeTagColor);
+      });
+    });
+
     document.addEventListener('keydown', (e) => {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
       const canvas = callbacks.getCanvas && callbacks.getCanvas();
@@ -64,6 +75,7 @@ const Toolbar = (() => {
         case 'r': setTool(TOOLS.RECT); break;
         case 't': setTool(TOOLS.TEXT); break;
         case 'a': setTool(TOOLS.ARROW); break;
+        case 'g': setTool(TOOLS.TAG); break;
         case 'b': setTool(TOOLS.BLUR_BRUSH); break;
         case 's': if (!e.metaKey && !e.ctrlKey) setTool(TOOLS.SEGMENT); break;
       }
@@ -88,11 +100,14 @@ const Toolbar = (() => {
     if (toolBtn) toolBtn.classList.add('active');
 
     // Show/hide contextual controls
+    var isTag = (tool === TOOLS.TAG);
     var showStroke = (tool === TOOLS.RECT || tool === TOOLS.ARROW);
     document.getElementById('stroke-group').classList.toggle('hidden', !showStroke);
     document.getElementById('rect-mode-group').classList.toggle('hidden', tool !== TOOLS.RECT);
-    document.getElementById('font-group').classList.toggle('hidden', tool !== TOOLS.TEXT);
+    document.getElementById('font-group').classList.toggle('hidden', tool !== TOOLS.TEXT && !isTag);
+    document.getElementById('tag-color-group').classList.toggle('hidden', !isTag);
     document.getElementById('brush-group').classList.toggle('hidden', tool !== TOOLS.BLUR_BRUSH);
+    document.getElementById('color-picker').classList.toggle('hidden', isTag);
 
     if (toolChangeCallback) toolChangeCallback(tool);
   }
@@ -110,11 +125,19 @@ const Toolbar = (() => {
     initToolbar,
     setTool,
     enableSegmentTool,
+    getActiveTool: () => activeTool,
     getActiveColor: () => activeColor,
     getActiveStrokeWidth: () => activeStrokeWidth,
     getActiveFont: () => activeFont,
     getActiveFontSize: () => activeFontSize,
     getActiveBrushSize: () => activeBrushSize,
+    getActiveTagColor: () => activeTagColor,
+    setActiveTagColor: (color) => {
+      activeTagColor = color;
+      document.querySelectorAll('.tag-color-swatch').forEach(s => {
+        s.classList.toggle('active', s.dataset.color === color);
+      });
+    },
     getRectMode: () => rectMode
   };
 })();

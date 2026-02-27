@@ -45,6 +45,13 @@
           <polyline points="12 5 19 5 19 12"/>
         </svg>
       </button>
+      <button id="tool-tag" class="tool-btn" data-tooltip="Tag (G)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="4" cy="20" r="2"/>
+          <line x1="5.5" y1="18.5" x2="10" y2="14"/>
+          <rect x="9" y="5" width="13" height="10" rx="3"/>
+        </svg>
+      </button>
       <button id="tool-blur-brush" class="tool-btn" data-tooltip="Blur Brush (B)">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="12" cy="12" r="5"/>
@@ -87,6 +94,17 @@
           <option value="32">32px</option>
           <option value="48">48px</option>
         </select>
+      </div>
+      <div id="tag-color-group" class="toolbar-group hidden">
+        <span class="toolbar-label">Color</span>
+        <div class="tag-color-swatches">
+          <button class="tag-color-swatch active" data-color="#64748B" style="background:#64748B" title="Slate"></button>
+          <button class="tag-color-swatch" data-color="#2563EB" style="background:#2563EB" title="Blue"></button>
+          <button class="tag-color-swatch" data-color="#059669" style="background:#059669" title="Emerald"></button>
+          <button class="tag-color-swatch" data-color="#D97706" style="background:#D97706" title="Amber"></button>
+          <button class="tag-color-swatch" data-color="#E11D48" style="background:#E11D48" title="Rose"></button>
+          <button class="tag-color-swatch" data-color="#7C3AED" style="background:#7C3AED" title="Violet"></button>
+        </div>
       </div>
       <div id="brush-group" class="toolbar-group hidden">
         <span class="toolbar-label">Brush</span>
@@ -161,6 +179,7 @@
   <script src="tools/rectangle.js"></script>
   <script src="tools/textbox.js"></script>
   <script src="tools/arrow.js"></script>
+  <script src="tools/tag.js"></script>
   <script src="tools/blur-brush.js"></script>
   <script src="tools/segment.js"></script>
   <script src="editor-canvas-manager.js"></script>

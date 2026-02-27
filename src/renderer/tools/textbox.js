@@ -15,11 +15,22 @@ const TextTool = (() => {
       }
       const pointer = ToolUtils.clampedScenePoint(canvas, opt.e);
 
+      var minWidth = 200;
       const textbox = new fabric.Textbox('Type here', {
-        left: pointer.x, top: pointer.y, width: 200,
+        left: pointer.x, top: pointer.y, width: minWidth,
         originX: 'left', originY: 'top',
         fontSize: getFontSize(), fontFamily: getFont(), fill: getColor(),
         editable: true, cursorColor: getColor(), padding: 5
+      });
+
+      // Auto-expand width as user types
+      textbox.on('changed', function() {
+        var measured = ToolUtils.measureTextWidth(textbox.text, textbox.fontSize, textbox.fontFamily);
+        var newWidth = Math.max(minWidth, measured + textbox.padding * 2 + 4);
+        if (Math.abs(newWidth - textbox.width) > 2) {
+          textbox.set('width', newWidth);
+          canvas.renderAll();
+        }
       });
 
       canvas.add(textbox);

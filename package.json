@@ -8,7 +8,10 @@
   "scripts": {
     "start": "electron .",
     "dev": "ELECTRON_ENABLE_LOGGING=1 electron .",
-    "build": "electron-builder --mac",
+    "postinstall": "electron-builder install-app-deps",
+    "prebuild": "node-gyp rebuild",
+    "build": "node-gyp rebuild && electron-builder --mac && npm run sign:adhoc",
+    "sign:adhoc": "[ -n \"$CSC_LINK\" ] || for app in dist/mac-*/Snip.app; do codesign --force --deep --sign - \"$app\" 2>/dev/null; done",
     "rebuild": "electron-rebuild"
   },
   "dependencies": {
