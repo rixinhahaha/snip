@@ -1,0 +1,43 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  overflow: hidden;
+  background: transparent;
+  cursor: crosshair;
+  user-select: none;
+  -webkit-app-region: no-drag;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'SF Pro', 'Helvetica Neue', sans-serif;
+}
+
+#selection-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 700;
+  cursor: crosshair;
+}
+
+#selection-hint {
+  position: fixed;
+  bottom: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 701;
+  padding: 8px 20px;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-radius: 20px;
+  color: var(--text-dim);
+  font-size: 14px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.hidden {
+  display: none !important;
+}

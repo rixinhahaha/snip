@@ -1,0 +1,36 @@
+appId: com.snip.app
+productName: Snip
+copyright: Copyright 2024
+directories:
+  output: dist
+  buildResources: assets
+
+mac:
+  category: public.app-category.productivity
+  target:
+    - target: dmg
+      arch:
+        - universal
+  darkModeSupport: true
+  hardenedRuntime: true
+  extendInfo:
+    LSUIElement: true
+    NSScreenCaptureUsageDescription: "Snip needs screen recording permission to capture screenshots."
+
+dmg:
+  title: "Snip"
+  contents:
+    - x: 130
+      y: 220
+    - x: 410
+      y: 220
+      type: link
+      path: /Applications
+
+files:
+  - src/**/*
+  - assets/**/*
+  - "!**/*.map"
+
+extraMetadata:
+  main: src/main/main.js

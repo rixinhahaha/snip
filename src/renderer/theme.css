@@ -1,0 +1,215 @@
+/* Plus Jakarta Sans — variable weight (200-800) */
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  src: url('fonts/PlusJakartaSans-LatinExt.woff2') format('woff2');
+  font-weight: 200 800;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  src: url('fonts/PlusJakartaSans-Latin.woff2') format('woff2');
+  font-weight: 200 800;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* Dark theme (default) — Liquid Glass, Purple accent */
+:root,
+[data-theme="dark"] {
+  --bg-body: rgba(10, 10, 10, 0.85);
+  --bg-primary: rgba(20, 20, 20, 0.75);
+  --bg-secondary: rgba(18, 18, 18, 0.8);
+  --bg-elevated: rgba(40, 40, 40, 0.7);
+  --bg-toolbar: rgba(25, 25, 25, 0.6);
+  --bg-hover: rgba(255, 255, 255, 0.06);
+  --bg-hover-strong: rgba(255, 255, 255, 0.12);
+  --bg-input: rgba(255, 255, 255, 0.08);
+  --bg-input-hover: rgba(255, 255, 255, 0.14);
+  --bg-toast: rgba(20, 20, 20, 0.7);
+  --bg-overlay: rgba(0, 0, 0, 0.4);
+
+  --text-primary: #e0e0e0;
+  --text-secondary: #888;
+  --text-muted: #555;
+  --text-bright: #fff;
+  --text-dim: #ccc;
+  --text-link-hover: #ddd;
+
+  --border: rgba(255, 255, 255, 0.08);
+  --border-card: rgba(255, 255, 255, 0.1);
+  --border-subtle: rgba(255, 255, 255, 0.12);
+  --border-input: rgba(255, 255, 255, 0.15);
+
+  --accent: #8B5CF6;
+  --accent-hover: #7C3AED;
+  --accent-bg: rgba(139, 92, 246, 0.15);
+  --accent-active: rgba(139, 92, 246, 0.7);
+  --accent-glow: 0 2px 8px rgba(139, 92, 246, 0.3);
+
+  --success: #22c55e;
+  --error: #ef4444;
+  --error-hover: #ff4444;
+  --error-bg: rgba(239, 68, 68, 0.15);
+
+  /* Glass */
+  --glass-blur: 24px;
+  --glass-specular: rgba(255, 255, 255, 0.08);
+  --glass-specular-strong: rgba(255, 255, 255, 0.15);
+  --glass-inner-glow: inset 0 1px 0 0 rgba(255, 255, 255, 0.06);
+
+  /* Shadows — layered for depth */
+  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.3), inset 0 1px 0 0 rgba(255, 255, 255, 0.04);
+  --shadow-toolbar: 0 4px 16px rgba(0, 0, 0, 0.35), inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+  --shadow-toast: 0 8px 24px rgba(0, 0, 0, 0.4), inset 0 1px 0 0 rgba(255, 255, 255, 0.06);
+  --shadow-modal: 0 12px 40px rgba(0, 0, 0, 0.5), inset 0 1px 0 0 rgba(255, 255, 255, 0.06);
+  --shadow-image: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 4px 12px rgba(0, 0, 0, 0.4);
+
+  --kbd-bg: rgba(255, 255, 255, 0.08);
+  --kbd-border: rgba(255, 255, 255, 0.12);
+  --kbd-shadow: rgba(255, 255, 255, 0.04);
+  --kbd-text: #ddd;
+
+  --btn-secondary-bg: rgba(255, 255, 255, 0.08);
+  --btn-secondary-hover: rgba(255, 255, 255, 0.14);
+
+  --toast-processing: #C4B5FD;
+  --toast-processing-border: rgba(139, 92, 246, 0.3);
+  --toast-success: #86efac;
+  --toast-success-border: rgba(34, 197, 94, 0.3);
+  --toast-error: #fca5a5;
+  --toast-error-border: rgba(239, 68, 68, 0.3);
+
+  --tooltip-bg: rgba(0, 0, 0, 0.85);
+
+  --segment-reject-bg: rgba(255, 255, 255, 0.08);
+  --segment-reject-hover: rgba(255, 255, 255, 0.14);
+  --segment-reject-text: #aaa;
+  --segment-reject-hover-text: #ddd;
+  --segment-reject-kbd-bg: rgba(255, 255, 255, 0.08);
+  --segment-accept-kbd-bg: rgba(255, 255, 255, 0.2);
+}
+
+/* Light theme — Cream & Lavender */
+[data-theme="light"] {
+  --bg-body: rgba(252, 250, 245, 0.9);
+  --bg-primary: rgba(255, 253, 250, 0.7);
+  --bg-secondary: rgba(250, 247, 242, 0.8);
+  --bg-elevated: rgba(255, 255, 255, 0.75);
+  --bg-toolbar: rgba(255, 253, 250, 0.6);
+  --bg-hover: rgba(139, 92, 246, 0.06);
+  --bg-hover-strong: rgba(139, 92, 246, 0.1);
+  --bg-input: rgba(0, 0, 0, 0.04);
+  --bg-input-hover: rgba(139, 92, 246, 0.08);
+  --bg-toast: rgba(255, 253, 250, 0.8);
+  --bg-overlay: rgba(0, 0, 0, 0.2);
+
+  --text-primary: #1a1a1a;
+  --text-secondary: #666;
+  --text-muted: #999;
+  --text-bright: #000;
+  --text-dim: #333;
+  --text-link-hover: #333;
+
+  --border: rgba(0, 0, 0, 0.07);
+  --border-card: rgba(0, 0, 0, 0.06);
+  --border-subtle: rgba(255, 255, 255, 0.5);
+  --border-input: rgba(0, 0, 0, 0.1);
+
+  --accent: #7C3AED;
+  --accent-hover: #6D28D9;
+  --accent-bg: rgba(124, 58, 237, 0.08);
+  --accent-active: rgba(124, 58, 237, 0.75);
+  --accent-glow: 0 2px 8px rgba(124, 58, 237, 0.3);
+
+  --success: #16a34a;
+  --error: #dc2626;
+  --error-hover: #ef4444;
+  --error-bg: rgba(220, 38, 38, 0.12);
+
+  /* Glass */
+  --glass-blur: 24px;
+  --glass-specular: rgba(255, 255, 255, 0.5);
+  --glass-specular-strong: rgba(255, 255, 255, 0.7);
+  --glass-inner-glow: inset 0 1px 0 0 rgba(255, 255, 255, 0.6);
+
+  /* Shadows — softer for light mode */
+  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.06), inset 0 1px 0 0 rgba(255, 255, 255, 0.5);
+  --shadow-toolbar: 0 2px 12px rgba(0, 0, 0, 0.08), inset 0 1px 0 0 rgba(255, 255, 255, 0.6);
+  --shadow-toast: 0 4px 16px rgba(0, 0, 0, 0.1), inset 0 1px 0 0 rgba(255, 255, 255, 0.5);
+  --shadow-modal: 0 8px 32px rgba(0, 0, 0, 0.12), inset 0 1px 0 0 rgba(255, 255, 255, 0.6);
+  --shadow-image: 0 0 0 1px rgba(0, 0, 0, 0.06), 0 2px 8px rgba(0, 0, 0, 0.08);
+
+  --kbd-bg: rgba(0, 0, 0, 0.04);
+  --kbd-border: rgba(0, 0, 0, 0.08);
+  --kbd-shadow: rgba(0, 0, 0, 0.03);
+  --kbd-text: #333;
+
+  --btn-secondary-bg: rgba(0, 0, 0, 0.04);
+  --btn-secondary-hover: rgba(124, 58, 237, 0.1);
+
+  --toast-processing: #7C3AED;
+  --toast-processing-border: rgba(124, 58, 237, 0.25);
+  --toast-success: #16a34a;
+  --toast-success-border: rgba(34, 197, 94, 0.3);
+  --toast-error: #dc2626;
+  --toast-error-border: rgba(239, 68, 68, 0.3);
+
+  --tooltip-bg: rgba(0, 0, 0, 0.75);
+
+  --segment-reject-bg: rgba(0, 0, 0, 0.05);
+  --segment-reject-hover: rgba(0, 0, 0, 0.08);
+  --segment-reject-text: #666;
+  --segment-reject-hover-text: #333;
+  --segment-reject-kbd-bg: rgba(0, 0, 0, 0.05);
+  --segment-accept-kbd-bg: rgba(255, 255, 255, 0.3);
+}
+
+/*
+ * ── Solid fallback — no backdrop-filter support ──
+ * When the OS or renderer can't blur, translucent backgrounds look broken.
+ * These overrides swap every semi-transparent surface for an opaque equivalent
+ * and disable glass effects (specular, inner glow) that rely on blur.
+ */
+@supports not (backdrop-filter: blur(1px)) {
+
+  /* Dark solid */
+  :root,
+  [data-theme="dark"] {
+    --bg-body: #0a0a0a;
+    --bg-primary: #141414;
+    --bg-secondary: #121212;
+    --bg-elevated: #1e1e1e;
+    --bg-toolbar: #191919;
+    --bg-toast: #141414;
+    --bg-overlay: rgba(0, 0, 0, 0.6);
+
+    --glass-blur: 0px;
+    --glass-specular: rgba(255, 255, 255, 0.06);
+    --glass-specular-strong: rgba(255, 255, 255, 0.1);
+    --glass-inner-glow: inset 0 1px 0 0 rgba(255, 255, 255, 0.04);
+
+    --border-card: rgba(255, 255, 255, 0.08);
+  }
+
+  /* Light solid — cream & lavender without translucency */
+  [data-theme="light"] {
+    --bg-body: #FBF8F2;
+    --bg-primary: #FFFDF9;
+    --bg-secondary: #F7F3EC;
+    --bg-elevated: #FFFFFF;
+    --bg-toolbar: #FFFDF9;
+    --bg-toast: #FFFDF9;
+    --bg-overlay: rgba(0, 0, 0, 0.3);
+
+    --glass-blur: 0px;
+    --glass-specular: rgba(0, 0, 0, 0.04);
+    --glass-specular-strong: rgba(0, 0, 0, 0.06);
+    --glass-inner-glow: none;
+
+    --border-card: rgba(0, 0, 0, 0.08);
+  }
+}

@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; script-src 'self' 'unsafe-inline';">
+  <link rel="stylesheet" href="theme.css">
+  <link rel="stylesheet" href="editor-styles.css">
+  <title>Snip Editor</title>
+</head>
+<body>
+  <!-- Toast notification -->
+  <div id="toast" class="toast hidden">
+    <span id="toast-icon"></span>
+    <span id="toast-message"></span>
+  </div>
+
+  <div id="editor-container">
+    <div id="image-area">
+      <img id="background-image" draggable="false">
+      <canvas id="annotation-canvas"></canvas>
+    </div>
+
+    <div id="toolbar">
+      <button id="tool-select" class="tool-btn active" data-tooltip="Select (V)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/>
+        </svg>
+      </button>
+      <button id="tool-rect" class="tool-btn" data-tooltip="Rectangle (R)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="18" height="18" rx="2"/>
+        </svg>
+      </button>
+      <button id="tool-text" class="tool-btn" data-tooltip="Text (T)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="4 7 4 4 20 4 20 7"/>
+          <line x1="9.5" y1="20" x2="14.5" y2="20"/>
+          <line x1="12" y1="4" x2="12" y2="20"/>
+        </svg>
+      </button>
+      <button id="tool-arrow" class="tool-btn" data-tooltip="Arrow (A)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="5" y1="19" x2="19" y2="5"/>
+          <polyline points="12 5 19 5 19 12"/>
+        </svg>
+      </button>
+      <button id="tool-blur-brush" class="tool-btn" data-tooltip="Blur Brush (B)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="5"/>
+          <path d="M12 2v4M12 18v4M2 12h4M18 12h4"/>
+        </svg>
+      </button>
+      <button id="tool-segment" class="tool-btn hidden" data-tooltip="Segment (S)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M6 3v12"/>
+          <circle cx="18" cy="6" r="3"/>
+          <circle cx="6" cy="18" r="3"/>
+          <path d="M18 9a9 9 0 01-9 9"/>
+        </svg>
+      </button>
+      <div class="toolbar-separator"></div>
+      <input type="color" id="color-picker" value="#ff3b30" title="Color">
+      <div id="rect-mode-group" class="toolbar-group hidden">
+        <span class="toolbar-label">Mode</span>
+        <select id="rect-mode" title="Rectangle Mode">
+          <option value="outline">Outline</option>
+          <option value="highlight">Highlight</option>
+          <option value="blur">Blur</option>
+        </select>
+      </div>
+      <div id="stroke-group" class="toolbar-group hidden">
+        <span class="toolbar-label">Thickness</span>
+        <select id="stroke-width" title="Outline Thickness">
+          <option value="2">Thin</option>
+          <option value="4" selected>Medium</option>
+          <option value="8">Thick</option>
+        </select>
+      </div>
+      <div id="font-group" class="toolbar-group hidden">
+        <span class="toolbar-label">Font</span>
+        <select id="font-select" title="Font"></select>
+        <select id="font-size" title="Font Size">
+          <option value="16">16px</option>
+          <option value="20">20px</option>
+          <option value="24" selected>24px</option>
+          <option value="32">32px</option>
+          <option value="48">48px</option>
+        </select>
+      </div>
+      <div id="brush-group" class="toolbar-group hidden">
+        <span class="toolbar-label">Brush</span>
+        <select id="brush-size" title="Brush Size">
+          <option value="10">Small</option>
+          <option value="20" selected>Medium</option>
+          <option value="40">Large</option>
+        </select>
+      </div>
+      <div class="toolbar-separator"></div>
+      <button id="btn-undo" class="tool-btn" data-tooltip="Undo (⌘Z)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="1 4 1 10 7 10"/>
+          <path d="M3.51 15a9 9 0 102.13-9.36L1 10"/>
+        </svg>
+      </button>
+      <button id="btn-redo" class="tool-btn" data-tooltip="Redo (⌘⇧Z)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="23 4 23 10 17 10"/>
+          <path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/>
+        </svg>
+      </button>
+      <button id="btn-reset" class="tool-btn" data-tooltip="Reset All">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="23 4 23 10 17 10"/>
+          <polyline points="1 20 1 14 7 14"/>
+          <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+        </svg>
+      </button>
+      <button id="btn-save" class="action-btn save" data-tooltip="Save (⌘S)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/>
+          <polyline points="17 21 17 13 7 13 7 21"/>
+          <polyline points="7 3 7 8 15 8"/>
+        </svg>
+      </button>
+      <button id="btn-done" class="action-btn primary" data-tooltip="Copy & Close (Esc)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+      </button>
+      <button id="btn-cancel" class="action-btn cancel" data-tooltip="Cancel">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Segment accept/reject action bar -->
+    <div id="segment-actions" class="segment-actions hidden">
+      <button id="segment-reject" class="segment-action-btn reject">Cancel <kbd>Esc</kbd></button>
+      <button id="segment-accept" class="segment-action-btn accept">Apply Cutout <kbd>Enter</kbd></button>
+    </div>
+
+    <!-- Segment tutorial modal -->
+    <div id="segment-tutorial-backdrop" class="tutorial-backdrop hidden">
+      <div class="tutorial-modal">
+        <div class="tutorial-title">Segment Tool</div>
+        <div class="tutorial-text">
+          <strong>Click</strong> on any object to automatically select it.<br>
+          <strong>Shift + Click</strong> to add more points and refine the selection.
+        </div>
+        <button id="segment-tutorial-dismiss" class="tutorial-dismiss-btn">Got it</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="../../node_modules/fabric/dist/index.min.js"></script>
+  <script src="toolbar.js"></script>
+  <script src="tools/tool-utils.js"></script>
+  <script src="tools/rectangle.js"></script>
+  <script src="tools/textbox.js"></script>
+  <script src="tools/arrow.js"></script>
+  <script src="tools/blur-brush.js"></script>
+  <script src="tools/segment.js"></script>
+  <script src="editor-canvas-manager.js"></script>
+  <script src="editor-app.js"></script>
+</body>
+</html>

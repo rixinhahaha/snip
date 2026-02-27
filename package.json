@@ -1,0 +1,28 @@
+{
+  "name": "snip",
+  "version": "1.0.0",
+  "description": "macOS screenshot annotation tool with AI-powered organization",
+  "author": "rixinw",
+  "license": "MIT",
+  "main": "src/main/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "ELECTRON_ENABLE_LOGGING=1 electron .",
+    "build": "electron-builder --mac",
+    "rebuild": "electron-rebuild"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.52.0",
+    "@fontsource-variable/plus-jakarta-sans": "^5.2.8",
+    "@huggingface/transformers": "^3.3.0",
+    "chokidar": "^4.0.0",
+    "electron-liquid-glass": "^1.1.1",
+    "fabric": "^7.0.0",
+    "node-addon-api": "^8.5.0"
+  },
+  "devDependencies": {
+    "@electron/rebuild": "^3.7.2",
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.0"
+  }
+}

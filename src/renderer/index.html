@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; script-src 'self' 'unsafe-inline';">
+  <link rel="stylesheet" href="theme.css">
+  <link rel="stylesheet" href="styles.css">
+  <title>Snip Overlay</title>
+</head>
+<body>
+  <canvas id="selection-overlay" class="hidden"></canvas>
+  <div id="selection-hint" class="hidden">Drag to select area. Move selection by dragging inside it. Enter to confirm, Esc to cancel.</div>
+
+  <script src="tools/selection.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
