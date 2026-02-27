@@ -1,0 +1,112 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        arch: [x64, arm64]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build, sign & notarize
+        env:
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: npx electron-builder --mac dmg --${{ matrix.arch }} --publish never
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dmg-${{ matrix.arch }}
+          path: dist/*.dmg
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dmg-x64/*.dmg
+            dmg-arm64/*.dmg
+          draft: false
+          generate_release_notes: true
+
+  update-cask:
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: rixinhahaha/homebrew-snip
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+
+      - name: Update cask version and checksums
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          BASE_URL="https://github.com/rixinhahaha/snip/releases/download/v${VERSION}"
+
+          ARM64_URL="${BASE_URL}/Snip-${VERSION}-arm64.dmg"
+          X64_URL="${BASE_URL}/Snip-${VERSION}.dmg"
+
+          ARM64_SHA=$(curl -sL "$ARM64_URL" | shasum -a 256 | cut -d' ' -f1)
+          X64_SHA=$(curl -sL "$X64_URL" | shasum -a 256 | cut -d' ' -f1)
+
+          cat > Casks/snip.rb << EOF
+          cask "snip" do
+            arch arm: "arm64", intel: "x64"
+
+            version "${VERSION}"
+            sha256 arm:   "${ARM64_SHA}",
+                   intel: "${X64_SHA}"
+
+            url "https://github.com/rixinhahaha/snip/releases/download/v#{version}/Snip-#{version}-#{arch}.dmg"
+            name "Snip"
+            desc "Screenshot app with annotation, AI-powered organization, and semantic search"
+            homepage "https://github.com/rixinhahaha/snip"
+
+            livecheck do
+              url :url
+              strategy :github_latest
+            end
+
+            depends_on macos: ">= :ventura"
+
+            app "Snip.app"
+
+            zap trash: [
+              "~/Library/Application Support/snip",
+              "~/Library/Caches/snip",
+              "~/Library/Preferences/com.snip.app.plist",
+              "~/Library/Saved Application State/com.snip.app.savedState",
+            ]
+          end
+          EOF
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Casks/snip.rb
+          git commit -m "Update snip to ${GITHUB_REF#refs/tags/v}"
+          git push

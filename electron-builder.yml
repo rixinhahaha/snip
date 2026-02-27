@@ -10,15 +10,21 @@ mac:
   target:
     - target: dmg
       arch:
-        - universal
+        - arm64
+        - x64
   darkModeSupport: true
   hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: assets/entitlements.mac.plist
+  entitlementsInherit: assets/entitlements.mac.plist
+  notarize: true
   extendInfo:
     LSUIElement: true
     NSScreenCaptureUsageDescription: "Snip needs screen recording permission to capture screenshots."
 
 dmg:
   title: "Snip"
+  sign: false
   contents:
     - x: 130
       y: 220
