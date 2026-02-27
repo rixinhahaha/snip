@@ -23,7 +23,7 @@ jobs:
           cache: npm
 
       - name: Install Python setuptools (needed by node-gyp)
-        run: pip3 install setuptools
+        run: brew install python-setuptools
 
       - run: npm ci
 
