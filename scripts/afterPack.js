@@ -154,8 +154,10 @@ module.exports = async function afterPack(context) {
     }
   }
 
-  if (failed > 0) {
-    console.error('[afterPack] WARNING: ' + failed + ' binaries failed to sign. Notarization may fail.');
+  if (failed === binaries.length) {
+    console.log('[afterPack] Pre-signing skipped (cert not in default keychain — electron-builder will handle signing)');
+  } else if (failed > 0) {
+    console.error('[afterPack] WARNING: ' + failed + '/' + binaries.length + ' binaries failed to sign.');
   } else {
     console.log('[afterPack] All native binaries pre-signed successfully');
   }
