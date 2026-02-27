@@ -35,8 +35,5 @@ Thumbs.db
 # Claude Code (user-specific session data)
 .claude/
 
-# Build scripts temp
-scripts/icon.iconset/
-
 # Lint cache
 .eslintcache
