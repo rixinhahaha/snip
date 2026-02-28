@@ -4,10 +4,12 @@
   'use strict';
 
   let capturedDataURL = null;
+  let displayOrigin = { x: 0, y: 0 };
   let selectionInstance = null;
 
   window.snip.onScreenshotCaptured(async (data) => {
     capturedDataURL = data.dataURL;
+    displayOrigin = data.displayOrigin || { x: 0, y: 0 };
     const width = window.innerWidth;
     const height = window.innerHeight;
 
@@ -58,9 +60,9 @@
         const scaleX = imgW / window.screen.width;
         const scaleY = imgH / window.screen.height;
 
-        // Account for overlay window's screen offset (menu bar / notch on macOS)
-        const winOffsetX = window.screenX || 0;
-        const winOffsetY = window.screenY || 0;
+        // Account for overlay window's offset within its display (menu bar / notch on macOS)
+        const winOffsetX = (window.screenX || 0) - displayOrigin.x;
+        const winOffsetY = (window.screenY || 0) - displayOrigin.y;
 
         const physX = Math.round((region.x + winOffsetX) * scaleX);
         const physY = Math.round((region.y + winOffsetY) * scaleY);

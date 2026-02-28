@@ -69,9 +69,9 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 | Step | Action | Expected Result |
 |------|--------|-----------------|
 | 1 | Press Cmd+Shift+2 | Home window hides |
-| 2 | -- | Screen is captured via `desktopCapturer.getSources()` |
-| 3 | -- | Fullscreen transparent overlay appears on current viewport |
-| 4 | -- | Overlay covers entire screen including menu bar |
+| 2 | -- | Display under the cursor is captured via `desktopCapturer.getSources()` |
+| 3 | -- | Fullscreen transparent overlay appears on that display |
+| 4 | -- | Overlay covers entire display including menu bar |
 | 5 | -- | Cursor becomes crosshair, hint text visible: "Drag to select a region, then press Enter" |
 | 6 | Drag to select a rectangular region | Selection box appears with handles |
 | 7 | (Optional) Drag inside selection to reposition | Selection moves without resizing |

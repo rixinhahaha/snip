@@ -37,14 +37,15 @@ function createOverlayWindow() {
     overlayWindow = null;
   }
 
-  const primaryDisplay = screen.getPrimaryDisplay();
-  const { width, height } = primaryDisplay.size;
+  const cursorDisplay = screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
+  const { width, height } = cursorDisplay.size;
+  const { x, y } = cursorDisplay.bounds;
 
   overlayWindow = new BrowserWindow({
     width,
     height,
-    x: 0,
-    y: 0,
+    x,
+    y,
     frame: false,
     transparent: true,
     alwaysOnTop: true,

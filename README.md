@@ -16,7 +16,7 @@ Requires **macOS 10.13+**, **Node.js 18+**, and **Xcode CLT** (`xcode-select --i
 
 ## How It Works
 
-1. **Cmd+Shift+2** — Fullscreen overlay appears, drag to select a region
+1. **Cmd+Shift+2** — Fullscreen overlay appears on whichever display the cursor is on, drag to select a region
 2. **Annotate** — Rectangle, arrow, text, tag, blur brush, or AI segment tools
 3. **Esc** — Copies annotated screenshot to clipboard
 4. **Cmd+S** — Saves to disk + AI organizes in background
