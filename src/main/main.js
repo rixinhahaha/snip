@@ -6,15 +6,19 @@ const { registerIpcHandlers } = require('./ipc-handlers');
 const { captureScreen } = require('./capturer');
 const { initStore } = require('./store');
 const { startWatcher } = require('./organizer/watcher');
+const { startOllama, stopOllama } = require('./ollama-manager');
 const { BASE_WEB_PREFERENCES } = require('./constants');
 
 // Native Liquid Glass (macOS 26+) — safe no-op on older systems
 let liquidGlass = null;
 try {
-  liquidGlass = require('electron-liquid-glass');
+  const lg = require('electron-liquid-glass');
+  // isGlassSupported() checks macOS >= 26; _addon confirms the native binary loaded
+  if (lg.isGlassSupported() && lg._addon) liquidGlass = lg;
 } catch {
   // Not available — fall back to vibrancy
 }
+if (!liquidGlass) console.log('[Snip] Liquid glass not available — using vibrancy fallback');
 
 // Single instance lock
 const gotTheLock = app.requestSingleInstanceLock();
@@ -88,17 +92,20 @@ function createHomeWindow() {
   homeWindow = new BrowserWindow(homeOpts);
   homeWindow.loadFile(path.join(__dirname, '..', 'renderer', 'home.html'));
 
-  // Apply native liquid glass if available
+  // Apply native liquid glass if available, with vibrancy fallback
   if (liquidGlass) {
+    homeWindow.setWindowButtonVisibility(true);
     homeWindow.webContents.once('did-finish-load', () => {
       try {
-        liquidGlass.addView(homeWindow.getNativeWindowHandle(), {
+        var glassId = liquidGlass.addView(homeWindow.getNativeWindowHandle(), {
           cornerRadius: 12,
-          tintColor: '#22000008',
-          opaque: true
+          tintColor: '#22000008'
         });
+        if (glassId < 0) throw new Error('addView returned ' + glassId);
+        console.log('[Snip] Liquid glass active on home window (id=' + glassId + ')');
       } catch (e) {
-        console.warn('[Snip] Liquid glass failed for home window:', e.message);
+        console.warn('[Snip] Liquid glass failed for home window, falling back to vibrancy:', e.message);
+        homeWindow.setVibrancy('under-window');
       }
     });
   }
@@ -148,17 +155,20 @@ function createEditorWindow(cssWidth, cssHeight) {
   editorWindow = new BrowserWindow(editorOpts);
   editorWindow.loadFile(path.join(__dirname, '..', 'renderer', 'editor.html'));
 
-  // Apply native liquid glass if available
+  // Apply native liquid glass if available, with vibrancy fallback
   if (liquidGlass) {
+    editorWindow.setWindowButtonVisibility(true);
     editorWindow.webContents.once('did-finish-load', () => {
       try {
-        liquidGlass.addView(editorWindow.getNativeWindowHandle(), {
+        var glassId = liquidGlass.addView(editorWindow.getNativeWindowHandle(), {
           cornerRadius: 12,
-          tintColor: '#22000008',
-          opaque: true
+          tintColor: '#22000008'
         });
+        if (glassId < 0) throw new Error('addView returned ' + glassId);
+        console.log('[Snip] Liquid glass active on editor window (id=' + glassId + ')');
       } catch (e) {
-        console.warn('[Snip] Liquid glass failed for editor window:', e.message);
+        console.warn('[Snip] Liquid glass failed for editor window, falling back to vibrancy:', e.message);
+        editorWindow.setVibrancy('under-window');
       }
     });
   }
@@ -235,8 +245,13 @@ app.whenReady().then(() => {
   // Start background organizer
   startWatcher();
 
+  // Start embedded Ollama server (downloads binary on first launch)
+  startOllama().catch(function (err) {
+    console.error('[Snip] Ollama startup failed:', err.message);
+  });
+
   // Pre-warm SAM segmentation model
-  const { warmUp } = require('./organizer/segmentation');
+  const { warmUp } = require('./segmentation/segmentation');
   warmUp();
 
   // Open home window on startup
@@ -245,6 +260,7 @@ app.whenReady().then(() => {
 
 app.on('will-quit', () => {
   unregisterShortcuts();
+  stopOllama();
 });
 
 app.on('window-all-closed', (e) => {

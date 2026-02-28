@@ -160,39 +160,44 @@
               </svg>
               Light
             </button>
+            <button id="theme-glass" class="theme-btn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2z"/>
+              </svg>
+              Glass
+            </button>
           </div>
         </div>
 
         <div class="settings-section">
-          <h3>Anthropic API Key</h3>
-          <p>Required for automatic snip organization and search. Uses Claude Haiku for cost efficiency.</p>
-          <div class="form-group">
-            <label for="api-key-input">API Key</label>
-            <div class="form-actions">
-              <input type="password" id="api-key-input" placeholder="sk-ant-...">
-              <button class="icon-btn" id="toggle-key-visibility" title="Show / Hide">
-                <svg id="eye-icon-show" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                  <circle cx="12" cy="12" r="3"/>
-                </svg>
-                <svg id="eye-icon-hide" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none">
-                  <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/>
-                  <line x1="1" y1="1" x2="23" y2="23"/>
-                </svg>
-              </button>
-              <button class="icon-btn" id="save-api-key" title="Save">
-                <svg id="save-icon-default" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/>
-                  <polyline points="17 21 17 13 7 13 7 21"/>
-                  <polyline points="7 3 7 8 15 8"/>
-                </svg>
-                <svg id="save-icon-check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none">
-                  <polyline points="20 6 9 17 4 12"/>
+          <h3>AI Assistant</h3>
+          <p>AI-powered snip organization runs locally on your machine.</p>
+          <div class="ollama-status-row">
+            <span id="ollama-status-dot" class="status-dot"></span>
+            <span id="ollama-status-text">Checking...</span>
+          </div>
+          <div class="current-model-card">
+            <span class="current-model-label">Active Model</span>
+            <div class="current-model-header">
+              <span id="current-model-name" class="current-model-name">—</span>
+              <button class="icon-btn model-info-btn" id="model-info-btn" title="Model info">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"/>
+                  <path d="M12 16v-4"/>
+                  <circle cx="12" cy="8" r="0.5" fill="currentColor" stroke="none"/>
                 </svg>
               </button>
             </div>
+            <div id="model-info-tooltip" class="model-info-tooltip hidden">
+              <table class="model-info-table">
+                <tr><td class="model-info-label">Model</td><td id="info-model">—</td></tr>
+                <tr><td class="model-info-label">Parameters</td><td id="info-params">—</td></tr>
+                <tr><td class="model-info-label">Size</td><td id="info-size">—</td></tr>
+                <tr><td class="model-info-label">Quantization</td><td id="info-quant">—</td></tr>
+                <tr><td class="model-info-label">Description</td><td id="info-desc">—</td></tr>
+              </table>
+            </div>
           </div>
-          <div id="api-key-status" class="status"></div>
         </div>
 
         <div class="settings-section">

@@ -15,7 +15,7 @@ ENV_FILE="${ENV_FILE:-$PROJECT_ROOT/.env}"
 
 if [ ! -f "$ENV_FILE" ]; then
   echo "❌ .env file not found at $ENV_FILE"
-  echo "   Create one with CSC_LINK, CSC_KEY_PASSWORD, APPLE_ID, APPLE_ID_PASSWORD, APPLE_TEAM_ID"
+  echo "   Create one with CSC_LINK, CSC_KEY_PASSWORD, APPLE_ID, APPLE_APP_SPECIFIC_PASSWORD, APPLE_TEAM_ID"
   exit 1
 fi
 
@@ -31,10 +31,7 @@ missing=""
 [ -z "${APPLE_ID:-}" ]         && missing="$missing APPLE_ID"
 [ -z "${APPLE_TEAM_ID:-}" ]    && missing="$missing APPLE_TEAM_ID"
 
-# Accept either APPLE_ID_PASSWORD or APPLE_APP_SPECIFIC_PASSWORD
-if [ -z "${APPLE_ID_PASSWORD:-}" ] && [ -z "${APPLE_APP_SPECIFIC_PASSWORD:-}" ]; then
-  missing="$missing APPLE_ID_PASSWORD"
-fi
+[ -z "${APPLE_APP_SPECIFIC_PASSWORD:-}" ] && missing="$missing APPLE_APP_SPECIFIC_PASSWORD"
 
 if [ -n "$missing" ]; then
   echo "❌ Missing required env vars:$missing"

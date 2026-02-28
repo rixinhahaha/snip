@@ -6,6 +6,7 @@ const zlib = require('zlib');
 
 let model = null;
 let processor = null;
+let envConfigured = false;
 
 function encodeRGBAtoPNG(rgbaData, width, height) {
   const rowBytes = width * 4;
@@ -46,8 +47,27 @@ function encodeRGBAtoPNG(rgbaData, width, height) {
   return Buffer.concat([signature, makeChunk('IHDR', ihdrData), makeChunk('IDAT', deflated), makeChunk('IEND', Buffer.alloc(0))]);
 }
 
+/**
+ * Configure Transformers.js env for bundled models.
+ * The parent process passes SNIP_MODELS_PATH and SNIP_PACKAGED via env.
+ */
+async function configureEnv() {
+  if (envConfigured) return;
+  envConfigured = true;
+  const { env } = await import('@huggingface/transformers');
+  if (process.env.SNIP_MODELS_PATH) {
+    env.cacheDir = process.env.SNIP_MODELS_PATH;
+    console.log('[Segmentation Worker] Model cache: ' + env.cacheDir);
+  }
+  if (process.env.SNIP_PACKAGED === '1') {
+    env.allowRemoteModels = false;
+    console.log('[Segmentation Worker] Remote downloads disabled (bundled)');
+  }
+}
+
 async function loadModel() {
   if (model && processor) return { model, processor };
+  await configureEnv();
   const { SamModel, AutoProcessor } = await import('@huggingface/transformers');
   console.log('[Segmentation Worker] Loading SlimSAM model...');
   model = await SamModel.from_pretrained('Xenova/slimsam-77-uniform');

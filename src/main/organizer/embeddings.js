@@ -1,3 +1,5 @@
+const { configureTransformersEnv } = require('../model-paths');
+
 let pipeline = null;
 let pipelinePromise = null;
 
@@ -7,8 +9,12 @@ async function getPipeline() {
 
   pipelinePromise = (async () => {
     // Dynamic import since @huggingface/transformers is ESM
-    const { pipeline: createPipeline } = await import('@huggingface/transformers');
-    pipeline = await createPipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2', {
+    const transformers = await import('@huggingface/transformers');
+
+    // Point Transformers.js at bundled models (offline in packaged app)
+    configureTransformersEnv(transformers.env);
+
+    pipeline = await transformers.pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2', {
       quantized: true
     });
     console.log('[Embeddings] Model loaded');

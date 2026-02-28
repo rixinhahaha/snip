@@ -2,15 +2,16 @@ const chokidar = require('chokidar');
 const path = require('path');
 const { Worker } = require('worker_threads');
 const { Notification } = require('electron');
-const { getScreenshotsDir, getApiKey, addCustomCategory, addToIndex } = require('../store');
+const { getScreenshotsDir, addCustomCategory, addToIndex } = require('../store');
+const { isReady } = require('../ollama-manager');
 
 let watcher = null;
 let worker = null;
 const pendingFiles = new Set(); // files saved by the app, awaiting agent processing
 
 function startWatcher() {
-  const watchDir = getScreenshotsDir();
-  const fs = require('fs');
+  var watchDir = getScreenshotsDir();
+  var fs = require('fs');
   fs.mkdirSync(watchDir, { recursive: true });
 
   // Spawn background worker thread for processing
@@ -27,8 +28,8 @@ function startWatcher() {
     }
   });
 
-  watcher.on('add', (filepath) => {
-    const ext = path.extname(filepath).toLowerCase();
+  watcher.on('add', async function (filepath) {
+    var ext = path.extname(filepath).toLowerCase();
     if (!['.jpg', '.jpeg', '.png'].includes(ext)) return;
 
     // Only run the agent on files saved by the app (not manual renames/copies)
@@ -48,10 +49,10 @@ function startWatcher() {
     }
     pendingFiles.delete(filepath);
 
-    // Check if API key is configured
-    const apiKey = getApiKey();
-    if (!apiKey) {
-      console.log('[Organizer] No API key — adding basic index entry:', path.basename(filepath));
+    // Check if Ollama is ready
+    var ollamaReady = await isReady();
+    if (!ollamaReady) {
+      console.log('[Organizer] Ollama not ready — adding basic index entry:', path.basename(filepath));
       addToIndex({
         filename: path.basename(filepath),
         path: filepath,
@@ -69,7 +70,7 @@ function startWatcher() {
 
     // Delegate to background worker thread
     if (worker) {
-      worker.postMessage({ type: 'process', filepath });
+      worker.postMessage({ type: 'process', filepath: filepath });
     }
   });
 
@@ -78,18 +79,17 @@ function startWatcher() {
 }
 
 function spawnWorker() {
-  const { app } = require('electron');
-  const workerPath = path.join(__dirname, 'worker.js');
+  var { app } = require('electron');
+  var workerPath = path.join(__dirname, 'worker.js');
 
   worker = new Worker(workerPath, {
     workerData: {
       screenshotsDir: getScreenshotsDir(),
-      configPath: path.join(app.getPath('userData'), 'snip-config.json'),
-      apiKey: getApiKey() // pass decrypted key since safeStorage is unavailable in workers
+      configPath: path.join(app.getPath('userData'), 'snip-config.json')
     }
   });
 
-  worker.on('message', (msg) => {
+  worker.on('message', function (msg) {
     switch (msg.type) {
       case 'ready':
         console.log('[Organizer] Worker thread ready');
@@ -107,12 +107,12 @@ function spawnWorker() {
       case 'notification':
         // Show Notification on main thread (not available in workers)
         try {
-          const notification = new Notification({
+          var notification = new Notification({
             title: msg.title,
             body: msg.body
           });
           if (msg.onClickCategory) {
-            notification.on('click', () => {
+            notification.on('click', function () {
               addCustomCategory(msg.onClickCategory);
               console.log('[Organizer] Added new category:', msg.onClickCategory);
             });
@@ -125,19 +125,19 @@ function spawnWorker() {
     }
   });
 
-  worker.on('error', (err) => {
+  worker.on('error', function (err) {
     console.error('[Organizer] Worker error:', err.message);
     // Respawn worker on crash
-    setTimeout(() => {
+    setTimeout(function () {
       console.log('[Organizer] Respawning worker...');
       spawnWorker();
     }, 2000);
   });
 
-  worker.on('exit', (code) => {
+  worker.on('exit', function (code) {
     if (code !== 0) {
       console.warn('[Organizer] Worker exited with code:', code);
-      setTimeout(() => {
+      setTimeout(function () {
         console.log('[Organizer] Respawning worker...');
         spawnWorker();
       }, 2000);
@@ -151,15 +151,15 @@ function spawnWorker() {
  */
 async function generateEmbeddingForEntry(filepath, textToEmbed) {
   try {
-    const { embedText } = require('./embeddings');
+    var { embedText } = require('./embeddings');
     console.log('[Organizer] Generating embedding for: "%s"', textToEmbed.slice(0, 80));
-    const embedding = await embedText(textToEmbed);
+    var embedding = await embedText(textToEmbed);
     console.log('[Organizer] Embedding generated (%d dimensions)', embedding ? embedding.length : 0);
 
     // Update the existing index entry with the embedding
-    const { readIndex, writeIndex } = require('../store');
-    const index = readIndex();
-    const entry = index.find(e => e.path === filepath);
+    var { readIndex, writeIndex } = require('../store');
+    var index = readIndex();
+    var entry = index.find(function (e) { return e.path === filepath; });
     if (entry) {
       entry.embedding = Array.from(embedding);
       writeIndex(index);
@@ -178,13 +178,4 @@ function queueNewFile(filepath) {
   pendingFiles.add(filepath);
 }
 
-/**
- * Forward updated API key to the worker thread.
- */
-function updateWorkerApiKey(key) {
-  if (worker) {
-    worker.postMessage({ type: 'update-api-key', apiKey: key });
-  }
-}
-
-module.exports = { startWatcher, queueNewFile, updateWorkerApiKey };
+module.exports = { startWatcher, queueNewFile };

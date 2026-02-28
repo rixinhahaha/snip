@@ -1,5 +1,9 @@
 # Snip Design Language
 
+> Role: **Designer** — Color palettes, component patterns, glass effects, and icon specs. This is the source of truth for all visual decisions.
+
+---
+
 ## Philosophy
 
 Snip uses a **Liquid Glass** aesthetic — translucent surfaces with subtle blur, specular highlights, and layered depth. The palette centers on **purple** as the primary accent, shifting between vibrant purple (dark mode) and softer lavender (light mode) for warmth and personality.
@@ -70,17 +74,41 @@ Both icons use a squircle shape (`rx="22.5"` on a 100x100 viewBox).
 - **Shadows**: Multi-layer — outer shadow for depth + inner glow for glass edge
 - **Borders**: Semi-transparent, never fully opaque
 
+### Glass Theme
+
+The **Glass** theme (`[data-theme="glass"]`) is a third theme option with lavender/purple-tinted translucent surfaces. It reveals the native `NSGlassEffectView` (macOS 26+) or vibrancy material through purple-tinted backgrounds. Uses light text (like Dark) but with a distinct violet palette.
+
+| Role | Value | Usage |
+|------|-------|-------|
+| **Accent** | `#A78BFA` (Violet 400) | Lighter purple for glass contrast |
+| **Accent hover** | `#8B5CF6` (Violet 500) | Hover/pressed states |
+| **Background body** | `rgba(25, 12, 50, 0.18)` | Subtle deep-purple wash |
+| **Background primary** | `rgba(30, 15, 60, 0.25)` | Main content area (readable tint) |
+| **Background secondary** | `rgba(25, 12, 50, 0.38)` | Sidebar (strong structural tint) |
+| **Background elevated** | `rgba(40, 20, 80, 0.30)` | Cards/panels (accent-tinted) |
+| **Background toolbar** | `rgba(25, 12, 50, 0.35)` | Toolbar with strong tint |
+| **Text primary** | `#f0eafa` | Bright lavender body text |
+| **Text bright** | `#ffffff` | Headings, active labels |
+
+CSS `backdrop-filter` is disabled (`--glass-blur: 0px`) since the native glass/vibrancy layer handles blur. Enhanced specular highlights and purple-tinted borders provide visual contrast.
+
+### Native Glass Layer (macOS 26+)
+
+On macOS 26 (Tahoe) and later, `electron-liquid-glass` applies a native `NSGlassEffectView` behind the web content in both home and editor windows. This layer is always active regardless of theme — the Dark and Light themes have opaque enough backgrounds to cover it, while the Glass theme's translucent backgrounds reveal it.
+
+**Fallback chain**: Native glass → `vibrancy: 'under-window'` → CSS `backdrop-filter` → solid opaque (no blur support).
+
 ### Solid Fallback (No Glass)
 
 When the OS or renderer doesn't support `backdrop-filter`, translucent `rgba()` backgrounds look broken (washed out, unreadable). A `@supports not (backdrop-filter: blur(1px))` block in `theme.css` swaps all surfaces to opaque equivalents.
 
-| Role | Dark solid | Light solid |
-|------|-----------|-------------|
-| **Body** | `#0a0a0a` | `#FBF8F2` (cream) |
-| **Primary** | `#141414` | `#FFFDF9` |
-| **Secondary** | `#121212` | `#F7F3EC` |
-| **Elevated** | `#1e1e1e` | `#FFFFFF` |
-| **Toolbar** | `#191919` | `#FFFDF9` |
+| Role | Dark solid | Light solid | Glass solid |
+|------|-----------|-------------|-------------|
+| **Body** | `#0a0a0a` | `#FBF8F2` (cream) | `#0e0a18` (deep purple) |
+| **Primary** | `#141414` | `#FFFDF9` | `#140f20` |
+| **Secondary** | `#121212` | `#F7F3EC` | `#1a1428` |
+| **Elevated** | `#1e1e1e` | `#FFFFFF` | `#221a30` |
+| **Toolbar** | `#191919` | `#FFFDF9` | `#181228` |
 
 The fallback also:
 - Sets `--glass-blur` to `0px`
@@ -117,6 +145,13 @@ fabric.FabricObject.ownDefaults.cornerColor = accent;
 ```
 
 This affects all canvas objects (rectangles, arrows, textboxes, blur images).
+
+### AI Assistant Settings (Model Card)
+
+The settings page "AI Assistant" section uses:
+
+- **Current model card**: `--bg-elevated` with `--border-card`, 10px radius. Shows "Active Model" uppercase label, large bold model name, and circular info button.
+- **Info tooltip**: Per-theme backgrounds (dark: `rgba(30,30,30,0.95)`, light: `rgba(255,255,255,0.95)`, glass: `rgba(15,8,30,0.85)` with backdrop blur). Positioned below card, `z-index: 20`. Contains a specs table with label column in `--text-secondary` and value column in `--text-primary`.
 
 ### Buttons
 - **Primary**: Solid accent fill, white text, rounded corners (8px)

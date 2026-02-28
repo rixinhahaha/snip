@@ -15,9 +15,10 @@ contextBridge.exposeInMainWorld('snip', {
   getEditorImage: () => ipcRenderer.invoke('get-editor-image'),
   closeEditor: () => ipcRenderer.send('close-editor'),
 
-  // Settings
-  getApiKey: () => ipcRenderer.invoke('get-api-key'),
-  setApiKey: (key) => ipcRenderer.invoke('set-api-key', key),
+  // Settings: Ollama
+  getOllamaConfig: () => ipcRenderer.invoke('get-ollama-config'),
+  setOllamaConfig: (config) => ipcRenderer.invoke('set-ollama-config', config),
+  getOllamaStatus: () => ipcRenderer.invoke('get-ollama-status'),
   getCategories: () => ipcRenderer.invoke('get-categories'),
   addCategory: (category) => ipcRenderer.invoke('add-category', category),
   removeCategory: (category) => ipcRenderer.invoke('remove-category', category),

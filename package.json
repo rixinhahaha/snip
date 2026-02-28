@@ -8,20 +8,23 @@
   "scripts": {
     "start": "electron .",
     "dev": "ELECTRON_ENABLE_LOGGING=1 electron .",
-    "postinstall": "electron-builder install-app-deps",
+    "postinstall": "electron-builder install-app-deps && npm run download-all",
     "prebuild": "node-gyp rebuild",
     "build": "node-gyp rebuild && electron-builder --mac && npm run sign:adhoc",
-    "sign:adhoc": "[ -n \"$CSC_LINK\" ] || for app in dist/mac-*/Snip.app; do codesign --force --deep --sign - \"$app\" 2>/dev/null; done",
-    "rebuild": "electron-rebuild"
+    "sign:adhoc": "for app in dist/mac-*/Snip.app; do if codesign -v \"$app\" 2>/dev/null; then echo \"Already signed: $app\"; else codesign --force --deep --sign - \"$app\" 2>/dev/null && echo \"Ad-hoc signed: $app\"; fi; done",
+    "rebuild": "electron-rebuild",
+    "download-ollama": "./scripts/download-ollama.sh",
+    "download-models": "node scripts/download-models.js",
+    "download-all": "./scripts/download-ollama.sh && node scripts/download-models.js"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.52.0",
     "@fontsource-variable/plus-jakarta-sans": "^5.2.8",
     "@huggingface/transformers": "^3.3.0",
     "chokidar": "^4.0.0",
     "electron-liquid-glass": "^1.1.1",
     "fabric": "^7.0.0",
-    "node-addon-api": "^8.5.0"
+    "node-addon-api": "^8.5.0",
+    "ollama": "^0.6.3"
   },
   "devDependencies": {
     "@electron/rebuild": "^3.7.2",

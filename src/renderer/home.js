@@ -49,7 +49,7 @@
   async function init() {
     screenshotsDir = await window.snip.getScreenshotsDir();
     loadFolder('');
-    loadApiKey();
+    initOllamaSettings();
     loadTags();
     initThemeToggle();
   }
@@ -65,6 +65,9 @@
     document.getElementById('theme-light').addEventListener('click', function() {
       window.snip.setTheme('light');
     });
+    document.getElementById('theme-glass').addEventListener('click', function() {
+      window.snip.setTheme('glass');
+    });
 
     // Sync when theme changes externally (tray menu or other window)
     window.snip.onThemeChanged(function(t) {
@@ -75,6 +78,7 @@
   function updateThemeButtons(theme) {
     document.getElementById('theme-dark').classList.toggle('active', theme === 'dark');
     document.getElementById('theme-light').classList.toggle('active', theme === 'light');
+    document.getElementById('theme-glass').classList.toggle('active', theme === 'glass');
   }
 
   async function loadFolder(subdir) {
@@ -288,42 +292,71 @@
     hideContextMenu();
   });
 
-  // ── Settings ──
-  async function loadApiKey() {
-    var key = await window.snip.getApiKey();
-    document.getElementById('api-key-input').value = key || '';
+  // ── Settings: AI Assistant (Ollama) ──
+
+  // Static specs for model info tooltip
+  var MODEL_SPECS = {
+    'minicpm-v': { params: '8B', size: '~5.1 GB', quant: 'Q4_K_M', description: 'Best balance of accuracy and speed for screenshot analysis.' }
+  };
+
+  async function initOllamaSettings() {
+    // Setup info tooltip toggle (click to show, click-outside to dismiss)
+    var infoBtn = document.getElementById('model-info-btn');
+    var tooltip = document.getElementById('model-info-tooltip');
+
+    infoBtn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      tooltip.classList.toggle('hidden');
+    });
+
+    document.addEventListener('click', function(e) {
+      if (!tooltip.classList.contains('hidden') && !tooltip.contains(e.target) && e.target !== infoBtn) {
+        tooltip.classList.add('hidden');
+      }
+    });
+
+    // Initial status refresh
+    refreshOllamaStatus();
   }
 
-  document.getElementById('save-api-key').addEventListener('click', async function() {
-    var key = document.getElementById('api-key-input').value.trim();
-    await window.snip.setApiKey(key);
-    var btn = document.getElementById('save-api-key');
-    var defaultIcon = document.getElementById('save-icon-default');
-    var checkIcon = document.getElementById('save-icon-check');
-    defaultIcon.style.display = 'none';
-    checkIcon.style.display = '';
-    btn.classList.add('saved');
-    setTimeout(function() {
-      defaultIcon.style.display = '';
-      checkIcon.style.display = 'none';
-      btn.classList.remove('saved');
-    }, 2000);
-  });
+  async function refreshOllamaStatus() {
+    var dot = document.getElementById('ollama-status-dot');
+    var text = document.getElementById('ollama-status-text');
 
-  document.getElementById('toggle-key-visibility').addEventListener('click', function() {
-    var input = document.getElementById('api-key-input');
-    var showIcon = document.getElementById('eye-icon-show');
-    var hideIcon = document.getElementById('eye-icon-hide');
-    if (input.type === 'password') {
-      input.type = 'text';
-      showIcon.style.display = 'none';
-      hideIcon.style.display = '';
-    } else {
-      input.type = 'password';
-      showIcon.style.display = '';
-      hideIcon.style.display = 'none';
+    var config = await window.snip.getOllamaConfig();
+    var modelName = config.model || 'minicpm-v';
+
+    try {
+      var status = await window.snip.getOllamaStatus();
+      if (status.running) {
+        dot.className = 'status-dot running';
+        text.textContent = 'Running';
+      } else {
+        dot.className = 'status-dot stopped';
+        text.textContent = status.error ? 'Starting... (' + status.error + ')' : 'Starting...';
+        // Retry in a few seconds (server may still be booting)
+        setTimeout(refreshOllamaStatus, 3000);
+      }
+    } catch (err) {
+      dot.className = 'status-dot stopped';
+      text.textContent = 'Error: ' + err.message;
     }
-  });
+
+    updateCurrentModelCard(modelName);
+  }
+
+  function updateCurrentModelCard(modelName) {
+    var nameEl = document.getElementById('current-model-name');
+    nameEl.textContent = modelName;
+
+    var specs = MODEL_SPECS[modelName] || { params: '—', size: '—', quant: '—', description: 'Custom model' };
+    document.getElementById('info-model').textContent = modelName;
+    document.getElementById('info-params').textContent = specs.params;
+    document.getElementById('info-size').textContent = specs.size;
+    document.getElementById('info-quant').textContent = specs.quant;
+    document.getElementById('info-desc').textContent = specs.description;
+  }
+
 
   async function loadTags() {
     var tags = await window.snip.getTagsWithDescriptions();

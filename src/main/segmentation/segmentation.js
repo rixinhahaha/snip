@@ -7,6 +7,7 @@ const child_process = require('child_process');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
+const { getModelConfig } = require('../model-paths');
 
 let worker = null;
 let requestId = 0;
@@ -68,15 +69,30 @@ function getWorker() {
   }
   const nodeBin = findNodeBinary();
 
+  // Pass model cache path to child process so it uses bundled models
+  const modelConfig = getModelConfig();
+  const childEnv = { ...process.env };
+  if (modelConfig.cacheDir) {
+    childEnv.SNIP_MODELS_PATH = modelConfig.cacheDir;
+  }
+  if (!modelConfig.allowRemote) {
+    childEnv.SNIP_PACKAGED = '1';
+  }
+  // Also pass resourcesPath for the child to resolve paths
+  if (process.resourcesPath) {
+    childEnv.SNIP_RESOURCES_PATH = process.resourcesPath;
+  }
+
   const forkOptions = {
     serialization: 'advanced',
-    stdio: ['pipe', 'inherit', 'inherit', 'ipc']
+    stdio: ['pipe', 'inherit', 'inherit', 'ipc'],
+    env: childEnv
   };
 
   if (nodeBin) {
     forkOptions.execPath = nodeBin;
   } else {
-    forkOptions.env = { ...process.env, ELECTRON_RUN_AS_NODE: '1' };
+    childEnv.ELECTRON_RUN_AS_NODE = '1';
   }
 
   worker = child_process.fork(workerScript, [], forkOptions);

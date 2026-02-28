@@ -47,6 +47,12 @@ function createTray(captureCallback, searchCallback, homeCallback) {
           type: 'radio',
           checked: currentTheme === 'light',
           click: () => broadcastTheme('light')
+        },
+        {
+          label: 'Glass',
+          type: 'radio',
+          checked: currentTheme === 'glass',
+          click: () => broadcastTheme('glass')
         }
       ]
     },

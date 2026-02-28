@@ -169,6 +169,85 @@
 }
 
 /*
+ * ── Glass theme — Lavender-tinted translucent surfaces ──
+ * Light text on frosted glass with purple-tinted surfaces for contrast.
+ * Native NSGlassEffectView (macOS 26+) or vibrancy provides the backdrop.
+ * CSS backdrop-filter disabled — the native layer handles blur.
+ */
+[data-theme="glass"] {
+  --bg-body: rgba(25, 12, 50, 0.18);
+  --bg-primary: rgba(30, 15, 60, 0.25);
+  --bg-secondary: rgba(25, 12, 50, 0.38);
+  --bg-elevated: rgba(40, 20, 80, 0.40);
+  --bg-toolbar: rgba(25, 12, 50, 0.35);
+  --bg-hover: rgba(139, 92, 246, 0.20);
+  --bg-hover-strong: rgba(139, 92, 246, 0.30);
+  --bg-input: rgba(139, 92, 246, 0.16);
+  --bg-input-hover: rgba(139, 92, 246, 0.24);
+  --bg-toast: rgba(20, 10, 40, 0.82);
+  --bg-overlay: rgba(0, 0, 0, 0.4);
+
+  --text-primary: #f0eafa;
+  --text-secondary: #b8b0cc;
+  --text-muted: #7e7694;
+  --text-bright: #fff;
+  --text-dim: #ddd4ee;
+  --text-link-hover: #f0e8ff;
+
+  --border: rgba(255, 255, 255, 0.10);
+  --border-card: rgba(255, 255, 255, 0.15);
+  --border-subtle: rgba(255, 255, 255, 0.12);
+  --border-input: rgba(255, 255, 255, 0.18);
+
+  --accent: #A78BFA;
+  --accent-hover: #8B5CF6;
+  --accent-bg: rgba(167, 139, 250, 0.28);
+  --accent-active: rgba(167, 139, 250, 0.65);
+  --accent-glow: 0 2px 10px rgba(167, 139, 250, 0.40);
+
+  --success: #34d399;
+  --error: #fb7185;
+  --error-hover: #ff4444;
+  --error-bg: rgba(251, 113, 133, 0.18);
+
+  /* Native layer handles blur — disable CSS backdrop-filter */
+  --glass-blur: 0px;
+  --glass-specular: rgba(255, 255, 255, 0.18);
+  --glass-specular-strong: rgba(255, 255, 255, 0.28);
+  --glass-inner-glow: inset 0 1px 0 0 rgba(255, 255, 255, 0.15);
+
+  --shadow-card: 0 2px 10px rgba(40, 15, 80, 0.35), inset 0 1px 0 0 rgba(255, 255, 255, 0.10);
+  --shadow-toolbar: 0 2px 12px rgba(25, 10, 50, 0.30);
+  --shadow-toast: 0 8px 24px rgba(20, 8, 40, 0.50), inset 0 1px 0 0 rgba(255, 255, 255, 0.12);
+  --shadow-modal: 0 12px 40px rgba(20, 8, 40, 0.60), inset 0 1px 0 0 rgba(255, 255, 255, 0.12);
+  --shadow-image: 0 0 0 1px rgba(139, 92, 246, 0.22), 0 4px 12px rgba(25, 10, 50, 0.40);
+
+  --kbd-bg: rgba(139, 92, 246, 0.30);
+  --kbd-border: rgba(139, 92, 246, 0.45);
+  --kbd-shadow: rgba(139, 92, 246, 0.15);
+  --kbd-text: #f0eafa;
+
+  --btn-secondary-bg: rgba(139, 92, 246, 0.16);
+  --btn-secondary-hover: rgba(139, 92, 246, 0.26);
+
+  --toast-processing: #C4B5FD;
+  --toast-processing-border: rgba(167, 139, 250, 0.35);
+  --toast-success: #86efac;
+  --toast-success-border: rgba(52, 211, 153, 0.35);
+  --toast-error: #fca5a5;
+  --toast-error-border: rgba(251, 113, 133, 0.35);
+
+  --tooltip-bg: rgba(15, 8, 30, 0.90);
+
+  --segment-reject-bg: rgba(139, 92, 246, 0.14);
+  --segment-reject-hover: rgba(139, 92, 246, 0.22);
+  --segment-reject-text: #b8b0cc;
+  --segment-reject-hover-text: #ddd4ee;
+  --segment-reject-kbd-bg: rgba(139, 92, 246, 0.14);
+  --segment-accept-kbd-bg: rgba(255, 255, 255, 0.25);
+}
+
+/*
  * ── Solid fallback — no backdrop-filter support ──
  * When the OS or renderer can't blur, translucent backgrounds look broken.
  * These overrides swap every semi-transparent surface for an opaque equivalent
@@ -211,5 +290,23 @@
     --glass-inner-glow: none;
 
     --border-card: rgba(0, 0, 0, 0.08);
+  }
+
+  /* Glass solid — opaque dark-purple fallback */
+  [data-theme="glass"] {
+    --bg-body: #0e0a18;
+    --bg-primary: #140f20;
+    --bg-secondary: #1a1428;
+    --bg-elevated: #221a30;
+    --bg-toolbar: #181228;
+    --bg-toast: #1a1428;
+    --bg-overlay: rgba(0, 0, 0, 0.5);
+
+    --glass-blur: 0px;
+    --glass-specular: rgba(139, 92, 246, 0.08);
+    --glass-specular-strong: rgba(139, 92, 246, 0.12);
+    --glass-inner-glow: inset 0 1px 0 0 rgba(139, 92, 246, 0.06);
+
+    --border-card: rgba(139, 92, 246, 0.12);
   }
 }

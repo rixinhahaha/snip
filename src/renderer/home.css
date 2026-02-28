@@ -551,9 +551,142 @@ input:focus { border-color: var(--accent); }
   background: var(--accent-bg);
 }
 
+/* Glass theme: white borders + brighter active state for contrast on purple glass */
+[data-theme="glass"] .theme-btn {
+  border-color: rgba(255, 255, 255, 0.25);
+  color: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="glass"] .theme-btn:hover {
+  border-color: rgba(255, 255, 255, 0.4);
+  color: #fff;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+[data-theme="glass"] .theme-btn.active {
+  border-color: #A78BFA;
+  color: #fff;
+  background: rgba(167, 139, 250, 0.35);
+  box-shadow: 0 0 12px rgba(167, 139, 250, 0.3), var(--glass-inner-glow);
+}
+
 .status { font-size: 12px; margin-top: 8px; min-height: 18px; }
 .status.success { color: var(--success); }
 .status.error { color: var(--error); }
+
+/* Ollama settings */
+.ollama-status-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-size: 13px;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.status-dot.running { background: var(--success); }
+.status-dot.stopped { background: var(--error); }
+
+/* Current model card */
+.current-model-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-card);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+  position: relative;
+}
+
+.current-model-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary);
+}
+
+.current-model-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+}
+
+.current-model-name {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text-bright);
+}
+
+.model-info-btn {
+  width: 26px !important;
+  height: 26px !important;
+  border-radius: 50% !important;
+  border: 1px solid var(--border-card) !important;
+}
+
+/* Model info tooltip */
+.model-info-tooltip {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 6px);
+  background: var(--tooltip-bg);
+  border: 1px solid var(--glass-specular);
+  border-radius: 10px;
+  padding: 12px 14px;
+  z-index: 20;
+  box-shadow: var(--shadow-toast);
+}
+
+.model-info-table {
+  width: 100%;
+  font-size: 12px;
+  border-collapse: collapse;
+}
+
+.model-info-table td {
+  padding: 3px 0;
+  color: var(--text-primary);
+  vertical-align: top;
+}
+
+.model-info-label {
+  color: var(--text-secondary) !important;
+  width: 100px;
+  padding-right: 12px !important;
+  white-space: nowrap;
+}
+
+/* Dark theme tooltip */
+[data-theme="dark"] .model-info-tooltip {
+  background: rgba(30, 30, 30, 0.95);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Light theme tooltip */
+[data-theme="light"] .model-info-tooltip {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: var(--border-card);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+/* Glass theme tooltip */
+[data-theme="glass"] .model-info-tooltip {
+  background: rgba(15, 8, 30, 0.85);
+  border-color: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
 
 .tags-list {
   display: flex;

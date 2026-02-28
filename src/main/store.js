@@ -41,7 +41,6 @@ function loadConfig() {
     configData = JSON.parse(raw);
   } catch {
     configData = {
-      anthropicApiKey: '',
       categories: { defaults: DEFAULT_CATEGORIES, custom: [] }
     };
   }
@@ -60,20 +59,12 @@ function initStore() {
   const screenshotsDir = getScreenshotsDir();
   fs.mkdirSync(screenshotsDir, { recursive: true });
 
-  // Migrate plaintext API key to encrypted storage
-  if (cfg.anthropicApiKey && !cfg.encryptedApiKey) {
-    try {
-      const { safeStorage } = require('electron');
-      if (safeStorage.isEncryptionAvailable()) {
-        const encrypted = safeStorage.encryptString(cfg.anthropicApiKey);
-        cfg.encryptedApiKey = encrypted.toString('base64');
-        delete cfg.anthropicApiKey;
-        saveConfig();
-        console.log('[Store] Migrated API key to encrypted storage');
-      }
-    } catch {
-      // safeStorage not ready yet — will migrate on next launch
-    }
+  // Clean up legacy Anthropic API key fields from config
+  if (cfg.anthropicApiKey || cfg.encryptedApiKey) {
+    delete cfg.anthropicApiKey;
+    delete cfg.encryptedApiKey;
+    saveConfig();
+    console.log('[Store] Removed legacy API key fields');
   }
 }
 
@@ -83,44 +74,21 @@ function getScreenshotsDir() {
   return path.join(app.getPath('documents'), 'snip', 'screenshots');
 }
 
-function getApiKey() {
-  const cfg = loadConfig();
-
-  // Prefer encrypted key (safeStorage)
-  if (cfg.encryptedApiKey) {
-    try {
-      const { safeStorage } = require('electron');
-      if (safeStorage.isEncryptionAvailable()) {
-        const buf = Buffer.from(cfg.encryptedApiKey, 'base64');
-        return safeStorage.decryptString(buf);
-      }
-    } catch {
-      // Worker thread or safeStorage unavailable — fall through
-    }
-  }
-
-  // Fallback: plaintext key (legacy / worker thread)
-  return cfg.anthropicApiKey || '';
+function getOllamaModel() {
+  return loadConfig().ollamaModel || 'minicpm-v';
 }
 
-function setApiKey(key) {
-  const cfg = loadConfig();
+function setOllamaModel(model) {
+  loadConfig().ollamaModel = model;
+  saveConfig();
+}
 
-  try {
-    const { safeStorage } = require('electron');
-    if (safeStorage.isEncryptionAvailable()) {
-      const encrypted = safeStorage.encryptString(key);
-      cfg.encryptedApiKey = encrypted.toString('base64');
-      // Remove plaintext key
-      delete cfg.anthropicApiKey;
-      saveConfig();
-      return;
-    }
-  } catch {
-    // safeStorage unavailable — store plaintext as fallback
-  }
+function getOllamaUrl() {
+  return loadConfig().ollamaUrl || 'http://127.0.0.1:11434';
+}
 
-  cfg.anthropicApiKey = key;
+function setOllamaUrl(url) {
+  loadConfig().ollamaUrl = url;
   saveConfig();
 }
 
@@ -287,8 +255,10 @@ module.exports = {
   initStore,
   setExternalPaths,
   getScreenshotsDir,
-  getApiKey,
-  setApiKey,
+  getOllamaModel,
+  setOllamaModel,
+  getOllamaUrl,
+  setOllamaUrl,
   getAllCategories,
   addCustomCategory,
   removeCustomCategory,

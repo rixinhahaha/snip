@@ -2,14 +2,14 @@ const { ipcMain, clipboard, nativeImage, app, Notification, shell, BrowserWindow
 const path = require('path');
 const fs = require('fs');
 const {
-  getScreenshotsDir, getApiKey, setApiKey,
+  getScreenshotsDir, getOllamaModel, setOllamaModel, getOllamaUrl, setOllamaUrl,
   getAllCategories, addCustomCategory, removeCustomCategory,
   getAllTagsWithDescriptions, setTagDescription, addCustomCategoryWithDescription,
   readIndex, removeFromIndex, removeFromIndexByDir, rebuildIndex,
   getTheme, setTheme
 } = require('./store');
-const { resetClient } = require('./organizer/agent');
-const { queueNewFile, updateWorkerApiKey } = require('./organizer/watcher');
+const { queueNewFile } = require('./organizer/watcher');
+const ollamaManager = require('./ollama-manager');
 
 let pendingEditorData = null;
 let editorWindowRef = null;
@@ -85,16 +85,25 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn) {
     ];
   });
 
-  // Settings: API key
-  ipcMain.handle('get-api-key', async () => {
-    return getApiKey() || '';
+  // Settings: Ollama
+  ipcMain.handle('get-ollama-config', async () => {
+    return { model: getOllamaModel(), url: getOllamaUrl() };
   });
 
-  ipcMain.handle('set-api-key', async (event, key) => {
-    setApiKey(key);
-    resetClient(); // Ensure cached Anthropic client picks up the new key
-    updateWorkerApiKey(key); // Forward decrypted key to worker thread
+  ipcMain.handle('set-ollama-config', async (event, { model, url }) => {
+    if (model) {
+      const oldModel = getOllamaModel();
+      if (oldModel !== model) {
+        console.log('[Snip] Model switched: %s → %s at %s', oldModel, model, new Date().toISOString());
+      }
+      setOllamaModel(model);
+    }
+    if (url) setOllamaUrl(url);
     return true;
+  });
+
+  ipcMain.handle('get-ollama-status', async () => {
+    return ollamaManager.getStatus();
   });
 
   // Settings: Categories
@@ -240,13 +249,13 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn) {
 
   // Segmentation: check device support
   ipcMain.handle('check-segment-support', async () => {
-    const { checkSupport } = require('./organizer/segmentation');
+    const { checkSupport } = require('./segmentation/segmentation');
     return checkSupport();
   });
 
   // Segmentation: generate mask at click point
   ipcMain.handle('segment-at-point', async (event, { points, cssWidth, cssHeight }) => {
-    const { generateMask } = require('./organizer/segmentation');
+    const { generateMask } = require('./segmentation/segmentation');
 
     if (!pendingEditorData || !pendingEditorData.croppedDataURL) {
       throw new Error('No editor image available for segmentation');

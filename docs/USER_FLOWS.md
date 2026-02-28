@@ -1,5 +1,7 @@
 # User Flows
 
+> Role: **QA / Product Manager** — Step-by-step user flows with preconditions, expected behavior, and edge cases. Use as acceptance criteria and test case definitions.
+
 Detailed user flows for every feature in Snip. Each flow describes preconditions, steps, expected behavior, and edge cases. Designed to be converted directly into automated and manual test cases.
 
 ---
@@ -19,8 +21,29 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 | 5 | -- | Home window opens with Gallery page showing "No screenshots yet" empty state |
 | 6 | -- | SAM segmentation model begins loading in background (logged: `[Segmentation Worker] Loading SlimSAM model...`) |
 | 7 | -- | File watcher starts monitoring screenshots directory (logged: `[Organizer] Watching: ...`) |
+| 8 | -- | Ollama binary downloaded if first launch (~70MB), server starts (logged: `[Ollama] Starting server...`) |
 
-### 1.2 Single Instance Lock
+### 1.2 Native Glass Layer Initialization
+
+**Preconditions:** macOS 26+ (Tahoe), `electron-liquid-glass` native addon built.
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | App starts | `electron-liquid-glass` module loaded, `isGlassSupported()` and `_addon` checked |
+| 2 | -- | If both pass: native glass path used (no `vibrancy` set on windows) |
+| 3 | -- | If either fails: `vibrancy: 'under-window'` set on home/editor windows |
+| 4 | Home window's `did-finish-load` fires | `liquidGlass.addView()` called with native window handle |
+| 5 | -- | If `addView` returns valid ID (>= 0): native glass layer active behind web content |
+| 6 | -- | Glass layer is always present; the Glass theme's CSS reveals it via transparent backgrounds |
+| 7 | -- | If `addView` fails (returns < 0): `setVibrancy('under-window')` applied as fallback |
+
+**Fallback chain:**
+1. Native Liquid Glass (`NSGlassEffectView` via `electron-liquid-glass`)
+2. Electron vibrancy (`vibrancy: 'under-window'`)
+3. CSS `backdrop-filter: blur()` with translucent backgrounds
+4. Solid opaque backgrounds (when `backdrop-filter` unsupported)
+
+### 1.3 Single Instance Lock
 
 | Step | Action | Expected Result |
 |------|--------|-----------------|
@@ -28,7 +51,7 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 | 2 | Run `npm start` again | Second instance quits immediately |
 | 3 | -- | First instance's home window shows and focuses |
 
-### 1.3 Window-All-Closed Behavior
+### 1.4 Window-All-Closed Behavior
 
 | Step | Action | Expected Result |
 |------|--------|-----------------|
@@ -278,11 +301,11 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 | 6 | -- | macOS notification shown: "Screenshot saved" |
 | 7 | -- | Editor remains open (user can continue editing or close) |
 
-### 4.3 Save Without API Key
+### 4.3 Save Without Ollama Ready
 
 | Step | Action | Expected Result |
 |------|--------|-----------------|
-| 1 | No API key configured | -- |
+| 1 | Ollama server not running or model not downloaded | -- |
 | 2 | Save screenshot via Cmd+S | File saved to screenshots root directory |
 | 3 | -- | Basic index entry created: `category: 'other'`, filename as name, `embedding: null` |
 | 4 | -- | No AI agent called, no rename, no categorization |
@@ -293,7 +316,7 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 
 ### 5.1 Agent Processing (Happy Path)
 
-**Preconditions:** API key configured, file saved by app.
+**Preconditions:** Ollama server running with vision model downloaded, file saved by app.
 
 | Step | Action | Expected Result |
 |------|--------|-----------------|
@@ -301,8 +324,8 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 | 2 | -- | `queueNewFile(filepath)` adds path to `pendingFiles` set |
 | 3 | -- | Chokidar detects `add` event |
 | 4 | -- | `pendingFiles.has(filepath)` returns true, file sent to worker |
-| 5 | -- | Worker reads file as base64, calls Claude Haiku API with image |
-| 6 | -- | Claude returns JSON: `{ category, name, description, tags }` |
+| 5 | -- | Worker reads file as base64, calls local Ollama vision model with image |
+| 6 | -- | Ollama returns JSON: `{ category, name, description, tags }` |
 | 7 | -- | File renamed: `<category>/<sanitized-name>.jpg` |
 | 8 | -- | Embedding generated from `name + description + tags` |
 | 9 | -- | Index entry created with all metadata |
@@ -311,7 +334,7 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 
 | Step | Action | Expected Result |
 |------|--------|-----------------|
-| 1 | Claude suggests name `api-response` | -- |
+| 1 | Ollama suggests name `api-response` | -- |
 | 2 | `code/api-response.jpg` already exists | -- |
 | 3 | -- | File saved as `code/api-response-1.jpg` (counter suffix) |
 
@@ -319,7 +342,7 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 
 | Step | Action | Expected Result |
 |------|--------|-----------------|
-| 1 | Claude returns `newCategory: true` with an unknown category | -- |
+| 1 | Ollama returns `newCategory: true` with an unknown category | -- |
 | 2 | -- | macOS notification: "New category suggested: <name>. Click to add." |
 | 3 | User clicks notification | Category added to config, screenshot moved to new category folder |
 
@@ -331,11 +354,11 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 | 2 | -- | `pendingFiles.has(filepath)` returns false (not app-saved) |
 | 3 | -- | Basic index entry created: `category: 'other'`, no agent called |
 
-### 5.5 Agent Error / API Failure
+### 5.5 Agent Error / Ollama Failure
 
 | Step | Action | Expected Result |
 |------|--------|-----------------|
-| 1 | API key valid but API call fails (network error, rate limit) | -- |
+| 1 | Ollama server running but model call fails (timeout, OOM) | -- |
 | 2 | -- | Error caught in worker.js catch block |
 | 3 | -- | If file exists on disk: basic index entry created |
 | 4 | -- | Error logged: `[Worker] Error processing ...` |
@@ -348,7 +371,6 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 | 1 | Worker thread crashes unexpectedly | -- |
 | 2 | -- | `worker.on('exit')` fires in watcher.js |
 | 3 | -- | New worker spawned after 2-second delay |
-| 4 | -- | Decrypted API key passed to new worker via `workerData` |
 
 ---
 
@@ -356,7 +378,7 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 
 ### 6.1 Semantic Search (With Embeddings)
 
-**Preconditions:** Screenshots indexed with embeddings (API key was configured when they were saved).
+**Preconditions:** Screenshots indexed with embeddings (Ollama was running when they were saved).
 
 | Step | Action | Expected Result |
 |------|--------|-----------------|
@@ -370,7 +392,7 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 
 ### 6.2 Text Fallback Search (No Embeddings)
 
-**Preconditions:** Screenshots indexed without embeddings (no API key when saved).
+**Preconditions:** Screenshots indexed without embeddings (Ollama not running when saved).
 
 | Step | Action | Expected Result |
 |------|--------|-----------------|
@@ -443,34 +465,35 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 
 ## 8. Settings
 
-### 8.1 API Key Management
+### 8.1 AI Assistant Settings
 
 | Step | Action | Expected Result |
 |------|--------|-----------------|
-| 1 | Navigate to Settings page | API key input field shown (masked) |
-| 2 | Enter API key, click Save (floppy icon) | Key encrypted via `safeStorage.encryptString()` |
-| 3 | -- | Stored as base64 in `encryptedApiKey` config field |
-| 4 | -- | Plaintext `anthropicApiKey` field deleted if present (migration) |
-| 5 | -- | Worker thread receives updated key via `update-api-key` message |
-| 6 | -- | Save icon briefly changes to checkmark confirmation |
-| 7 | Click Show/Hide (eye icon) | Key toggled between masked and visible |
+| 1 | Navigate to Settings page | "AI Assistant" section shown |
+| 2 | -- | Status dot: green "Running" if Ollama server is active, red "Starting..." if not |
+| 3 | -- | **Current model card**: shows active model name (minicpm-v) with info (ⓘ) button |
+| 4 | Click info button on model card | Tooltip appears below card showing specs table (model, parameters, size, quantization, description) |
+| 5 | Click outside tooltip | Tooltip dismisses |
 
-### 8.2 API Key Migration (Legacy Plaintext)
+### 8.2 Ollama First Launch
 
 | Step | Action | Expected Result |
 |------|--------|-----------------|
-| 1 | Config has `anthropicApiKey` (plaintext) but no `encryptedApiKey` | -- |
-| 2 | App starts, `initStore()` runs | Plaintext key encrypted and stored as `encryptedApiKey` |
-| 3 | -- | `anthropicApiKey` field deleted from config |
+| 1 | First app launch | Ollama binary and bundled model (minicpm-v) copied to `~/Library/Application Support/snip/ollama/` |
+| 2 | -- | Ollama server starts automatically |
+| 3 | -- | Settings shows status as "Running" once ready |
 
 ### 8.3 Theme Toggle
 
 | Step | Action | Expected Result |
 |------|--------|-----------------|
-| 1 | Click Dark/Light toggle in Settings | Theme changes immediately |
-| 2 | -- | `data-theme` attribute updated on `<html>` |
+| 1 | Click Dark, Light, or Glass button in Settings | Theme changes immediately |
+| 2 | -- | `data-theme` attribute updated on `<html>` (`dark`, `light`, or `glass`) |
 | 3 | -- | Preference saved to config |
 | 4 | -- | All open windows receive `theme-changed` IPC event |
+| 5 | Select Glass theme | Backgrounds become lavender-tinted translucent, native glass/vibrancy visible |
+| 6 | -- | CSS `backdrop-filter` disabled (native layer handles blur) |
+| 7 | Select Dark or Light theme | Standard opaque backgrounds restored, glass layer hidden |
 
 ### 8.4 Category Management
 
