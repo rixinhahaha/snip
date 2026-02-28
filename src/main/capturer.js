@@ -33,9 +33,10 @@ function showPermissionDialog(detail) {
 
 async function captureScreen(createOverlayFn, getOverlayFn) {
   // 1. Capture screenshot FIRST (before overlay appears)
-  const primaryDisplay = screen.getPrimaryDisplay();
-  const { width, height } = primaryDisplay.size;
-  const scaleFactor = primaryDisplay.scaleFactor;
+  // Use whichever display the cursor is currently on
+  const cursorDisplay = screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
+  const { width, height } = cursorDisplay.size;
+  const scaleFactor = cursorDisplay.scaleFactor;
 
   let sources;
   try {
@@ -58,8 +59,10 @@ async function captureScreen(createOverlayFn, getOverlayFn) {
     throw new Error('No screen sources available');
   }
 
-  const primarySource = sources[0];
-  const dataURL = primarySource.thumbnail.toDataURL();
+  // Match source to the cursor's display; fall back to first source
+  const targetId = String(cursorDisplay.id);
+  const matchedSource = sources.find(function (s) { return s.display_id === targetId; }) || sources[0];
+  const dataURL = matchedSource.thumbnail.toDataURL();
 
   // Guard against blank thumbnails (macOS 15+ returns these without permission)
   if (!dataURL || dataURL.length < 100) {
@@ -96,8 +99,9 @@ async function captureScreen(createOverlayFn, getOverlayFn) {
     overlayWindow.focus();
     // Force position to cover full screen including menu bar
     // (macOS may push the window below menu bar on show)
-    overlayWindow.setBounds({ x: 0, y: 0, width, height });
-    overlayWindow.webContents.send('screenshot-captured', { dataURL });
+    const bounds = cursorDisplay.bounds;
+    overlayWindow.setBounds({ x: bounds.x, y: bounds.y, width, height });
+    overlayWindow.webContents.send('screenshot-captured', { dataURL, displayOrigin: { x: bounds.x, y: bounds.y } });
   });
 }
 
