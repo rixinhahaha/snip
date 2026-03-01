@@ -90,8 +90,7 @@ These are non-negotiable rules. Violating them causes crashes or broken UX:
 | AI agent | `src/main/organizer/agent.js` + `worker.js` |
 | Ollama manager | `src/main/ollama-manager.js` |
 | Ollama binary (bundled) | `vendor/ollama/ollama` (dev) / `Resources/ollama/ollama` (packaged) |
-| Ollama models (bundled) | `vendor/ollama/models/` (dev) / `Resources/ollama/models/` (packaged) |
-| Ollama models (runtime) | `~/Library/Application Support/snip/ollama/models/` |
+| Ollama models (runtime) | `~/Library/Application Support/snip/ollama/models/` (pulled on first launch or symlinked from `~/.ollama/models/`) |
 | Config | `~/Library/Application Support/snip/snip-config.json` |
 | Screenshots | `~/Documents/snip/screenshots/` |
 | Index | `~/Documents/snip/screenshots/.index.json` |

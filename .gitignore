@@ -41,3 +41,6 @@ vendor/models/
 
 # Lint cache
 .eslintcache
+
+# Personal
+personal/

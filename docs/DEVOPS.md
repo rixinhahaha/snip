@@ -29,10 +29,11 @@ npm run rebuild
 # Download Ollama binary (run once, ~70 MB)
 npm run download-ollama
 
-# Download all AI models (run once, ~5.1 GB total)
-#   - minicpm-v (~5 GB) — Ollama vision model for AI categorization
+# Download HuggingFace models (run once, ~75 MB total)
 #   - MiniLM (~23 MB) — embedding model for semantic search
 #   - SlimSAM (~50 MB) — segmentation model for object selection
+# Note: minicpm-v (~5 GB) is NOT bundled — it is pulled automatically
+# on first launch via Ollama's client.pull() API
 npm run download-models
 
 # Launch in dev mode (verbose logging)
@@ -59,7 +60,7 @@ The app runs as a **tray-only** process (no Dock icon). Look for the scissors ic
 | `./scripts/build-signed.sh` | Production build: loads `.env` creds, validates cert, builds + signs + notarizes |
 | `node scripts/generate-app-icon.js` | Regenerate `assets/icon.png` and `assets/icon.icns` from SVG template |
 | `npm run download-ollama` | Download Ollama binary to `vendor/ollama/` (~70 MB) |
-| `npm run download-models` | Download all AI models: minicpm-v (~5 GB), MiniLM (~23 MB), SlimSAM (~50 MB) |
+| `npm run download-models` | Download HuggingFace models: MiniLM (~23 MB), SlimSAM (~50 MB). Note: minicpm-v is pulled at runtime, not bundled. |
 | `npm run download-all` | `download-ollama` + `download-models` in one command |
 | `npm run download-all` | Run both download scripts |
 
@@ -114,7 +115,8 @@ npm run build
 3. `afterPack` hook in `electron-builder.yml`:
    - Removes unused native modules (`canvas`, `sharp`, `@img/*`)
    - Strips non-macOS ONNX Runtime binaries
-   - Pre-signs remaining `.node` and `.dylib` files
+   - Removes wrong-arch `electron-liquid-glass` prebuilds
+   - Pre-signs remaining `.node`, `.dylib`, `.so`, `.metallib` files (including bundled Ollama binary)
 4. No `CSC_LINK` detected -> `sign:adhoc` runs `codesign --force --deep --sign -`
 5. Output: `dist/mac-arm64/Snip.app` + `.dmg`
 
@@ -145,7 +147,7 @@ base64 -i certificate.p12 | tr -d '\n' | pbcopy
 1. Loads `.env` credentials, validates cert type
 2. `npm run prebuild` compiles native addon
 3. `electron-builder --mac` assembles + signs with Developer ID cert
-4. `afterPack` hook cleans + pre-signs binaries
+4. `afterPack` hook cleans unused modules, removes wrong-arch prebuilds, pre-signs all native binaries + Ollama binary
 5. App submitted to Apple notary service
 6. Notarization ticket stapled to DMG on success
 7. Output: signed + notarized `dist/*.dmg`
@@ -166,8 +168,7 @@ base64 -i certificate.p12 | tr -d '\n' | pbcopy
 | Index | `~/Documents/snip/screenshots/.index.json` | Store module |
 | Config | `~/Library/Application Support/snip/snip-config.json` | Electron defaults |
 | Ollama binary | `vendor/ollama/ollama` (dev) / `Resources/ollama/ollama` (packaged) | Bundled — `npm run download-ollama` |
-| Ollama models (bundled) | `vendor/ollama/models/` (dev) / `Resources/ollama/models/` (packaged) | Bundled — `minicpm-v` (~5 GB) via `npm run download-models --ollama` |
-| Ollama models (runtime) | `~/Library/Application Support/snip/ollama/models/` | Copied from bundle on first launch, writable |
+| Ollama models (runtime) | `~/Library/Application Support/snip/ollama/models/` | Pulled on first launch via `client.pull()`, or symlinked from `~/.ollama/models/` |
 | HF models (MiniLM + SlimSAM) | `vendor/models/` (dev) / `Resources/models/` (packaged) | Bundled — `npm run download-models --hf` (~75 MB) |
 | Animation presets | Inlined in `src/main/animation/animation.js` | 6 static text-prompt presets (fallback when Ollama AI presets unavailable) |
 

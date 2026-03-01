@@ -10,7 +10,7 @@
     "dev": "ELECTRON_ENABLE_LOGGING=1 electron .",
     "postinstall": "electron-builder install-app-deps && npm run download-all",
     "prebuild": "node-gyp rebuild",
-    "build": "node-gyp rebuild && electron-builder --mac && npm run sign:adhoc",
+    "build": "node-gyp rebuild && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --mac && npm run sign:adhoc",
     "sign:adhoc": "for app in dist/mac-*/Snip.app; do if codesign -v \"$app\" 2>/dev/null; then echo \"Already signed: $app\"; else codesign --force --deep --sign - \"$app\" 2>/dev/null && echo \"Ad-hoc signed: $app\"; fi; done",
     "rebuild": "electron-rebuild",
     "download-ollama": "./scripts/download-ollama.sh",

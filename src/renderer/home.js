@@ -316,6 +316,13 @@
       }
     });
 
+    // Listen for model download progress push events
+    if (window.snip.onOllamaPullProgress) {
+      window.snip.onOllamaPullProgress(function(progress) {
+        updateDownloadProgress(progress);
+      });
+    }
+
     // Initial status refresh
     refreshOllamaStatus();
   }
@@ -329,9 +336,19 @@
 
     try {
       var status = await window.snip.getOllamaStatus();
-      if (status.running) {
+      if (status.running && status.modelReady) {
         dot.className = 'status-dot running';
         text.textContent = 'Running';
+        hideDownloadProgress();
+      } else if (status.pulling) {
+        dot.className = 'status-dot stopped';
+        text.textContent = 'Downloading model...';
+        updateDownloadProgress(status.pullProgress);
+        setTimeout(refreshOllamaStatus, 3000);
+      } else if (status.running && !status.modelReady) {
+        dot.className = 'status-dot stopped';
+        text.textContent = 'Preparing model...';
+        setTimeout(refreshOllamaStatus, 3000);
       } else {
         dot.className = 'status-dot stopped';
         text.textContent = status.error ? 'Starting... (' + status.error + ')' : 'Starting...';
@@ -344,6 +361,49 @@
     }
 
     updateCurrentModelCard(modelName);
+  }
+
+  function updateDownloadProgress(progress) {
+    var section = document.getElementById('model-download-section');
+    var bar = document.getElementById('model-download-bar');
+    var detail = document.getElementById('model-download-detail');
+
+    if (!section) return;
+
+    if (progress.status === 'ready') {
+      hideDownloadProgress();
+      var dot = document.getElementById('ollama-status-dot');
+      var text = document.getElementById('ollama-status-text');
+      if (dot) dot.className = 'status-dot running';
+      if (text) text.textContent = 'Running';
+      return;
+    }
+
+    if (progress.status === 'error') {
+      section.classList.remove('hidden');
+      bar.style.width = '0%';
+      detail.textContent = 'Download failed: ' + (progress.error || 'unknown error');
+      return;
+    }
+
+    if (progress.status === 'idle') return;
+
+    // Show download progress
+    section.classList.remove('hidden');
+    bar.style.width = progress.percent + '%';
+
+    if (progress.total > 0) {
+      var downloadedMB = (progress.completed / (1024 * 1024)).toFixed(0);
+      var totalMB = (progress.total / (1024 * 1024)).toFixed(0);
+      detail.textContent = progress.status + ' — ' + downloadedMB + ' / ' + totalMB + ' MB (' + progress.percent + '%)';
+    } else {
+      detail.textContent = progress.status || 'Preparing...';
+    }
+  }
+
+  function hideDownloadProgress() {
+    var section = document.getElementById('model-download-section');
+    if (section) section.classList.add('hidden');
   }
 
   function updateCurrentModelCard(modelName) {

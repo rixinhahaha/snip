@@ -19,6 +19,12 @@ contextBridge.exposeInMainWorld('snip', {
   getOllamaConfig: () => ipcRenderer.invoke('get-ollama-config'),
   setOllamaConfig: (config) => ipcRenderer.invoke('set-ollama-config', config),
   getOllamaStatus: () => ipcRenderer.invoke('get-ollama-status'),
+  getOllamaPullProgress: () => ipcRenderer.invoke('get-ollama-pull-progress'),
+  onOllamaPullProgress: (callback) => {
+    var handler = (event, progress) => callback(progress);
+    ipcRenderer.on('ollama-pull-progress', handler);
+    return () => ipcRenderer.removeListener('ollama-pull-progress', handler);
+  },
   getCategories: () => ipcRenderer.invoke('get-categories'),
   addCategory: (category) => ipcRenderer.invoke('add-category', category),
   removeCategory: (category) => ipcRenderer.invoke('remove-category', category),

@@ -53,12 +53,17 @@ asarUnpack:
   - "node_modules/upng-js/**"
   - "node_modules/pako/**"
   - "node_modules/ffmpeg-static/**"
+  - "node_modules/electron-liquid-glass/**"
 
 extraResources:
   - from: "build/Release/window_utils.node"
     to: "native/window_utils.node"
   - from: "vendor/ollama"
     to: "ollama"
+    filter:
+      - "**/*"
+      - "!models"
+      - "!models/**"
   - from: "vendor/models"
     to: "models"
 
