@@ -3,7 +3,7 @@ name: Deploy Marketing Site
 on:
   push:
     branches: [main]
-    paths: [site/**]
+    paths: ['site/**', '.github/workflows/deploy-site.yml']
   workflow_dispatch:
 
 permissions:
