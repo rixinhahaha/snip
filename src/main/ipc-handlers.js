@@ -152,6 +152,11 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn) {
   // Search: get thumbnail
   ipcMain.handle('get-thumbnail', async (event, filepath) => {
     try {
+      // GIFs: return full file as data URL (nativeImage strips animation)
+      if (filepath.toLowerCase().endsWith('.gif')) {
+        const buf = fs.readFileSync(filepath);
+        return 'data:image/gif;base64,' + buf.toString('base64');
+      }
       const image = nativeImage.createFromPath(filepath);
       const resized = image.resize({ width: 200 });
       return resized.toDataURL();
@@ -323,6 +328,7 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn) {
       const { generatePresets, listPresets } = require('./animation/animation');
       var aiPresets = await generatePresets(cutoutBase64);
       if (aiPresets && aiPresets.length > 0) {
+        new Notification({ title: 'Snip', body: 'AI presets ready — ' + aiPresets.length + ' animations suggested' }).show();
         return { source: 'ai', presets: aiPresets };
       }
       // AI returned null → fallback
@@ -348,6 +354,8 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn) {
         }
       }
     );
+
+    new Notification({ title: 'Snip', body: 'GIF ready — ' + result.frameCount + ' frames generated' }).show();
 
     // Convert Buffers to base64 data URLs for reliable IPC to renderer.
     var gifB64 = Buffer.from(result.gifBuffer).toString('base64');
