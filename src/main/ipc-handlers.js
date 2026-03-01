@@ -107,6 +107,10 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn) {
     return ollamaManager.getStatus();
   });
 
+  ipcMain.handle('get-ollama-pull-progress', async () => {
+    return ollamaManager.getPullProgress();
+  });
+
   // Settings: Animation (fal.ai)
   ipcMain.handle('get-animation-config', async () => {
     return { falApiKey: getFalApiKey() };

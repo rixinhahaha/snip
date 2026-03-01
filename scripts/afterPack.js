@@ -102,6 +102,23 @@ module.exports = async function afterPack(context) {
   }
 
   // ---------------------------------------------------------------
+  // 2b. Remove wrong-arch electron-liquid-glass prebuilds
+  // ---------------------------------------------------------------
+  var elgPrebuildsDir = path.join(nmDir, 'electron-liquid-glass', 'prebuilds');
+  if (fs.existsSync(elgPrebuildsDir)) {
+    var elgPlatforms = fs.readdirSync(elgPrebuildsDir);
+    for (var ep = 0; ep < elgPlatforms.length; ep++) {
+      var elgPlat = elgPlatforms[ep];
+      if (elgPlat !== 'darwin-' + targetArch) {
+        removeDir(
+          path.join(elgPrebuildsDir, elgPlat),
+          'electron-liquid-glass ' + elgPlat + ' (building for ' + targetArch + ')'
+        );
+      }
+    }
+  }
+
+  // ---------------------------------------------------------------
   // 4. Pre-sign remaining native binaries
   //    electron-builder will sign the whole app bundle after this
   //    hook, but third-party .dylib/.node files sometimes need to

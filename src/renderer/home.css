@@ -727,6 +727,46 @@ input:focus { border-color: var(--accent); }
   word-break: break-all;
 }
 
+/* Model download progress */
+.model-download-section {
+  margin-bottom: 12px;
+  padding: 12px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-card);
+  border-radius: 10px;
+}
+
+.model-download-section.hidden { display: none; }
+
+.model-download-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.model-download-bar-track {
+  width: 100%;
+  height: 6px;
+  background: var(--bg-tertiary);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+
+.model-download-bar-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--accent);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.model-download-detail {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
 /* Current model card */
 .current-model-card {
   background: var(--bg-elevated);

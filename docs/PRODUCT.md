@@ -59,7 +59,7 @@ Power users on macOS who take 5-50 screenshots per day: developers, designers, P
 - File renamed and moved to category subfolder
 - 384-dim embedding generated for semantic search (HuggingFace Transformers.js, also local)
 - New category suggestions via macOS notification
-- Default model: `minicpm-v` (8B, Metal-accelerated on Apple Silicon)
+- Default model: `minicpm-v` (8B, Metal-accelerated on Apple Silicon) — pulled on first launch, not bundled. If user already has minicpm-v in system Ollama, blobs are symlinked (no re-download).
 
 ### Animation (2GIF)
 - Requires internet connection and a fal.ai API key (configured in Settings > Animation)
@@ -110,7 +110,7 @@ Power users on macOS who take 5-50 screenshots per day: developers, designers, P
 ## Product Principles
 
 1. **Clipboard-first**: Most users want the screenshot on their clipboard immediately. Saving to disk is secondary.
-2. **Zero-config by default**: Ollama binary and model auto-download on first launch. No onboarding wizard.
+2. **Zero-config by default**: Ollama binary bundled, model auto-pulled on first launch (or symlinked from system Ollama). No onboarding wizard.
 3. **Non-intrusive**: Tray-only, no Dock icon, no Space switching, hides during capture.
 4. **AI is invisible labor**: Users don't "invoke AI" — it just happens in the background after save.
 5. **Purple, always purple**: The brand color is violet/purple. Never blue. See [`DESIGN.md`](DESIGN.md).

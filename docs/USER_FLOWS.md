@@ -21,7 +21,9 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 | 5 | -- | Home window opens with Gallery page showing "No screenshots yet" empty state |
 | 6 | -- | SAM segmentation model begins loading in background (logged: `[Segmentation Worker] Loading SlimSAM model...`) |
 | 7 | -- | File watcher starts monitoring screenshots directory (logged: `[Organizer] Watching: ...`) |
-| 8 | -- | Ollama binary downloaded if first launch (~70MB), server starts (logged: `[Ollama] Starting server...`) |
+| 8 | -- | Ollama server starts on dedicated port 11435 (logged: `[Ollama] Starting server...`) |
+| 9 | -- | If minicpm-v model not found locally: pull begins from Ollama registry with progress bar in Settings |
+| 9a | -- | If user has minicpm-v in system Ollama (`~/.ollama/models/`): model blobs symlinked (instant, no download) |
 
 ### 1.2 Native Glass Layer Initialization
 
@@ -376,7 +378,7 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 
 | Step | Action | Expected Result |
 |------|--------|-----------------|
-| 1 | Ollama server not running or model not downloaded | -- |
+| 1 | Ollama server not running or model not yet downloaded | -- |
 | 2 | Save screenshot via Cmd+S | File saved to screenshots root directory |
 | 3 | -- | Basic index entry created: `category: 'other'`, filename as name, `embedding: null` |
 | 4 | -- | No AI agent called, no rename, no categorization |
@@ -546,13 +548,28 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 | 4 | Click info button on model card | Tooltip appears below card showing specs table (model, parameters, size, quantization, description) |
 | 5 | Click outside tooltip | Tooltip dismisses |
 
-### 8.2 Ollama First Launch
+### 8.2 Ollama First Launch & Model Download
 
 | Step | Action | Expected Result |
 |------|--------|-----------------|
-| 1 | First app launch | Ollama binary and bundled model (minicpm-v) copied to `~/Library/Application Support/snip/ollama/` |
-| 2 | -- | Ollama server starts automatically |
-| 3 | -- | Settings shows status as "Running" once ready |
+| 1 | First app launch | Ollama server spawns on dedicated port 11435 (auto-finds next available port if taken) |
+| 2 | -- | `ensureModel()` checks if minicpm-v exists in Snip's model store |
+| 3a | Model found in Snip's store | Status shows "Running" immediately |
+| 3b | Model found in system Ollama (`~/.ollama/models/`) | Blobs symlinked to Snip's store (instant), status shows "Running" |
+| 3c | Model not found anywhere | Download begins from Ollama registry |
+| 4 | -- | Settings shows "Downloading AI model..." with progress bar |
+| 5 | -- | Progress bar shows percentage + downloaded MB / total MB |
+| 6 | -- | Progress pushed in real-time via `ollama-pull-progress` IPC events |
+| 7 | Download completes | Progress bar disappears, status shows "Running" |
+
+**Edge cases:**
+
+| Condition | Expected Behavior |
+|-----------|-------------------|
+| No internet on first launch | Pull fails gracefully, status shows error. App works for capture/annotate, no AI organization. |
+| Pull interrupted (app quit mid-download) | On next launch, `ensureModel()` re-runs and resumes the download |
+| Port 11435 taken (user's own Ollama or other service) | Auto-finds next available port (11436–11445). If all taken, `startupError` set. |
+| User has system Ollama on port 11434 | No conflict — Snip uses its own port (11435+). Both run independently. |
 
 ### 8.3 Theme Toggle
 
