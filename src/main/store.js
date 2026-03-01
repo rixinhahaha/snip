@@ -284,7 +284,6 @@ module.exports = {
   getAllCategories,
   addCustomCategory,
   removeCustomCategory,
-  getTagDescription,
   getAllTagsWithDescriptions,
   setTagDescription,
   addCustomCategoryWithDescription,

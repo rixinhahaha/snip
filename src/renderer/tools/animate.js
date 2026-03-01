@@ -7,6 +7,7 @@ var AnimateTool = (function() {
   var cutoutData = null;
   var animationResult = null;
   var presets = [];
+  var presetsSource = null; // 'ai' or 'static'
   var progressCleanup = null;
 
   function setCutoutData(data) {
@@ -161,8 +162,6 @@ var AnimateTool = (function() {
       sparkInterval = null;
     }
   }
-
-  var presetsSource = null; // 'ai' or 'static'
 
   /**
    * Load animation presets for the current cutout.

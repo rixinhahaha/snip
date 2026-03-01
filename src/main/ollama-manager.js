@@ -205,13 +205,6 @@ async function stopOllama() {
 }
 
 /**
- * Get the Ollama JS client (or null if not ready).
- */
-function getClient() {
-  return client;
-}
-
-/**
  * Check if the Ollama server is running and reachable.
  */
 async function isReady() {
@@ -239,36 +232,6 @@ async function listModels() {
 }
 
 /**
- * Pull a model with optional progress callback.
- * @param {string} modelName  e.g. 'minicpm-v'
- * @param {function} onProgress  called with { status, completed, total }
- */
-async function pullModel(modelName, onProgress) {
-  if (!client) throw new Error('Ollama server not running');
-
-  var stream = await client.pull({ model: modelName, stream: true });
-  for await (var part of stream) {
-    if (onProgress) {
-      onProgress({
-        status: part.status,
-        completed: part.completed || 0,
-        total: part.total || 0
-      });
-    }
-  }
-  console.log('[Ollama] Model pulled: %s', modelName);
-}
-
-/**
- * Check if the configured model (or a specific model) is available locally.
- */
-async function hasModel(modelName) {
-  var models = await listModels();
-  var target = modelName || getOllamaModel();
-  return models.some(function (m) { return m.name.split(':')[0] === target || m.name === target; });
-}
-
-/**
  * Get current Ollama status for the settings UI.
  */
 async function getStatus() {
@@ -291,10 +254,6 @@ async function getStatus() {
 module.exports = {
   startOllama,
   stopOllama,
-  getClient,
   isReady,
-  listModels,
-  pullModel,
-  hasModel,
   getStatus
 };

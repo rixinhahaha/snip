@@ -36,7 +36,7 @@ src/
     shortcuts.js             # Global keyboard shortcuts (Cmd+Shift+2, Cmd+Shift+F)
     store.js                 # Config persistence, index I/O, fal.ai API key storage
     constants.js             # Shared constants (BASE_WEB_PREFERENCES)
-    ollama-manager.js        # Ollama binary download, server start/stop, model pulls
+    ollama-manager.js        # Ollama binary lifecycle (start/stop/ready/status)
     model-paths.js           # Bundled model path resolution (dev vs packaged)
     organizer/               # AI screenshot organization pipeline
       agent.js               # Ollama vision prompt + response parsing
