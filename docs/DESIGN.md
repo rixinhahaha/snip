@@ -170,6 +170,23 @@ The settings page "AI Assistant" section uses:
 - Transparent background with subtle border
 - Focus: accent-colored border
 
+### 2GIF Button & Panels
+- **2GIF button**: Fixed bottom-center, accent background, white bold text, accent glow shadow. Scale(1.05) on hover.
+- **Preset panel**: Fixed bottom-center, 340px wide, glass background with backdrop blur, 14px radius. Contains a 2-column grid of preset buttons + custom prompt section below.
+- **Preset buttons**: `--bg-input` background, `--border-input` border, 10px radius. Hover: accent-bg fill with accent border and glow. Each button has an emoji icon + bold label row on top, small description text below.
+- **Custom prompt section**: Divider line with "or describe your own" text centered between two lines, then a flex row containing a text input (8px radius, `--bg-input` fill, accent border on focus) + accent-filled go button (34×34px, 8px radius, arrow icon).
+- **Result panel**: Same glass panel as preset picker. Contains GIF preview (max 200px, 8px radius) + action buttons row.
+- **Action buttons**: accent-filled for Save GIF/APNG, input-filled for Copy GIF. Standard `--text-secondary` cancel link for Done.
+
+### Animation Settings (home.css)
+The Settings page "Animation" section uses `fal-api-*` CSS classes:
+- **`.fal-api-key-row`**: Flex column layout, 8px gap. Contains the label, input group, status, and hint.
+- **`.fal-api-label`**: 12px font, 500 weight, `--text-secondary` color.
+- **`.fal-api-input-group`**: Flex row with 8px gap for the input field and save button.
+- **`.fal-api-input`**: Flex-grow text input, `--bg-input` background, `--border-input` border, 8px radius. Focus state: `--accent` border.
+- **`.fal-api-status`**: 12px status text. `.saved` variant uses `--success` color. `.error` variant uses `--error` color.
+- **`.fal-api-hint`**: 12px hint text in `--text-dim`, contains "Get API Key" link.
+
 ---
 
 ## File Reference

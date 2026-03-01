@@ -237,7 +237,78 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 - Image resized to max 1024px before sending to SAM
 - BGRA to RGBA conversion handled for Electron's native image format
 
-### 3.7 Select Tool
+### 3.7 2GIF Animation (After Segment)
+
+**Preconditions:** Segment tool used, cutout accepted (Apply Cutout). Internet connection available. fal.ai API key must be configured in Settings > Animation.
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Accept a segment cutout (Enter / Apply Cutout) | Cutout applied to canvas background |
+| 2 | -- | Purple "2GIF" button appears at bottom center |
+| 3 | Click "2GIF" button | Preset picker panel appears with "✨ Generating presets" loading state while Ollama analyzes cutout |
+| 3a | -- | After ~3-5 seconds: loading replaced with 3 AI-tailored animation presets + "✨ AI" badge on title |
+| 3b | -- | If Ollama unavailable: 6 static presets shown instead (no badge), seamless fallback |
+| 4 | -- | Presets shown as a single-column list (label + description per row) |
+| 4a | -- | Below presets: divider with "or describe your own" text, text input + go button |
+| 5a | Click a preset | Panel closes, progress overlay appears with spark animations |
+| 5b | Type custom prompt + click go / press Enter | Panel closes, progress overlay appears (uses `_custom` preset name) |
+| 6 | -- | Progress: "Uploading image..." (5%) |
+| 7 | -- | Progress: "Starting generation..." (10%) |
+| 8 | -- | Progress: "In queue (position N)..." (10-15%) |
+| 9 | -- | Progress: "Generating..." (15-90%, polled every 1s from fal.ai queue API) |
+| 10 | -- | Progress: "Downloading video..." (92%) |
+| 11 | -- | Progress: "Encoding GIF..." / "Encoding frame X/N..." (95-100%) |
+| 12 | Generation complete | Result panel appears with animated GIF preview |
+| 13 | -- | Buttons: "Save GIF", "Save APNG", "Redo", "Discard" |
+| 14 | -- | Keyboard: Enter or Cmd+S saves GIF, R redoes, Esc discards |
+| 15 | Click "Save GIF" (or Enter / Cmd+S) | GIF saved to `~/Documents/snip/screenshots/animations/<timestamp>.gif` |
+| 16 | Click "Save APNG" | APNG saved as `~/Documents/snip/screenshots/animations/<timestamp>.png` |
+| 17 | Click "Redo" (or R) | Result panel closes, preset picker reopens for another generation |
+| 18 | Click "Discard" (or Esc) | Result panel closes, animation discarded |
+
+**Pipeline detail:**
+1. Cutout PNG composited onto magenta (#FF00FF) background — prevents fal.ai from hallucinating scenery (magenta chosen over green so green subjects aren't keyed out)
+2. Composited PNG uploaded to fal.ai storage (pre-signed URL)
+3. Job submitted to `fal-ai/wan/v2.2-a14b/image-to-video` queue API with text prompt (from preset or custom user input)
+4. Queue polled every 1 second until COMPLETED or FAILED (2-minute timeout)
+5. Resulting MP4 video downloaded (capped at 4 seconds max)
+6. `ffmpeg-static` extracts raw RGBA frames in `gif-encoder-worker.js` child process
+7. Per-frame chroma-key removes magenta pixels → transparent (tracks subject movement dynamically)
+8. Frames encoded as GIF + APNG
+
+**AI-generated presets:**
+- When user clicks 2GIF, cutout image sent to Ollama (minicpm-v) for analysis
+- Ollama returns 3 animation suggestions tailored to the subject (e.g., "wag tail" for a dog)
+- AI presets use `_custom` preset name internally, passing the AI prompt via `options.customPrompt`
+- "✨ AI" badge shown on panel title when AI presets are active
+- Falls back to 6 static presets (inlined in `animation.js`) if Ollama is not running or fails
+- "✨ Generating presets" loading text shown while waiting for Ollama (~3-5 seconds)
+- **Preset caching**: presets are cached within the same cutout session. Clicking "Redo" reuses cached presets instantly without re-calling Ollama. Cache clears when a new cutout is created.
+
+**Custom prompt:**
+- User types a free-form animation description (e.g., "gently swaying in the wind")
+- Input limited to 200 characters, submitted with Enter key or arrow button
+- Uses preset name `_custom` with `options.customPrompt` containing the text
+- `num_frames` capped at `fps × 4` (max 65) to enforce 4-second limit
+- Empty prompts show toast: "Enter a prompt describing the animation"
+
+**GIF vs APNG:**
+- GIF: 256 colors, 1-bit transparency (may have jagged edges on cutout boundary)
+- APNG: full 24-bit color, 8-bit alpha (smooth transparent edges, larger file)
+
+**Edge cases:**
+- 2GIF button only appears after accepting a segment cutout, not during any other tool use
+- 2GIF button only appears when fal.ai API key is configured (checked via `checkAnimateSupport()`)
+- Cancel in preset picker returns to showing the 2GIF button
+- `checkAnimateSupport()` returns `{ supported: true }` only if a fal.ai API key is stored in config
+- Animation times out after 2 minutes of polling with an error message
+- Transient API errors during polling are retried automatically
+- All animations (preset or custom) capped at 4 seconds maximum
+- Result panel: Enter or Cmd+S saves GIF, R redoes, Esc discards
+- Animations saved to `animations/` subdirectory, not processed by the AI organizer (watcher has `depth: 0`, skips subdirectories; also only watches `.jpg`/`.jpeg`/`.png` extensions)
+
+
+### 3.8 Select Tool
 
 | Step | Action | Expected Result |
 |------|--------|-----------------|
@@ -247,7 +318,7 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 | 4 | Drag handles | Object resizes |
 | 5 | Press Delete/Backspace | Selected object removed |
 
-### 3.8 Color Picker
+### 3.9 Color Picker
 
 | Step | Action | Expected Result |
 |------|--------|-----------------|
@@ -255,7 +326,7 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 | 2 | Select a color | Active color updates |
 | 3 | Draw new annotation | Uses newly selected color |
 
-### 3.9 Undo / Redo
+### 3.10 Undo / Redo
 
 | Step | Action | Expected Result |
 |------|--------|-----------------|
@@ -264,7 +335,7 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 | 3 | Press Cmd+Shift+Z | Object restored (redo) |
 | 4 | Draw after undo | Redo stack cleared |
 
-### 3.10 Toolbar Minimum Width
+### 3.11 Toolbar Minimum Width
 
 **Preconditions:** Capture a very small region (e.g. 50x50px).
 
@@ -499,7 +570,7 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 
 | Step | Action | Expected Result |
 |------|--------|-----------------|
-| 1 | View tag list in Settings | All categories shown with descriptions |
+| 1 | View tag list in Settings | All categories shown with descriptions (defaults: code, chat, web, design, documents, terminal, personal, fun, other) |
 | 2 | Type a new category name, click Add | Category added to custom list |
 | 3 | -- | Tag row appears with editable description textarea |
 | 4 | Edit a tag description (textarea) | Auto-resizes as text grows |

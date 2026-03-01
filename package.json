@@ -23,8 +23,11 @@
     "chokidar": "^4.0.0",
     "electron-liquid-glass": "^1.1.1",
     "fabric": "^7.0.0",
+    "ffmpeg-static": "^5.3.0",
+    "gifenc": "^1.0.3",
     "node-addon-api": "^8.5.0",
-    "ollama": "^0.6.3"
+    "ollama": "^0.6.3",
+    "upng-js": "^2.1.0"
   },
   "devDependencies": {
     "@electron/rebuild": "^3.7.2",

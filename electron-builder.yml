@@ -44,10 +44,14 @@ files:
 
 asarUnpack:
   - "src/main/segmentation/segmentation-worker.js"
+  - "src/main/animation/gif-encoder-worker.js"
   - "node_modules/@huggingface/transformers/**"
   - "node_modules/onnxruntime-node/**"
   - "node_modules/onnxruntime-common/**"
   - "node_modules/onnxruntime-web/**"
+  - "node_modules/gifenc/**"
+  - "node_modules/upng-js/**"
+  - "node_modules/ffmpeg-static/**"
 
 extraResources:
   - from: "build/Release/window_utils.node"

@@ -241,6 +241,30 @@ select:hover {
   opacity: 1;
 }
 
+/* Tooltip for animate button (bottom → top, since button is at the bottom) */
+.animate-btn[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 10px;
+  background: var(--tooltip-bg);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 400;
+  border-radius: 4px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 2001;
+}
+
+.animate-btn:hover[data-tooltip]::after {
+  opacity: 1;
+}
+
 /* Tag color swatches */
 .tag-color-swatches {
   display: flex;
@@ -272,12 +296,12 @@ select:hover {
   display: none !important;
 }
 
-/* Toast notification */
+/* Toast notification — top center, below toolbar */
 .toast {
   position: fixed;
-  bottom: 24px;
+  top: 60px;
   left: 50%;
-  transform: translateX(-50%) translateY(0);
+  transform: translateX(-50%);
   z-index: 2000;
   display: flex;
   align-items: center;
@@ -301,7 +325,7 @@ select:hover {
 .toast.hidden {
   display: flex !important;
   opacity: 0;
-  transform: translateX(-50%) translateY(10px);
+  transform: translateX(-50%) translateY(-6px);
   pointer-events: none;
 }
 
@@ -334,10 +358,10 @@ select:hover {
   animation: toast-spin 1s linear infinite;
 }
 
-/* Segment accept/reject action bar */
+/* Segment accept/reject action bar — top center, below toolbar */
 .segment-actions {
   position: fixed;
-  bottom: 24px;
+  top: 60px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 2000;
@@ -468,4 +492,530 @@ select:hover {
 
 .tutorial-dismiss-btn:hover {
   background: var(--accent-hover);
+}
+
+/* 2GIF animate button */
+/* ── 2GIF Sparkle Button ── */
+.animate-btn {
+  position: fixed;
+  bottom: 36px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2000;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: var(--accent);
+  color: white;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.15s, box-shadow 0.15s;
+  box-shadow: var(--accent-glow), var(--shadow-toast);
+  overflow: visible;
+}
+
+.animate-btn:hover {
+  background: var(--accent-hover);
+  transform: translateX(-50%) scale(1.1);
+}
+
+.animate-btn.hidden {
+  display: none !important;
+}
+
+/* ── Sparkles around animate button ── */
+.animate-btn-sparks {
+  position: absolute;
+  inset: -14px;
+  pointer-events: none;
+}
+
+/* 4-point star sparkle via clip-path */
+.animate-btn-sparkle {
+  position: absolute;
+  background: #fff;
+  clip-path: polygon(
+    50% 0%, 60% 35%, 100% 50%, 60% 65%,
+    50% 100%, 40% 65%, 0% 50%, 40% 35%
+  );
+  animation: sparkle-twinkle 1.6s ease-in-out infinite;
+}
+
+.animate-btn-sparkle:nth-child(1) {
+  width: 10px; height: 10px;
+  top: -6px; left: 50%;
+  animation-delay: 0s;
+}
+
+.animate-btn-sparkle:nth-child(2) {
+  width: 7px; height: 7px;
+  top: 4px; right: -8px;
+  animation-delay: 0.4s;
+}
+
+.animate-btn-sparkle:nth-child(3) {
+  width: 8px; height: 8px;
+  bottom: -4px; right: 2px;
+  animation-delay: 0.8s;
+}
+
+.animate-btn-sparkle:nth-child(4) {
+  width: 6px; height: 6px;
+  bottom: 2px; left: -6px;
+  animation-delay: 1.2s;
+}
+
+.animate-btn-sparkle:nth-child(5) {
+  width: 9px; height: 9px;
+  top: 2px; left: -4px;
+  animation-delay: 0.2s;
+}
+
+.animate-btn-sparkle.gold {
+  background: #fbbf24;
+}
+
+.animate-btn-sparkle.accent {
+  background: var(--accent);
+}
+
+@keyframes sparkle-twinkle {
+  0%, 100% { opacity: 0; transform: scale(0) rotate(0deg); }
+  15% { opacity: 1; transform: scale(1) rotate(15deg); }
+  30% { opacity: 1; transform: scale(0.8) rotate(30deg); }
+  45% { opacity: 1; transform: scale(1.1) rotate(45deg); }
+  65% { opacity: 0.6; transform: scale(0.6) rotate(60deg); }
+  80% { opacity: 0; transform: scale(0) rotate(75deg); }
+}
+
+/* ── Preset Picker Panel ── */
+.animate-panel {
+  position: fixed;
+  bottom: 36px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2000;
+  padding: 12px 14px 10px;
+  border-radius: 14px;
+  background: var(--bg-toast);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-specular);
+  box-shadow: var(--shadow-modal);
+  width: 300px;
+  max-width: calc(100vw - 32px);
+}
+
+.animate-panel.hidden {
+  display: none !important;
+}
+
+.animate-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.animate-panel-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.animate-close-btn {
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.animate-close-btn:hover {
+  background: var(--bg-input);
+  color: var(--text-primary);
+}
+
+.animate-preset-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.animate-preset-btn {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: left;
+}
+
+.animate-preset-btn:hover {
+  background: var(--accent-bg);
+  border-color: var(--accent);
+}
+
+.animate-preset-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.animate-preset-desc {
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Preset Loading State ── */
+.animate-preset-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 18px 0;
+  color: var(--text-secondary);
+}
+
+.animate-loading-sparkle {
+  font-size: 14px;
+  animation: sparkle-pulse 1.5s ease-in-out infinite;
+}
+
+.animate-loading-text {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.animate-loading-dots::after {
+  content: '';
+  animation: loading-dots 1.5s steps(4, end) infinite;
+}
+
+@keyframes sparkle-pulse {
+  0%, 100% { opacity: 0.5; transform: scale(0.9); }
+  50% { opacity: 1; transform: scale(1.1); }
+}
+
+@keyframes loading-dots {
+  0% { content: ''; }
+  25% { content: '.'; }
+  50% { content: '..'; }
+  75% { content: '...'; }
+}
+
+/* ── AI Badge ── */
+.ai-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 5px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  border-radius: 4px;
+  background: var(--accent-bg);
+  color: var(--accent);
+  vertical-align: middle;
+}
+
+/* ── Custom Prompt Section ── */
+.animate-custom-divider {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0 8px;
+}
+
+.animate-custom-divider-line {
+  flex: 1;
+  height: 1px;
+  background: var(--border-input);
+}
+
+.animate-custom-divider-text {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.animate-custom-prompt-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.animate-custom-input {
+  flex: 1;
+  padding: 8px 10px;
+  border: 1px solid var(--border-input);
+  border-radius: 8px;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 12px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.animate-custom-input::placeholder {
+  color: var(--text-secondary);
+  opacity: 0.6;
+}
+
+.animate-custom-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-bg);
+}
+
+.animate-custom-go-btn {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 8px;
+  background: var(--accent);
+  color: white;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.15s;
+}
+
+.animate-custom-go-btn:hover {
+  background: var(--accent-hover);
+  transform: scale(1.05);
+}
+
+.animate-custom-go-btn:active {
+  transform: scale(0.97);
+}
+
+/* ── Result Preview Window ── */
+.animate-result-window {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2001;
+  border-radius: 16px;
+  background: var(--bg-toast);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-specular);
+  box-shadow: var(--shadow-modal);
+  overflow: hidden;
+  max-width: 90vw;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.animate-result-window.hidden {
+  display: none !important;
+}
+
+.animate-result-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px 8px;
+}
+
+.animate-result-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.animate-preview-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0 16px;
+  min-width: 200px;
+  min-height: 160px;
+}
+
+.animate-preview {
+  max-width: 320px;
+  max-height: 320px;
+  border-radius: 10px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  object-fit: contain;
+}
+
+/* ── Icon Action Bar ── */
+.animate-result-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 10px 14px 12px;
+}
+
+.animate-bar-separator {
+  width: 1px;
+  height: 20px;
+  background: var(--border-subtle);
+  margin: 0 6px;
+}
+
+.animate-icon-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.animate-icon-btn:hover {
+  background: var(--bg-input);
+  color: var(--accent);
+}
+
+.animate-icon-label {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+
+/* ── Progress Overlay with Sparks ── */
+.animate-progress {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2002;
+  width: 280px;
+  border-radius: 16px;
+  background: var(--bg-toast);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-specular);
+  box-shadow: var(--shadow-modal);
+  overflow: visible;
+}
+
+.animate-progress.hidden {
+  display: none !important;
+}
+
+.animate-progress-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 20px 20px;
+  gap: 10px;
+}
+
+.animate-progress-icon {
+  animation: animate-wand-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes animate-wand-pulse {
+  0%, 100% { transform: scale(1) rotate(0deg); opacity: 1; }
+  50% { transform: scale(1.15) rotate(8deg); opacity: 0.8; }
+}
+
+.animate-progress-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.animate-progress-bar-track {
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border-input);
+  overflow: hidden;
+}
+
+.animate-progress-bar-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 2px;
+  background: var(--accent);
+  transition: width 0.3s ease;
+  box-shadow: 0 0 8px var(--accent);
+}
+
+.animate-progress-count {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Sparks (particle effect) ── */
+.animate-progress-sparks {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.animate-spark {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: animate-spark-fly 1s ease-out forwards;
+  box-shadow: 0 0 6px var(--accent), 0 0 12px var(--accent);
+}
+
+.animate-spark.gold {
+  background: #fbbf24;
+  box-shadow: 0 0 6px #fbbf24, 0 0 12px #f59e0b;
+}
+
+.animate-spark.white {
+  background: #ffffff;
+  box-shadow: 0 0 6px rgba(255,255,255,0.8), 0 0 12px rgba(255,255,255,0.4);
+}
+
+@keyframes animate-spark-fly {
+  0% {
+    transform: translate(0, 0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--spark-dx), var(--spark-dy)) scale(0);
+    opacity: 0;
+  }
 }

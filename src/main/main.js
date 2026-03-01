@@ -130,8 +130,9 @@ function createEditorWindow(cssWidth, cssHeight) {
   const primaryDisplay = screen.getPrimaryDisplay();
   const { width: screenW, height: screenH } = primaryDisplay.workAreaSize;
 
+  const PANEL_CLEARANCE = 260; // space below image for animate preset panel
   const winWidth = Math.min(Math.max(cssWidth + MARGIN, TOOLBAR_MIN_WIDTH), Math.round(screenW * 0.9));
-  const winHeight = Math.min(Math.max(cssHeight + TOOLBAR_HEIGHT + MARGIN, 300), Math.round(screenH * 0.9));
+  const winHeight = Math.min(Math.max(cssHeight + TOOLBAR_HEIGHT + MARGIN, cssHeight + TOOLBAR_HEIGHT + PANEL_CLEARANCE, 500), Math.round(screenH * 0.9));
   const x = Math.round((screenW - winWidth) / 2);
   const y = Math.round((screenH - winHeight) / 2);
 

@@ -6,7 +6,8 @@ const {
   getAllCategories, addCustomCategory, removeCustomCategory,
   getAllTagsWithDescriptions, setTagDescription, addCustomCategoryWithDescription,
   readIndex, removeFromIndex, removeFromIndexByDir, rebuildIndex,
-  getTheme, setTheme
+  getTheme, setTheme,
+  getFalApiKey, setFalApiKey
 } = require('./store');
 const { queueNewFile } = require('./organizer/watcher');
 const ollamaManager = require('./ollama-manager');
@@ -106,6 +107,16 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn) {
     return ollamaManager.getStatus();
   });
 
+  // Settings: Animation (fal.ai)
+  ipcMain.handle('get-animation-config', async () => {
+    return { falApiKey: getFalApiKey() };
+  });
+
+  ipcMain.handle('set-animation-config', async (event, { falApiKey }) => {
+    if (falApiKey !== undefined) setFalApiKey(falApiKey);
+    return true;
+  });
+
   // Settings: Categories
   ipcMain.handle('get-categories', async () => {
     return getAllCategories();
@@ -153,6 +164,11 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn) {
   // Reveal in Finder
   ipcMain.handle('reveal-in-finder', async (event, filepath) => {
     shell.showItemInFolder(filepath);
+    return true;
+  });
+
+  ipcMain.handle('open-external-url', async (event, url) => {
+    shell.openExternal(url);
     return true;
   });
 
@@ -287,6 +303,82 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn) {
     }
 
     return generateMask(rgba, size.width, size.height, points, cssWidth, cssHeight);
+  });
+
+  // Animation: check support
+  ipcMain.handle('check-animate-support', async () => {
+    const { checkSupport } = require('./animation/animation');
+    return checkSupport();
+  });
+
+  // Animation: list available presets (static fallback)
+  ipcMain.handle('list-animation-presets', async () => {
+    const { listPresets } = require('./animation/animation');
+    return listPresets();
+  });
+
+  // Animation: generate AI-tailored presets from cutout image via Ollama
+  ipcMain.handle('generate-animation-presets', async (event, { cutoutBase64 }) => {
+    try {
+      const { generatePresets, listPresets } = require('./animation/animation');
+      var aiPresets = await generatePresets(cutoutBase64);
+      if (aiPresets && aiPresets.length > 0) {
+        return { source: 'ai', presets: aiPresets };
+      }
+      // AI returned null → fallback
+      return { source: 'static', presets: listPresets() };
+    } catch (err) {
+      console.warn('[Animation] AI preset generation failed:', err.message);
+      const { listPresets } = require('./animation/animation');
+      return { source: 'static', presets: listPresets() };
+    }
+  });
+
+  // Animation: generate animation from cutout via fal.ai API
+  ipcMain.handle('animate-cutout', async (event, { cutoutDataURL, presetName, options }) => {
+    const { generateAnimation } = require('./animation/animation');
+
+    var result = await generateAnimation(
+      cutoutDataURL,
+      presetName,
+      options || { fps: 16, loops: 0 },
+      function(progress) {
+        if (event.sender && !event.sender.isDestroyed()) {
+          event.sender.send('animate-progress', progress);
+        }
+      }
+    );
+
+    // Convert Buffers to base64 data URLs for reliable IPC to renderer.
+    var gifB64 = Buffer.from(result.gifBuffer).toString('base64');
+    var apngB64 = Buffer.from(result.apngBuffer).toString('base64');
+
+    return {
+      gifDataURL: 'data:image/gif;base64,' + gifB64,
+      apngDataURL: 'data:image/png;base64,' + apngB64,
+      gifBuffer: Array.from(result.gifBuffer),
+      apngBuffer: Array.from(result.apngBuffer),
+      frameCount: result.frameCount,
+      width: result.width,
+      height: result.height
+    };
+  });
+
+  // Animation: save animated file to animations/ subdirectory (skips LLM processing)
+  ipcMain.handle('save-animation', async (event, { buffer, format, timestamp }) => {
+    var screenshotsDir = getScreenshotsDir();
+    var animationsDir = path.join(screenshotsDir, 'animations');
+    fs.mkdirSync(animationsDir, { recursive: true });
+
+    var ext = format === 'apng' ? 'png' : 'gif';
+    var filename = timestamp + '.' + ext;
+    var filepath = path.join(animationsDir, filename);
+
+    var buf = Buffer.from(buffer);
+    fs.writeFileSync(filepath, buf);
+    console.log('[Snip] Saved animation: animations/%s (%s KB)', filename, (buf.length / 1024).toFixed(1));
+
+    return filepath;
   });
 
   // Theme

@@ -49,6 +49,28 @@ contextBridge.exposeInMainWorld('snip', {
     ipcRenderer.invoke('segment-at-point', { points, cssWidth, cssHeight }),
   checkSegmentSupport: () => ipcRenderer.invoke('check-segment-support'),
 
+  // External URL
+  openExternalUrl: (url) => ipcRenderer.invoke('open-external-url', url),
+
+  // Settings: Animation (fal.ai)
+  getAnimationConfig: () => ipcRenderer.invoke('get-animation-config'),
+  setAnimationConfig: (config) => ipcRenderer.invoke('set-animation-config', config),
+
+  // Animation (fal.ai)
+  checkAnimateSupport: () => ipcRenderer.invoke('check-animate-support'),
+  listAnimationPresets: () => ipcRenderer.invoke('list-animation-presets'),
+  generateAnimationPresets: (cutoutBase64) =>
+    ipcRenderer.invoke('generate-animation-presets', { cutoutBase64 }),
+  animateCutout: ({ cutoutDataURL, presetName, options }) =>
+    ipcRenderer.invoke('animate-cutout', { cutoutDataURL, presetName, options }),
+  onAnimateProgress: (callback) => {
+    const handler = (event, progress) => callback(progress);
+    ipcRenderer.on('animate-progress', handler);
+    return () => ipcRenderer.removeListener('animate-progress', handler);
+  },
+  saveAnimation: ({ buffer, format, timestamp }) =>
+    ipcRenderer.invoke('save-animation', { buffer, format, timestamp }),
+
   // Editor resize
   resizeEditor: (minWidth) => ipcRenderer.invoke('resize-editor', { minWidth }),
 

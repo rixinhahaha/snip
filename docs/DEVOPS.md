@@ -169,6 +169,7 @@ base64 -i certificate.p12 | tr -d '\n' | pbcopy
 | Ollama models (bundled) | `vendor/ollama/models/` (dev) / `Resources/ollama/models/` (packaged) | Bundled — `minicpm-v` (~5 GB) via `npm run download-models --ollama` |
 | Ollama models (runtime) | `~/Library/Application Support/snip/ollama/models/` | Copied from bundle on first launch, writable |
 | HF models (MiniLM + SlimSAM) | `vendor/models/` (dev) / `Resources/models/` (packaged) | Bundled — `npm run download-models --hf` (~75 MB) |
+| Animation presets | Inlined in `src/main/animation/animation.js` | 6 static text-prompt presets (fallback when Ollama AI presets unavailable) |
 
 ---
 
@@ -193,6 +194,7 @@ base64 -i certificate.p12 | tr -d '\n' | pbcopy
 | No tray icon visible | Check `assets/tray-iconTemplate.png` exists (Template suffix = auto dark/light) |
 | Screen capture blank | Grant Screen Recording permission, restart app |
 | SAM segment tool hidden | Needs 4GB+ RAM and system Node.js (not Electron's bundled one) |
+| Animation (2GIF) fails | Check fal.ai API key is set in Settings → Animation, and internet connection is available |
 | `electron-liquid-glass` fails | Only works on macOS 26+; older macOS falls back to vibrancy |
 | App switches Spaces on capture | Ensure `app.dock.hide()` is running and native module built |
 | Glass theme looks opaque | Native glass layer failed — check console for `[Snip] Liquid glass` messages |

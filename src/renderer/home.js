@@ -50,6 +50,7 @@
     screenshotsDir = await window.snip.getScreenshotsDir();
     loadFolder('');
     initOllamaSettings();
+    initAnimationSettings();
     loadTags();
     initThemeToggle();
   }
@@ -357,6 +358,88 @@
     document.getElementById('info-desc').textContent = specs.description;
   }
 
+
+  // ── Settings: Animation ──
+  async function initAnimationSettings() {
+    var statusEl = document.getElementById('animation-presets-status');
+    var keyInput = document.getElementById('fal-api-key');
+    var keyToggle = document.getElementById('fal-api-key-toggle');
+    var keySave = document.getElementById('fal-api-key-save');
+    var keyStatus = document.getElementById('fal-api-key-status');
+    var keyLink = document.getElementById('fal-api-key-link');
+
+    if (!keyInput) return;
+
+    // Load existing key
+    try {
+      var config = await window.snip.getAnimationConfig();
+      if (config.falApiKey) {
+        keyInput.value = config.falApiKey;
+        updateKeyStatus(true);
+      } else {
+        updateKeyStatus(false);
+      }
+    } catch (err) {
+      updateKeyStatus(false);
+    }
+
+    // Toggle visibility
+    keyToggle.addEventListener('click', function() {
+      keyInput.type = keyInput.type === 'password' ? 'text' : 'password';
+    });
+
+    // Save key
+    keySave.addEventListener('click', function() {
+      var key = keyInput.value.trim();
+      window.snip.setAnimationConfig({ falApiKey: key }).then(function() {
+        updateKeyStatus(!!key);
+      });
+    });
+
+    // Enter key to save
+    keyInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        keySave.click();
+      }
+    });
+
+    // Open fal.ai in browser
+    keyLink.addEventListener('click', function(e) {
+      e.preventDefault();
+      window.snip.openExternalUrl('https://fal.ai/dashboard/keys');
+    });
+
+    function updateKeyStatus(configured) {
+      if (configured) {
+        keyStatus.innerHTML = '<span class="status-dot running"></span> Configured';
+      } else {
+        keyStatus.innerHTML = '<span class="status-dot stopped"></span> Not configured — animation features disabled';
+      }
+    }
+
+    // AI presets status (Ollama)
+    if (!statusEl) return;
+    try {
+      var ollamaStatus = await window.snip.getOllamaStatus();
+      if (ollamaStatus && ollamaStatus.running) {
+        statusEl.textContent = 'Powered by Ollama (AI-tailored)';
+      } else {
+        statusEl.textContent = 'Static presets (Ollama starting…)';
+        // Retry after Ollama boots
+        setTimeout(async function() {
+          var retry = await window.snip.getOllamaStatus();
+          if (retry && retry.running) {
+            statusEl.textContent = 'Powered by Ollama (AI-tailored)';
+          } else {
+            statusEl.textContent = 'Static presets (Ollama unavailable)';
+          }
+        }, 5000);
+      }
+    } catch (err) {
+      statusEl.textContent = 'Static presets (fallback)';
+    }
+  }
 
   async function loadTags() {
     var tags = await window.snip.getTagsWithDescriptions();

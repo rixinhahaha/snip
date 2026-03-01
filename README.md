@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/icon.png" alt="Snip" width="128" height="128">
+</p>
+
 # Snip
 
 macOS screenshot tool with annotation and AI-powered organization.
