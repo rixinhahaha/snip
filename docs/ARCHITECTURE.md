@@ -13,6 +13,10 @@
 | AI categorization | Local vision LLM | Ollama (bundled binary + minicpm-v model) |
 | Semantic embeddings | HuggingFace Transformers.js | all-MiniLM-L6-v2 |
 | Image segmentation | SlimSAM | ONNX Runtime |
+| Animation (fal.ai) | Wan 2.2 I2V via fal.ai cloud API | HTTPS queue API (requires API key) |
+| Video frame extraction | ffmpeg-static | Bundled ffmpeg binary |
+| GIF encoding | gifenc | ~9KB pure JS |
+| APNG encoding | upng-js | ~170KB pure JS |
 | File watching | Chokidar | 4 |
 | Native bridge | Node-API (N-API) | node-addon-api 8 |
 | macOS glass effects | electron-liquid-glass | 1.1+ |
@@ -30,9 +34,9 @@ src/
     ipc-handlers.js          # All IPC channel handlers
     tray.js                  # Menu-bar tray icon and context menu
     shortcuts.js             # Global keyboard shortcuts (Cmd+Shift+2, Cmd+Shift+F)
-    store.js                 # Config persistence, index I/O
+    store.js                 # Config persistence, index I/O, fal.ai API key storage
     constants.js             # Shared constants (BASE_WEB_PREFERENCES)
-    ollama-manager.js        # Ollama binary download, server start/stop, model pulls
+    ollama-manager.js        # Ollama binary lifecycle (start/stop/ready/status)
     model-paths.js           # Bundled model path resolution (dev vs packaged)
     organizer/               # AI screenshot organization pipeline
       agent.js               # Ollama vision prompt + response parsing
@@ -42,6 +46,9 @@ src/
     segmentation/            # SAM image segmentation (isolated from organizer)
       segmentation.js        # SAM model orchestration (spawns subprocess)
       segmentation-worker.js # SAM inference in child process (not worker_threads)
+    animation/               # 2GIF animation feature (fal.ai cloud API)
+      animation.js           # fal.ai API integration (upload, queue, poll, MP4 download)
+      gif-encoder-worker.js  # Child process: ffmpeg MP4→frames extraction + GIF/APNG encoding
 
   renderer/                  # Renderer processes (ES5, no modules)
     index.html / app.js      # Capture overlay — fullscreen transparent region selector
@@ -60,6 +67,7 @@ src/
       tag.js                 # Tag callout tool (two-click placement)
       blur-brush.js          # Free-draw blur brush
       segment.js             # SAM segmentation tool (click-to-select)
+      animate.js             # 2GIF animation tool (preset picker, save/copy panel)
 
   preload/
     preload.js               # contextBridge — defines window.snip API surface
@@ -74,6 +82,7 @@ scripts/                     # Build and generation scripts
 vendor/                      # Downloaded at dev time, bundled at build time
   ollama/                      # Ollama binary + minicpm-v model blobs (~5 GB)
   models/                      # HuggingFace models: MiniLM + SlimSAM (~75 MB)
+  (static animation presets inlined in src/main/animation/animation.js)
 ```
 
 ---
@@ -109,6 +118,26 @@ ONNX Runtime (via Transformers.js) **crashes in worker_threads**. Embeddings mus
 
 ### SAM in Child Process
 The segmentation model (SlimSAM) runs in a **child process** (`child_process.fork`), not a worker thread, because ONNX Runtime also crashes in Electron's V8 worker context. The child process uses the system-installed Node.js binary (not Electron's). The parent passes `SNIP_MODELS_PATH` and `SNIP_PACKAGED` env vars so the worker uses bundled models.
+
+### fal.ai Cloud Animation
+The 2GIF animation feature uses the **fal.ai Wan 2.2 A14B image-to-video API** instead of a local model. This requires an internet connection and a fal.ai API key (set in Settings). When the user clicks 2GIF, Ollama's minicpm-v vision model analyzes the cutout and generates 3 AI-tailored animation presets (e.g., "wag tail" for a dog). If Ollama is unavailable, it falls back to 6 static presets inlined in `animation.js`. Users can also enter a custom animation prompt. All animations are capped at **4 seconds maximum** (enforced via `MAX_DURATION_SECONDS` in `animation.js` and `maxDuration` in `gif-encoder-worker.js`). The pipeline:
+
+1. Cutout PNG composited onto magenta (#FF00FF) background (prevents fal.ai from hallucinating scenery; magenta chosen over green so green subjects aren't incorrectly keyed out)
+2. Composited PNG uploaded to fal.ai storage via HTTPS
+3. Job submitted to `fal-ai/wan/v2.2-a14b/image-to-video` queue API with a text prompt (from preset or custom user input)
+4. Queue polled for completion (typically 15-60 seconds)
+5. Resulting MP4 downloaded
+6. `ffmpeg-static` extracts raw RGBA frames from the MP4 in a child process (`gif-encoder-worker.js`)
+7. Per-frame chroma-key removes magenta background → transparent (handles subject movement dynamically)
+8. Frames encoded as GIF (`gifenc`, 1-bit transparency) and APNG (`upng-js`, full 8-bit alpha)
+
+Custom prompts and AI-generated presets both use preset name `_custom` and pass the prompt text via `options.customPrompt`. AI presets can also specify `options.numFrames` (33 for short motions, 49 for flowing ones). The `num_frames` parameter falls back to `fps × MAX_DURATION_SECONDS` (capped at 65) if not specified.
+
+AI preset generation uses the `generate-animation-presets` IPC channel, which calls `generatePresets()` in `animation.js`. The cutout image is downscaled to 384px max dimension via `downscaleForVision()` (using Electron's `nativeImage.resize`) before being sent to Ollama — full resolution isn't needed for subject identification and this dramatically reduces inference time. The Ollama call uses `num_predict: 512` to cap output tokens and `keep_alive: '10m'` to keep the model warm between calls. The response is validated and normalized before being returned to the renderer. If Ollama is not running, the IPC handler returns static presets inlined in `animation.js` instead. Presets are cached in the renderer within the same cutout session — clicking "Redo" reuses cached presets instantly without re-calling Ollama. The cache clears when `setCutoutData()` or `clearCutoutData()` is called with a new cutout.
+
+All fal.ai communication uses raw Node.js `https` module (no SDK). Users must provide their own fal.ai API key in Settings > Animation. The key is stored in `snip-config.json`. If no key is configured, the 2GIF button does not appear. Cost is approximately $0.08-0.15 per animation at 480p resolution.
+
+Saved animations go to `~/Documents/snip/screenshots/animations/` subdirectory, which is excluded from AI organizer processing (watcher's `depth: 0` skips subdirectories, and `.gif` extensions aren't in the watcher's allow list). The result panel supports keyboard shortcuts: Enter or Cmd+S saves GIF (and auto-closes the panel), R redoes with another preset, Esc discards. The Settings page shows an Animation section with a fal.ai API key input (password field with show/hide toggle and save button) and an info panel with provider, resolution, duration, output formats, save location, and AI preset availability status.
 
 ### Single Index File
 All screenshot metadata lives in `~/Documents/snip/screenshots/.index.json`. Simple, atomic, easy to debug. No database.
@@ -171,6 +200,14 @@ The preload script (`preload.js`) exposes `window.snip` with these methods:
 | `getSystemFonts()` | R -> M | List installed fonts |
 | `checkSegmentSupport()` | R -> M | Check SAM availability |
 | `segmentImage(data)` | R -> M | Run SAM segmentation |
+| `getAnimationConfig()` / `setAnimationConfig(cfg)` | R -> M | fal.ai API key settings |
+| `checkAnimateSupport()` | R -> M | Check animation availability (true only if fal.ai API key configured) |
+| `listAnimationPresets()` | R -> M | List static text-based animation presets (fallback) |
+| `generateAnimationPresets(base64)` | R -> M | Generate AI-tailored presets via Ollama vision (falls back to static) |
+| `animateCutout(data)` | R -> M | Generate GIF/APNG via fal.ai API |
+| `onAnimateProgress(cb)` | M -> R | Animation progress (upload, queue, generate, encode) |
+| `saveAnimation(data)` | R -> M | Save GIF/APNG to disk |
+| `openExternalUrl(url)` | R -> M | Open URL in default browser |
 
 *(R = Renderer, M = Main)*
 
@@ -226,9 +263,11 @@ The native Liquid Glass layer is always present (macOS 26+). Dark and Light them
 | Data | Dev Path | Packaged Path |
 |------|----------|---------------|
 | Screenshots | `~/Documents/snip/screenshots/<category>/` | same |
+| Animations | `~/Documents/snip/screenshots/animations/` | same |
 | Index | `~/Documents/snip/screenshots/.index.json` | same |
 | Config | `~/Library/Application Support/snip/snip-config.json` | same |
 | Ollama binary | `vendor/ollama/ollama` | `Resources/ollama/ollama` |
 | Ollama models (bundled) | `vendor/ollama/models/` | `Resources/ollama/models/` |
 | Ollama models (writable) | — | `~/Library/Application Support/snip/ollama/models/` |
 | HF models (MiniLM + SlimSAM) | `vendor/models/` | `Resources/models/` |
+| Animation presets | Inlined in `src/main/animation/animation.js` | same (bundled in asar) |

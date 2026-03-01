@@ -171,6 +171,109 @@
         <button id="segment-tutorial-dismiss" class="tutorial-dismiss-btn">Got it</button>
       </div>
     </div>
+
+    <!-- 2GIF button (appears after cutout accepted) — sparkle icon -->
+    <button id="animate-btn" class="animate-btn hidden" data-tooltip="Animate">
+      <div class="animate-btn-sparks"></div>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M15 4V2"/>
+        <path d="M15 16v-2"/>
+        <path d="M8 9h2"/>
+        <path d="M20 9h2"/>
+        <path d="M17.8 11.8L19 13"/>
+        <path d="M15 9h0"/>
+        <path d="M17.8 6.2L19 5"/>
+        <path d="M11 6.2L9.7 5"/>
+        <path d="M11 11.8L9.7 13"/>
+      </svg>
+    </button>
+
+    <!-- Animation preset picker panel -->
+    <div id="animate-presets" class="animate-panel hidden">
+      <div class="animate-panel-header">
+        <span class="animate-panel-title">Animate Cutout</span>
+        <button id="animate-cancel-preset" class="animate-close-btn" data-tooltip="Close">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <div class="animate-preset-grid" id="animate-preset-grid"></div>
+      <div class="animate-custom-divider">
+        <span class="animate-custom-divider-line"></span>
+        <span class="animate-custom-divider-text">or describe your own</span>
+        <span class="animate-custom-divider-line"></span>
+      </div>
+      <div class="animate-custom-prompt-row">
+        <input type="text" id="animate-custom-input" class="animate-custom-input" placeholder="e.g. gently swaying in the wind" maxlength="200">
+        <button id="animate-custom-go" class="animate-custom-go-btn" data-tooltip="Generate">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="5" y1="12" x2="19" y2="12"/>
+            <polyline points="12 5 19 12 12 19"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Animation progress overlay with sparks -->
+    <div id="animate-progress" class="animate-progress hidden">
+      <div class="animate-progress-sparks" id="animate-sparks"></div>
+      <div class="animate-progress-content">
+        <div class="animate-progress-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M15 4V2"/><path d="M15 16v-2"/><path d="M8 9h2"/><path d="M20 9h2"/>
+            <path d="M17.8 11.8L19 13"/><path d="M15 9h0"/>
+            <path d="M17.8 6.2L19 5"/><path d="M11 6.2L9.7 5"/><path d="M11 11.8L9.7 13"/>
+          </svg>
+        </div>
+        <div class="animate-progress-text" id="animate-progress-text">Bringing to life…</div>
+        <div class="animate-progress-bar-track">
+          <div class="animate-progress-bar-fill" id="animate-progress-fill"></div>
+        </div>
+        <div class="animate-progress-count" id="animate-progress-count"></div>
+      </div>
+    </div>
+
+    <!-- Animation result window (GIF preview + icon action bar) -->
+    <div id="animate-result" class="animate-result-window hidden">
+      <div class="animate-result-header">
+        <span class="animate-result-title" id="animate-result-title">GIF Preview</span>
+      </div>
+      <div class="animate-preview-container">
+        <img id="animate-preview" class="animate-preview" alt="GIF preview">
+      </div>
+      <div class="animate-result-bar">
+        <button id="animate-save-gif" class="animate-icon-btn" data-tooltip="Save GIF (⏎)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          <span class="animate-icon-label">GIF</span>
+        </button>
+        <button id="animate-save-apng" class="animate-icon-btn" data-tooltip="Save APNG">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          <span class="animate-icon-label">APNG</span>
+        </button>
+        <div class="animate-bar-separator"></div>
+        <button id="animate-redo" class="animate-icon-btn" data-tooltip="Redo (R)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="23 4 23 10 17 10"/>
+            <path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/>
+          </svg>
+        </button>
+        <button id="animate-cancel-result" class="animate-icon-btn" data-tooltip="Discard (Esc)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"/>
+            <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+          </svg>
+        </button>
+      </div>
+    </div>
   </div>
 
   <script src="../../node_modules/fabric/dist/index.min.js"></script>
@@ -182,6 +285,7 @@
   <script src="tools/tag.js"></script>
   <script src="tools/blur-brush.js"></script>
   <script src="tools/segment.js"></script>
+  <script src="tools/animate.js"></script>
   <script src="editor-canvas-manager.js"></script>
   <script src="editor-app.js"></script>
 </body>

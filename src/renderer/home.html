@@ -201,6 +201,55 @@
         </div>
 
         <div class="settings-section">
+          <h3>Animation (2GIF)</h3>
+          <p>Animate cutouts into GIF/APNG using AI-powered video generation.</p>
+          <div class="animation-api-key-row">
+            <label class="animation-api-key-label" for="fal-api-key">fal.ai API Key</label>
+            <div class="animation-api-key-input-group">
+              <input type="password" id="fal-api-key" class="animation-api-key-input"
+                     placeholder="Enter your fal.ai API key…" autocomplete="off" spellcheck="false">
+              <button class="animation-api-key-toggle" id="fal-api-key-toggle" title="Show/hide key">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>
+              </button>
+              <button class="animation-api-key-save" id="fal-api-key-save">Save</button>
+            </div>
+            <div class="animation-api-key-status" id="fal-api-key-status"></div>
+            <div class="animation-api-key-help">
+              Get your API key from <a href="#" id="fal-api-key-link">fal.ai/dashboard/keys</a>
+            </div>
+          </div>
+          <div class="animation-info-grid">
+            <div class="animation-info-item">
+              <span class="animation-info-label">Provider</span>
+              <span class="animation-info-value">fal.ai (Wan 2.2)</span>
+            </div>
+            <div class="animation-info-item">
+              <span class="animation-info-label">Resolution</span>
+              <span class="animation-info-value">480p</span>
+            </div>
+            <div class="animation-info-item">
+              <span class="animation-info-label">Max Duration</span>
+              <span class="animation-info-value">4 seconds</span>
+            </div>
+            <div class="animation-info-item">
+              <span class="animation-info-label">Output</span>
+              <span class="animation-info-value">GIF + APNG</span>
+            </div>
+            <div class="animation-info-item">
+              <span class="animation-info-label">Save Location</span>
+              <span class="animation-info-value">~/Documents/snip/screenshots/animations/</span>
+            </div>
+            <div class="animation-info-item">
+              <span class="animation-info-label">AI Presets</span>
+              <span id="animation-presets-status" class="animation-info-value">Checking…</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-section">
           <h3>Snip Tags</h3>
           <p>Edit descriptions to guide how the AI categorizes your snips.</p>
           <div id="tags-list" class="tags-list"></div>
@@ -239,6 +288,9 @@
               <tr><td>Delete selected</td><td><kbd>Delete</kbd> / <kbd>Backspace</kbd></td><td>Annotation</td></tr>
               <tr><td>Save snip</td><td><kbd>Cmd</kbd> + <kbd>S</kbd></td><td>Annotation</td></tr>
               <tr><td>Copy &amp; close</td><td><kbd>Esc</kbd></td><td>Annotation</td></tr>
+              <tr><td>Save GIF</td><td><kbd>Enter</kbd> / <kbd>Cmd</kbd> + <kbd>S</kbd></td><td>GIF Preview</td></tr>
+              <tr><td>Redo animation</td><td><kbd>R</kbd></td><td>GIF Preview</td></tr>
+              <tr><td>Discard animation</td><td><kbd>Esc</kbd></td><td>GIF Preview</td></tr>
             </tbody>
           </table>
         </div>

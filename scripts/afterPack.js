@@ -4,7 +4,7 @@
  * Runs after the app directory is assembled but BEFORE electron-builder signs
  * the app bundle. This hook:
  *   1. Removes canvas/sharp/@img native modules (unused transitive deps)
- *   2. Removes non-macOS onnxruntime binaries (linux, win32)
+ *   2. Removes non-macOS onnxruntime binaries (used by @huggingface/transformers)
  *   3. Removes wrong-arch darwin binaries (keep only the target arch)
  *   4. Pre-signs remaining .node and .dylib files with Developer ID cert
  */

@@ -1,4 +1,4 @@
-/* global EditorCanvasManager, Toolbar, RectangleTool, TextTool, ArrowTool, TagTool, BlurBrushTool, SegmentTool, ToolUtils */
+/* global EditorCanvasManager, Toolbar, RectangleTool, TextTool, ArrowTool, TagTool, BlurBrushTool, SegmentTool, AnimateTool, ToolUtils */
 
 (function() {
   'use strict';
@@ -93,8 +93,14 @@
     tools[TOOLS.BLUR_BRUSH] = BlurBrushTool.attach(canvas, Toolbar.getActiveBrushSize);
     tools[TOOLS.SEGMENT] = SegmentTool.attach(canvas, {
       replaceBackground: EditorCanvasManager.replaceBackground,
-      getBackground: EditorCanvasManager.getBackgroundDataURL
+      getBackground: EditorCanvasManager.getBackgroundDataURL,
+      onCutoutAccepted: function(data) {
+        AnimateTool.setCutoutData(data);
+      }
     });
+
+    // Initialize animate tool (2GIF)
+    AnimateTool.init();
 
     Toolbar.initToolbar({
       getCanvas: function() { return canvas; },
@@ -331,6 +337,17 @@
         }
         return;
       }
+    }
+
+    // Don't close the editor while animation panels are open
+    if (typeof AnimateTool !== 'undefined' && AnimateTool.isActive()) {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        AnimateTool.dismiss();
+      } else {
+        AnimateTool.handleKeydown(e);
+      }
+      return;
     }
 
     if (e.key === 'Escape' || e.key === 'Enter') {

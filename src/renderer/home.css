@@ -595,6 +595,138 @@ input:focus { border-color: var(--accent); }
 .status-dot.running { background: var(--success); }
 .status-dot.stopped { background: var(--error); }
 
+/* Animation API key */
+.animation-api-key-row {
+  margin-bottom: 16px;
+}
+
+.animation-api-key-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.animation-api-key-input-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.animation-api-key-input {
+  flex: 1;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-card);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: var(--text-primary);
+  font-family: 'Menlo', monospace;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.animation-api-key-input:focus {
+  border-color: var(--accent);
+}
+
+.animation-api-key-input::placeholder {
+  color: var(--text-muted);
+  font-family: var(--font-family);
+}
+
+.animation-api-key-toggle {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-card);
+  border-radius: 8px;
+  padding: 7px 8px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: color 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.animation-api-key-toggle:hover {
+  color: var(--text-primary);
+}
+
+.animation-api-key-save {
+  background: var(--accent);
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: white;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.animation-api-key-save:hover {
+  opacity: 0.9;
+}
+
+.animation-api-key-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.animation-api-key-help {
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.animation-api-key-help a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.animation-api-key-help a:hover {
+  text-decoration: underline;
+}
+
+/* Animation info grid */
+.animation-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.animation-info-item {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-card);
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.animation-info-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary);
+}
+
+.animation-info-value {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  word-break: break-all;
+}
+
 /* Current model card */
 .current-model-card {
   background: var(--bg-elevated);

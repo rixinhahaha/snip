@@ -47,6 +47,7 @@ Power users on macOS who take 5-50 screenshots per day: developers, designers, P
 | Tag | G | Two-click callout: tip + leader line + text bubble |
 | Blur Brush | B | Paint to pixelate sensitive info |
 | Segment | S | AI-powered object selection (SlimSAM) |
+| 2GIF | — | Animate a segment cutout into GIF/APNG via fal.ai cloud API |
 
 ### Save & Export
 - **Esc/Enter/Done**: Copy annotated PNG to clipboard, close editor
@@ -60,6 +61,18 @@ Power users on macOS who take 5-50 screenshots per day: developers, designers, P
 - New category suggestions via macOS notification
 - Default model: `minicpm-v` (8B, Metal-accelerated on Apple Silicon)
 
+### Animation (2GIF)
+- Requires internet connection and a fal.ai API key (configured in Settings > Animation)
+- Uses fal.ai Wan 2.2 image-to-video cloud API with text-based animation prompts
+- AI-generated presets: Ollama (minicpm-v) analyzes the cutout and suggests 3 animation motions tailored to the subject (e.g., "wag tail" for a dog, "sway in wind" for a plant). Falls back to 6 static presets (Breathe, Sway, Bounce, Wobble, Float, Zoom In) if Ollama is unavailable.
+- Custom prompt mode: users can type their own animation description instead of picking a preset
+- All animations capped at 4 seconds maximum
+- Generates at 480p resolution, costs approximately $0.08-0.15 per animation
+- Pipeline: composite cutout onto magenta background → upload to fal.ai → submit job to queue → poll for result → download MP4 → extract frames via ffmpeg → chroma-key magenta out per-frame → encode as GIF + APNG
+- Output formats: GIF (256 colors, 1-bit transparency) and APNG (full color, 8-bit alpha)
+- Result panel keyboard shortcuts: Enter or Cmd+S saves GIF, R redoes with another preset, Esc discards
+- Animations saved to `~/Documents/snip/screenshots/animations/` (not processed by AI organizer)
+
 ### Search
 - **Cmd+Shift+F**: Semantic search using local embeddings (no API calls)
 - Falls back to text matching without embeddings
@@ -72,8 +85,10 @@ Power users on macOS who take 5-50 screenshots per day: developers, designers, P
 
 ### Settings
 - AI Assistant status and model info
+- Animation settings: fal.ai API key input, info panel (provider, resolution, max duration, output formats, save location, AI preset status)
 - Three themes: Dark, Light, Glass
 - Custom category management
+- Full keyboard shortcuts reference table
 
 ### Tray Menu
 - Capture, Search, Show Snip, Theme submenu, Quit
@@ -86,7 +101,7 @@ Power users on macOS who take 5-50 screenshots per day: developers, designers, P
 |------|---------|
 | **Snip** | A screenshot (never say "screenshot" in the UI) |
 | **Snip It** | The capture action (menu item and tray label) |
-| **Category** | AI-assigned folder: code, chat, web, design, documents, terminal, other |
+| **Category** | AI-assigned folder: code, chat, web, design, documents, terminal, personal, fun, other |
 | **Tag** | AI-assigned keyword for search/filtering |
 | **Glass** | The translucent Liquid Glass theme on macOS 26+ |
 
@@ -108,4 +123,3 @@ Power users on macOS who take 5-50 screenshots per day: developers, designers, P
 - Screenshot history timeline
 - Team sharing / cloud sync
 - Custom shortcut configuration
-- Video/GIF capture

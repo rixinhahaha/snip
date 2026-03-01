@@ -1,7 +1,7 @@
 const path = require('path');
 const fs = require('fs');
 
-const DEFAULT_CATEGORIES = ['code', 'chat', 'web', 'design', 'documents', 'terminal', 'other'];
+const DEFAULT_CATEGORIES = ['code', 'chat', 'web', 'design', 'documents', 'terminal', 'personal', 'fun', 'other'];
 
 const DEFAULT_TAG_DESCRIPTIONS = {
   code: 'Snips of code editors, IDEs, terminal output, programming-related content, and developer tools',
@@ -10,6 +10,8 @@ const DEFAULT_TAG_DESCRIPTIONS = {
   design: 'Snips of design tools, UI mockups, wireframes, graphics editors, and visual assets',
   documents: 'Snips of documents, spreadsheets, PDFs, presentations, and text editors',
   terminal: 'Snips of terminal windows, command-line interfaces, shell output, and system logs',
+  personal: 'Snips of personal content, photos, social media posts, and non-work related items',
+  fun: 'Snips of memes, jokes, funny content, entertainment, games, and humor',
   other: 'Snips that do not fit into any other category'
 };
 
@@ -94,9 +96,20 @@ function setOllamaUrl(url) {
 
 function getAllCategories() {
   const cfg = loadConfig();
-  const defaults = (cfg.categories && cfg.categories.defaults) || DEFAULT_CATEGORIES;
+  const saved = (cfg.categories && cfg.categories.defaults) || [];
+  // Merge saved defaults with current DEFAULT_CATEGORIES so newly added defaults always appear
+  const merged = [...DEFAULT_CATEGORIES];
+  for (const s of saved) {
+    if (!merged.includes(s)) merged.push(s);
+  }
+  // Sync saved defaults if they're stale
+  if (!cfg.categories) cfg.categories = { defaults: DEFAULT_CATEGORIES, custom: [] };
+  if (cfg.categories.defaults.length !== merged.length || !DEFAULT_CATEGORIES.every(d => cfg.categories.defaults.includes(d))) {
+    cfg.categories.defaults = merged;
+    saveConfig();
+  }
   const custom = (cfg.categories && cfg.categories.custom) || [];
-  return [...defaults, ...custom];
+  return [...merged, ...custom];
 }
 
 function addCustomCategory(category) {
@@ -251,6 +264,15 @@ function setTheme(theme) {
   saveConfig();
 }
 
+function getFalApiKey() {
+  return loadConfig().falApiKey || '';
+}
+
+function setFalApiKey(key) {
+  loadConfig().falApiKey = key;
+  saveConfig();
+}
+
 module.exports = {
   initStore,
   setExternalPaths,
@@ -262,7 +284,6 @@ module.exports = {
   getAllCategories,
   addCustomCategory,
   removeCustomCategory,
-  getTagDescription,
   getAllTagsWithDescriptions,
   setTagDescription,
   addCustomCategoryWithDescription,
@@ -274,4 +295,6 @@ module.exports = {
   rebuildIndex,
   getTheme,
   setTheme,
+  getFalApiKey,
+  setFalApiKey,
 };

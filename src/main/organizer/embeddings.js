@@ -92,4 +92,4 @@ async function searchScreenshots(query) {
   return scored;
 }
 
-module.exports = { embedText, cosineSimilarity, searchScreenshots };
+module.exports = { embedText, searchScreenshots };

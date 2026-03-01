@@ -12,6 +12,8 @@
  *   node scripts/download-models.js --ollama       # Ollama model only (minicpm-v)
  *   node scripts/download-models.js --force        # force re-pull (clean partial downloads)
  *
+ * Note: Animation (2GIF) no longer uses local models — it calls the fal.ai cloud API.
+ *
  * Prerequisites:
  *   - Ollama binary must exist at vendor/ollama/ollama (run: npm run download-ollama)
  *   - @huggingface/transformers must be installed (npm install)

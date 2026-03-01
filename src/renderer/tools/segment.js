@@ -5,6 +5,7 @@ const SegmentTool = (() => {
   function attach(canvas, callbacks) {
     var replaceBackground = callbacks.replaceBackground;
     var getBackground = callbacks.getBackground;
+    var onCutoutAccepted = callbacks.onCutoutAccepted || null;
 
     let maskOverlay = null;
     let pendingCutoutURL = null;
@@ -95,6 +96,16 @@ const SegmentTool = (() => {
       removeMaskOverlay();
       removePointMarkers();
       accumulatedPoints = [];
+
+      // Notify animate module with cutout data before clearing
+      if (onCutoutAccepted) {
+        onCutoutAccepted({
+          cutoutDataURL: pendingCutoutURL,
+          width: canvas.width,
+          height: canvas.height
+        });
+      }
+
       pendingCutoutURL = null;
       ToolUtils.showToast('Cutout applied', 'success', 2000);
     }
