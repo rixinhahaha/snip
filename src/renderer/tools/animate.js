@@ -260,6 +260,7 @@ var AnimateTool = (function() {
     presets.forEach(function(preset) {
       var btn = document.createElement('button');
       btn.className = 'animate-preset-btn';
+      btn.title = preset.prompt || preset.description;
       btn.innerHTML = '<span class="animate-preset-label">' + preset.label + '</span>' +
                        '<span class="animate-preset-desc">' + preset.description + '</span>';
       btn.addEventListener('click', function() {
