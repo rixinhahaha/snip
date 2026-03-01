@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Snip — Capture, Annotate, Find. Powered by AI.</title>
+  <meta name="description" content="Snip is a macOS screenshot tool with annotation and AI-powered organization. Capture, annotate, and find any screenshot instantly with semantic search.">
+  <meta name="theme-color" content="#8B5CF6">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Snip — Capture, Annotate, Find.">
+  <meta property="og:description" content="macOS screenshot tool with annotation and AI-powered organization. Find any screenshot by describing it.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="assets/og-image.png">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <link rel="icon" type="image/png" href="assets/icon.png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Ambient sparkle canvas -->
+  <canvas id="sparkle-canvas" aria-hidden="true"></canvas>
+
+  <!-- Navigation -->
+  <nav class="nav" id="nav">
+    <div class="nav-inner">
+      <a href="#" class="nav-logo">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="32" height="32" role="img" aria-label="Snip logo">
+          <defs>
+            <linearGradient id="n-bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#0f0a1e"/><stop offset="100%" stop-color="#1a1030"/></linearGradient>
+            <linearGradient id="n-bl" x1="0.3" y1="0" x2="0.7" y2="1"><stop offset="0%" stop-color="#93c5fd"/><stop offset="60%" stop-color="#818cf8"/><stop offset="100%" stop-color="#6366f1"/></linearGradient>
+            <linearGradient id="n-br" x1="0.7" y1="0" x2="0.3" y2="1"><stop offset="0%" stop-color="#93c5fd"/><stop offset="60%" stop-color="#818cf8"/><stop offset="100%" stop-color="#6366f1"/></linearGradient>
+            <linearGradient id="n-h" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#818cf8"/><stop offset="100%" stop-color="#6366f1"/></linearGradient>
+            <filter id="n-g" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="1.5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          </defs>
+          <rect width="100" height="100" rx="22.5" fill="url(#n-bg)"/>
+          <g transform="translate(50,46)">
+            <g><animateTransform attributeName="transform" type="rotate" values="0;-15;0;-15;0;0;0;0;0;0" dur="3s" repeatCount="indefinite" keyTimes="0;0.08;0.16;0.24;0.32;0.4;0.5;0.6;0.8;1"/><path d="M-2,2 L-13,-22 Q-11.5,-25 -8,-23 L1,-1 Z" fill="url(#n-bl)" opacity="0.95"/></g>
+            <g><animateTransform attributeName="transform" type="rotate" values="0;15;0;15;0;0;0;0;0;0" dur="3s" repeatCount="indefinite" keyTimes="0;0.08;0.16;0.24;0.32;0.4;0.5;0.6;0.8;1"/><path d="M2,2 L13,-22 Q11.5,-25 8,-23 L-1,-1 Z" fill="url(#n-br)" opacity="0.95"/></g>
+            <circle cx="0" cy="1" r="2.8" fill="#a5b4fc" opacity="0.85" filter="url(#n-g)"/>
+            <circle cx="-7" cy="16" r="9.5" fill="none" stroke="url(#n-h)" stroke-width="3.5" opacity="0.9"/>
+            <circle cx="7" cy="16" r="9.5" fill="none" stroke="url(#n-h)" stroke-width="3.5" opacity="0.8"/>
+          </g>
+          <g transform="translate(42,18)"><path d="M0,-5.5 L1.1,-1.1 L5.5,0 L1.1,1.1 L0,5.5 L-1.1,1.1 L-5.5,0 L-1.1,-1.1 Z" fill="#93c5fd"><animateTransform attributeName="transform" type="scale" values="1;0.4;1;1.3;1" dur="2.5s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.9;0.3;0.9;1;0.9" dur="2.5s" repeatCount="indefinite"/></path></g>
+          <g transform="translate(62,14)"><path d="M0,-4 L0.8,-0.8 L4,0 L0.8,0.8 L0,4 L-0.8,0.8 L-4,0 L-0.8,-0.8 Z" fill="#93c5fd"><animateTransform attributeName="transform" type="scale" values="0.5;1.3;0.5;1;0.5" dur="2.8s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.5;1;0.5;0.8;0.5" dur="2.8s" repeatCount="indefinite"/></path></g>
+          <g transform="translate(28,24)"><path d="M0,-3.5 L0.7,-0.7 L3.5,0 L0.7,0.7 L0,3.5 L-0.7,0.7 L-3.5,0 L-0.7,-0.7 Z" fill="#a5b4fc"><animateTransform attributeName="transform" type="scale" values="1;1.4;1;0.3;1" dur="3.2s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.7;1;0.7;0.15;0.7" dur="3.2s" repeatCount="indefinite"/></path></g>
+          <g transform="translate(73,24)"><path d="M0,-2.5 L0.5,-0.5 L2.5,0 L0.5,0.5 L0,2.5 L-0.5,0.5 L-2.5,0 L-0.5,-0.5 Z" fill="#c4b5fd"><animateTransform attributeName="transform" type="scale" values="0.8;1.5;0.8;0.2;0.8" dur="2.2s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.8;0.3;0.8;0.1;0.8" dur="2.2s" repeatCount="indefinite"/></path></g>
+          <g transform="translate(20,32)"><path d="M0,-2 L0.4,-0.4 L2,0 L0.4,0.4 L0,2 L-0.4,0.4 L-2,0 L-0.4,-0.4 Z" fill="#93c5fd"><animateTransform attributeName="transform" type="scale" values="1;0.2;1;1.6;1" dur="3.8s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.5;0.1;0.5;0.9;0.5" dur="3.8s" repeatCount="indefinite"/></path></g>
+          <circle cx="35" cy="12" r="0.9" fill="#93c5fd"><animate attributeName="opacity" values="0.3;0.9;0.3;0.1;0.3" dur="4s" repeatCount="indefinite"/></circle>
+          <circle cx="55" cy="10" r="0.7" fill="#a5b4fc"><animate attributeName="opacity" values="0.2;0.8;0.2;0.5;0.2" dur="3.5s" repeatCount="indefinite"/></circle>
+          <circle cx="70" cy="18" r="0.6" fill="#93c5fd"><animate attributeName="opacity" values="0.6;0.1;0.6;0.8;0.6" dur="2.9s" repeatCount="indefinite"/></circle>
+          <circle cx="25" cy="14" r="0.5" fill="#c4b5fd"><animate attributeName="opacity" values="0.4;0.8;0.4;0.1;0.4" dur="3.3s" repeatCount="indefinite"/></circle>
+          <circle cx="48" cy="8" r="0.6" fill="#818cf8"><animate attributeName="opacity" values="0.5;0.15;0.5;0.9;0.5" dur="4.2s" repeatCount="indefinite"/></circle>
+        </svg>
+        <span>Snip</span>
+      </a>
+      <div class="nav-links">
+        <a href="#features">Features</a>
+        <a href="#how-it-works">How It Works</a>
+        <a href="#tools">Tools</a>
+        <a href="#ai">AI</a>
+        <a href="https://github.com/rixinw/snip" class="nav-cta" target="_blank" rel="noopener">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+          GitHub
+        </a>
+      </div>
+      <button class="nav-mobile-toggle" id="nav-toggle" aria-label="Toggle menu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-glow"></div>
+    <!-- Decorative sparkles -->
+    <div class="hero-sparkles" aria-hidden="true">
+      <div class="sparkle-star sparkle-star-1"></div>
+      <div class="sparkle-star sparkle-star-2"></div>
+      <div class="sparkle-star sparkle-star-3"></div>
+      <div class="sparkle-star sparkle-star-4"></div>
+      <div class="sparkle-star sparkle-star-5"></div>
+      <div class="sparkle-star sparkle-star-6"></div>
+      <div class="sparkle-star sparkle-star-7"></div>
+      <div class="sparkle-star sparkle-star-8"></div>
+    </div>
+    <div class="hero-content">
+      <div class="hero-badge">macOS Screenshot Tool</div>
+      <h1>Capture. Annotate.<br><span class="hero-gradient">Find anything.</span></h1>
+      <p class="hero-subtitle">
+        Snip captures your screen, lets you annotate with powerful tools,
+        and uses on-device AI to organize every screenshot automatically.
+        Find any snip later by just describing it.
+      </p>
+      <div class="hero-actions">
+        <a href="https://github.com/rixinw/snip/releases" class="btn btn-primary" target="_blank" rel="noopener">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Download for macOS
+        </a>
+        <a href="https://github.com/rixinw/snip" class="btn btn-secondary" target="_blank" rel="noopener">
+          View Source
+        </a>
+      </div>
+      <div class="brew-install">
+        <span class="brew-prompt">$</span>
+        <code>brew install --cask snip</code>
+        <button class="brew-copy" aria-label="Copy to clipboard" onclick="navigator.clipboard.writeText('brew install --cask snip');this.classList.add('copied');setTimeout(function(){document.querySelector('.brew-copy').classList.remove('copied')},2000)">
+          <svg class="brew-copy-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          <svg class="brew-check-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        </button>
+      </div>
+      <p class="hero-note">Requires macOS 10.13+. Free and open source.</p>
+    </div>
+    <div class="hero-visual">
+      <div class="hero-video-wrapper">
+        <video class="hero-video" autoplay loop muted playsinline poster="assets/hero-poster.jpg">
+          <source src="assets/hero-demo.mp4" type="video/mp4">
+        </video>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section class="features" id="features">
+    <div class="section-inner">
+      <div class="section-header">
+        <div class="section-badge">Features</div>
+        <h2>Everything you need.<br>Nothing you don't.</h2>
+        <p>Built for power users who take screenshots every day. Fast capture, rich annotation, AI-powered organization.</p>
+      </div>
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          </div>
+          <h3>Instant Capture</h3>
+          <p>Hit <kbd>Cmd+Shift+2</kbd> anywhere. Select a region or grab the full screen. Your snip is on your clipboard in under 5 seconds.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          </div>
+          <h3>Powerful Annotation</h3>
+          <p>Rectangles, arrows, text, tags, blur brush, and AI-powered object segmentation. Everything you need to communicate visually.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+          </div>
+          <h3>AI Organization</h3>
+          <p>A local vision AI names, categorizes, and tags every saved screenshot automatically. No cloud. No API keys. Runs entirely on your Mac.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          </div>
+          <h3>Semantic Search</h3>
+          <p>Find any screenshot by describing what was in it. "slack message about deployment" finds the right one. Local embeddings, no API calls.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          </div>
+          <h3>Native macOS Feel</h3>
+          <p>Menu bar app with Liquid Glass UI. No Dock icon. Works across Spaces. Stays out of your way until you need it.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+          </div>
+          <h3>2GIF Animation</h3>
+          <p>Segment any object from your screenshot, then animate it into a GIF with AI-generated motion presets. Bring your screenshots to life.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- How It Works -->
+  <section class="how-it-works" id="how-it-works">
+    <div class="section-inner">
+      <div class="section-header">
+        <div class="section-badge">How It Works</div>
+        <h2>Four steps. Five seconds.</h2>
+        <p>From capture to clipboard in a flash. Save to disk and AI handles the rest.</p>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-number">1</div>
+          <div class="step-content">
+            <h3>Capture</h3>
+            <p><kbd>Cmd+Shift+2</kbd> opens a fullscreen overlay. Drag to select any region, or press Enter for full screen.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-number">2</div>
+          <div class="step-content">
+            <h3>Annotate</h3>
+            <p>Add rectangles, arrows, text, blur, or use AI segmentation to isolate objects. All with keyboard shortcuts.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-number">3</div>
+          <div class="step-content">
+            <h3>Copy or Save</h3>
+            <p>Press <kbd>Esc</kbd> to copy to clipboard. Press <kbd>Cmd+S</kbd> to save to disk and trigger AI organization.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-number">4</div>
+          <div class="step-content">
+            <h3>Find Later</h3>
+            <p>AI names, categorizes, and indexes your screenshots. Search by description with <kbd>Cmd+Shift+F</kbd>.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Feature Showcase -->
+  <section class="showcase">
+    <div class="section-inner">
+      <div class="showcase-grid">
+        <div class="showcase-item">
+          <img src="assets/hero-capture.jpg" alt="Capture overlay - drag to select a region" loading="lazy">
+          <div class="showcase-label">Drag to select any region</div>
+        </div>
+        <div class="showcase-item">
+          <img src="assets/hero-editor.jpg" alt="Editor with annotation toolbar and segment tool" loading="lazy">
+          <div class="showcase-label">Annotate with powerful tools</div>
+        </div>
+        <div class="showcase-item">
+          <img src="assets/hero-segment.jpg" alt="AI segmentation with Apply Cutout" loading="lazy">
+          <div class="showcase-label">AI-powered object segmentation</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Tools -->
+  <section class="tools-section" id="tools">
+    <div class="section-inner">
+      <div class="section-header">
+        <div class="section-badge">Annotation Tools</div>
+        <h2>Pro tools. Zero friction.</h2>
+        <p>Every tool you need to annotate screenshots effectively, accessible by a single keypress.</p>
+      </div>
+      <div class="tools-grid">
+        <div class="tool-card">
+          <div class="tool-key">V</div>
+          <h4>Select</h4>
+          <p>Move, resize, and delete annotations</p>
+        </div>
+        <div class="tool-card">
+          <div class="tool-key">R</div>
+          <h4>Rectangle</h4>
+          <p>Outline, highlight, or blur modes</p>
+        </div>
+        <div class="tool-card">
+          <div class="tool-key">T</div>
+          <h4>Text</h4>
+          <p>Editable text with font and size pickers</p>
+        </div>
+        <div class="tool-card">
+          <div class="tool-key">A</div>
+          <h4>Arrow</h4>
+          <p>Point at anything with clean arrows</p>
+        </div>
+        <div class="tool-card">
+          <div class="tool-key">G</div>
+          <h4>Tag</h4>
+          <p>Two-click callout with leader line</p>
+        </div>
+        <div class="tool-card">
+          <div class="tool-key">B</div>
+          <h4>Blur Brush</h4>
+          <p>Paint to pixelate sensitive information</p>
+        </div>
+        <div class="tool-card">
+          <div class="tool-key">S</div>
+          <h4>Segment</h4>
+          <p>AI-powered object selection with SlimSAM</p>
+        </div>
+        <div class="tool-card tool-card-accent">
+          <div class="tool-key">2GIF</div>
+          <h4>Animate</h4>
+          <p>Turn any segmented object into an animated GIF</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Animate Demo -->
+  <section class="animate-demo" id="animate">
+    <div class="section-inner">
+      <div class="section-header">
+        <div class="section-badge">2GIF</div>
+        <h2>Bring your screenshots<br>to life.</h2>
+        <p>Segment any object, pick an AI-generated motion preset, and turn it into an animated GIF in seconds.</p>
+      </div>
+      <div class="animate-demo-visual">
+        <div class="animate-demo-video-wrapper">
+          <video class="animate-demo-video" autoplay loop muted playsinline poster="assets/animate-poster.jpg">
+            <source src="assets/animate-demo.mp4" type="video/mp4">
+          </video>
+        </div>
+        <div class="animate-demo-steps">
+          <div class="animate-step">
+            <div class="animate-step-num">1</div>
+            <div><strong>Segment</strong><span>Click any object to isolate it</span></div>
+          </div>
+          <div class="animate-step">
+            <div class="animate-step-num">2</div>
+            <div><strong>Pick a preset</strong><span>AI suggests contextual motions</span></div>
+          </div>
+          <div class="animate-step">
+            <div class="animate-step-num">3</div>
+            <div><strong>Export</strong><span>Save as GIF or animated PNG</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- AI Section -->
+  <section class="ai-section" id="ai">
+    <div class="section-inner">
+      <div class="section-header">
+        <div class="section-badge">On-Device AI</div>
+        <h2>Your screenshots,<br>organized by AI.</h2>
+        <p>A local vision LLM runs entirely on your Mac. No data leaves your machine.</p>
+      </div>
+      <!-- Search & Tagging Screenshot -->
+      <div class="ai-screenshot">
+        <div class="ai-screenshot-img-wrapper">
+          <img src="assets/search-view.jpg" alt="Snip search view showing AI-generated tag cloud and organized screenshot gallery" loading="lazy">
+          <div class="ai-callout ai-callout-tags">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/></svg>
+            AI-generated tags
+          </div>
+          <div class="ai-callout ai-callout-search">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            Semantic search
+          </div>
+          <div class="ai-callout ai-callout-gallery">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
+            Auto-organized gallery
+          </div>
+        </div>
+      </div>
+
+      <div class="ai-features">
+        <div class="ai-card">
+          <div class="ai-card-header">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/></svg>
+            <h4>Auto-Tagging</h4>
+          </div>
+          <p>AI generates relevant tags for every screenshot — "IRS", "tax form", "social media", "code architecture" — making them instantly discoverable through the tag cloud.</p>
+        </div>
+        <div class="ai-card">
+          <div class="ai-card-header">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+            <h4>Auto-Categorize</h4>
+          </div>
+          <p>Screenshots are sorted into folders: code, chat, web, design, documents, terminal, and more. Create custom categories too.</p>
+        </div>
+        <div class="ai-card">
+          <div class="ai-card-header">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            <h4>Smart Naming</h4>
+          </div>
+          <p>No more "Screenshot 2024-01-15 at 3.45.23 PM". Every snip gets a descriptive name like "api-endpoint-response-fix".</p>
+        </div>
+        <div class="ai-card">
+          <div class="ai-card-header">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            <h4>Semantic Search</h4>
+          </div>
+          <p>384-dimensional embeddings make every screenshot searchable by meaning, not just filename. Powered by Transformers.js, all local.</p>
+        </div>
+      </div>
+      <div class="ai-privacy">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        <div>
+          <strong>100% Private</strong>
+          <p>All AI processing happens on your Mac using Ollama and Metal GPU acceleration. Zero data sent to the cloud. No API keys needed for core features.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Tech Stack -->
+  <section class="tech-section">
+    <div class="section-inner">
+      <div class="section-header">
+        <div class="section-badge">Built With</div>
+        <h2>Modern stack. Native feel.</h2>
+      </div>
+      <div class="tech-grid">
+        <div class="tech-item">
+          <strong>Electron 33</strong>
+          <span>Cross-platform runtime</span>
+        </div>
+        <div class="tech-item">
+          <strong>Fabric.js 7</strong>
+          <span>Canvas annotation engine</span>
+        </div>
+        <div class="tech-item">
+          <strong>Ollama</strong>
+          <span>Local vision LLM</span>
+        </div>
+        <div class="tech-item">
+          <strong>Transformers.js</strong>
+          <span>Local embeddings</span>
+        </div>
+        <div class="tech-item">
+          <strong>SlimSAM</strong>
+          <span>Object segmentation</span>
+        </div>
+        <div class="tech-item">
+          <strong>Liquid Glass</strong>
+          <span>macOS 26+ native UI</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta-section">
+    <div class="cta-sparkles" aria-hidden="true">
+      <div class="sparkle-star sparkle-star-c1"></div>
+      <div class="sparkle-star sparkle-star-c2"></div>
+      <div class="sparkle-star sparkle-star-c3"></div>
+      <div class="sparkle-star sparkle-star-c4"></div>
+      <div class="sparkle-star sparkle-star-c5"></div>
+      <div class="sparkle-star sparkle-star-c6"></div>
+    </div>
+    <div class="section-inner">
+      <div class="cta-glow"></div>
+      <h2>Ready to snip smarter?</h2>
+      <p>Free, open source, and built for power users.</p>
+      <div class="hero-actions">
+        <a href="https://github.com/rixinw/snip/releases" class="btn btn-primary" target="_blank" rel="noopener">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Download for macOS
+        </a>
+        <a href="https://github.com/rixinw/snip" class="btn btn-secondary" target="_blank" rel="noopener">
+          View on GitHub
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="24" height="24" role="img" aria-label="Snip logo">
+          <defs>
+            <linearGradient id="f-bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#0f0a1e"/><stop offset="100%" stop-color="#1a1030"/></linearGradient>
+            <linearGradient id="f-bl" x1="0.3" y1="0" x2="0.7" y2="1"><stop offset="0%" stop-color="#93c5fd"/><stop offset="60%" stop-color="#818cf8"/><stop offset="100%" stop-color="#6366f1"/></linearGradient>
+            <linearGradient id="f-br" x1="0.7" y1="0" x2="0.3" y2="1"><stop offset="0%" stop-color="#93c5fd"/><stop offset="60%" stop-color="#818cf8"/><stop offset="100%" stop-color="#6366f1"/></linearGradient>
+            <linearGradient id="f-h" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#818cf8"/><stop offset="100%" stop-color="#6366f1"/></linearGradient>
+            <filter id="f-g" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="1.5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          </defs>
+          <rect width="100" height="100" rx="22.5" fill="url(#f-bg)"/>
+          <g transform="translate(50,46)">
+            <g><animateTransform attributeName="transform" type="rotate" values="0;-15;0;-15;0;0;0;0;0;0" dur="3s" repeatCount="indefinite" keyTimes="0;0.08;0.16;0.24;0.32;0.4;0.5;0.6;0.8;1"/><path d="M-2,2 L-13,-22 Q-11.5,-25 -8,-23 L1,-1 Z" fill="url(#f-bl)" opacity="0.95"/></g>
+            <g><animateTransform attributeName="transform" type="rotate" values="0;15;0;15;0;0;0;0;0;0" dur="3s" repeatCount="indefinite" keyTimes="0;0.08;0.16;0.24;0.32;0.4;0.5;0.6;0.8;1"/><path d="M2,2 L13,-22 Q11.5,-25 8,-23 L-1,-1 Z" fill="url(#f-br)" opacity="0.95"/></g>
+            <circle cx="0" cy="1" r="2.8" fill="#a5b4fc" opacity="0.85" filter="url(#f-g)"/>
+            <circle cx="-7" cy="16" r="9.5" fill="none" stroke="url(#f-h)" stroke-width="3.5" opacity="0.9"/>
+            <circle cx="7" cy="16" r="9.5" fill="none" stroke="url(#f-h)" stroke-width="3.5" opacity="0.8"/>
+          </g>
+          <g transform="translate(42,18)"><path d="M0,-5.5 L1.1,-1.1 L5.5,0 L1.1,1.1 L0,5.5 L-1.1,1.1 L-5.5,0 L-1.1,-1.1 Z" fill="#93c5fd"><animateTransform attributeName="transform" type="scale" values="1;0.4;1;1.3;1" dur="2.5s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.9;0.3;0.9;1;0.9" dur="2.5s" repeatCount="indefinite"/></path></g>
+          <g transform="translate(62,14)"><path d="M0,-4 L0.8,-0.8 L4,0 L0.8,0.8 L0,4 L-0.8,0.8 L-4,0 L-0.8,-0.8 Z" fill="#93c5fd"><animateTransform attributeName="transform" type="scale" values="0.5;1.3;0.5;1;0.5" dur="2.8s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.5;1;0.5;0.8;0.5" dur="2.8s" repeatCount="indefinite"/></path></g>
+          <g transform="translate(28,24)"><path d="M0,-3.5 L0.7,-0.7 L3.5,0 L0.7,0.7 L0,3.5 L-0.7,0.7 L-3.5,0 L-0.7,-0.7 Z" fill="#a5b4fc"><animateTransform attributeName="transform" type="scale" values="1;1.4;1;0.3;1" dur="3.2s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.7;1;0.7;0.15;0.7" dur="3.2s" repeatCount="indefinite"/></path></g>
+          <circle cx="35" cy="12" r="0.9" fill="#93c5fd"><animate attributeName="opacity" values="0.3;0.9;0.3;0.1;0.3" dur="4s" repeatCount="indefinite"/></circle>
+          <circle cx="55" cy="10" r="0.7" fill="#a5b4fc"><animate attributeName="opacity" values="0.2;0.8;0.2;0.5;0.2" dur="3.5s" repeatCount="indefinite"/></circle>
+          <circle cx="48" cy="8" r="0.6" fill="#818cf8"><animate attributeName="opacity" values="0.5;0.15;0.5;0.9;0.5" dur="4.2s" repeatCount="indefinite"/></circle>
+        </svg>
+        <span>Snip</span>
+      </div>
+      <p class="footer-copy">Open source. Built with
+        <span class="claude-code-badge">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2L9.5 9.5L2 12L9.5 14.5L12 22L14.5 14.5L22 12L14.5 9.5L12 2Z" fill="#D97757"/>
+          </svg>
+          Claude Code
+        </span>
+        on macOS.
+      </p>
+      <div class="footer-links">
+        <a href="https://github.com/rixinw/snip" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://github.com/rixinw/snip/issues" target="_blank" rel="noopener">Issues</a>
+        <a href="https://github.com/rixinw/snip/releases" target="_blank" rel="noopener">Releases</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>

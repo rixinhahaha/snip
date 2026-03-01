@@ -1,0 +1,124 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0f0a1e"/>
+      <stop offset="100%" stop-color="#1a1030"/>
+    </linearGradient>
+    <linearGradient id="blade-l" x1="0.3" y1="0" x2="0.7" y2="1">
+      <stop offset="0%" stop-color="#93c5fd"/>
+      <stop offset="60%" stop-color="#818cf8"/>
+      <stop offset="100%" stop-color="#6366f1"/>
+    </linearGradient>
+    <linearGradient id="blade-r" x1="0.7" y1="0" x2="0.3" y2="1">
+      <stop offset="0%" stop-color="#93c5fd"/>
+      <stop offset="60%" stop-color="#818cf8"/>
+      <stop offset="100%" stop-color="#6366f1"/>
+    </linearGradient>
+    <linearGradient id="handle" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#818cf8"/>
+      <stop offset="100%" stop-color="#6366f1"/>
+    </linearGradient>
+    <!-- Glow filter for pivot -->
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="1.5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- Squircle background -->
+  <rect x="0" y="0" width="100" height="100" rx="22.5" fill="url(#bg)"/>
+
+  <!-- === SCISSORS (centered at 50,46, slightly above center) === -->
+  <g transform="translate(50, 46)">
+
+    <!-- Left blade - pivots at origin -->
+    <g>
+      <animateTransform attributeName="transform" type="rotate"
+        values="0;-15;0;-15;0;0;0;0;0;0" dur="3s" repeatCount="indefinite"
+        keyTimes="0;0.08;0.16;0.24;0.32;0.4;0.5;0.6;0.8;1"/>
+      <path d="M-2,2 L-13,-22 Q-11.5,-25 -8,-23 L1,-1 Z"
+            fill="url(#blade-l)" opacity="0.95"/>
+    </g>
+
+    <!-- Right blade - pivots at origin -->
+    <g>
+      <animateTransform attributeName="transform" type="rotate"
+        values="0;15;0;15;0;0;0;0;0;0" dur="3s" repeatCount="indefinite"
+        keyTimes="0;0.08;0.16;0.24;0.32;0.4;0.5;0.6;0.8;1"/>
+      <path d="M2,2 L13,-22 Q11.5,-25 8,-23 L-1,-1 Z"
+            fill="url(#blade-r)" opacity="0.95"/>
+    </g>
+
+    <!-- Pivot point with glow -->
+    <circle cx="0" cy="1" r="2.8" fill="#a5b4fc" opacity="0.85" filter="url(#glow)"/>
+
+    <!-- Left handle ring -->
+    <circle cx="-7" cy="16" r="9.5" fill="none" stroke="url(#handle)" stroke-width="3.5" opacity="0.9"/>
+
+    <!-- Right handle ring (overlapping) -->
+    <circle cx="7" cy="16" r="9.5" fill="none" stroke="url(#handle)" stroke-width="3.5" opacity="0.8"/>
+  </g>
+
+  <!-- === SPARKLES === -->
+  <!-- Large sparkle - top center-left -->
+  <g transform="translate(42, 18)">
+    <path d="M0,-5.5 L1.1,-1.1 L5.5,0 L1.1,1.1 L0,5.5 L-1.1,1.1 L-5.5,0 L-1.1,-1.1 Z" fill="#93c5fd">
+      <animateTransform attributeName="transform" type="scale"
+        values="1;0.4;1;1.3;1" dur="2.5s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0.9;0.3;0.9;1;0.9" dur="2.5s" repeatCount="indefinite"/>
+    </path>
+  </g>
+
+  <!-- Medium sparkle - top right -->
+  <g transform="translate(62, 14)">
+    <path d="M0,-4 L0.8,-0.8 L4,0 L0.8,0.8 L0,4 L-0.8,0.8 L-4,0 L-0.8,-0.8 Z" fill="#93c5fd">
+      <animateTransform attributeName="transform" type="scale"
+        values="0.5;1.3;0.5;1;0.5" dur="2.8s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0.5;1;0.5;0.8;0.5" dur="2.8s" repeatCount="indefinite"/>
+    </path>
+  </g>
+
+  <!-- Medium sparkle - upper left -->
+  <g transform="translate(28, 24)">
+    <path d="M0,-3.5 L0.7,-0.7 L3.5,0 L0.7,0.7 L0,3.5 L-0.7,0.7 L-3.5,0 L-0.7,-0.7 Z" fill="#a5b4fc">
+      <animateTransform attributeName="transform" type="scale"
+        values="1;1.4;1;0.3;1" dur="3.2s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0.7;1;0.7;0.15;0.7" dur="3.2s" repeatCount="indefinite"/>
+    </path>
+  </g>
+
+  <!-- Small sparkle - far right -->
+  <g transform="translate(73, 24)">
+    <path d="M0,-2.5 L0.5,-0.5 L2.5,0 L0.5,0.5 L0,2.5 L-0.5,0.5 L-2.5,0 L-0.5,-0.5 Z" fill="#c4b5fd">
+      <animateTransform attributeName="transform" type="scale"
+        values="0.8;1.5;0.8;0.2;0.8" dur="2.2s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0.8;0.3;0.8;0.1;0.8" dur="2.2s" repeatCount="indefinite"/>
+    </path>
+  </g>
+
+  <!-- Small sparkle - left edge -->
+  <g transform="translate(20, 32)">
+    <path d="M0,-2 L0.4,-0.4 L2,0 L0.4,0.4 L0,2 L-0.4,0.4 L-2,0 L-0.4,-0.4 Z" fill="#93c5fd">
+      <animateTransform attributeName="transform" type="scale"
+        values="1;0.2;1;1.6;1" dur="3.8s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0.5;0.1;0.5;0.9;0.5" dur="3.8s" repeatCount="indefinite"/>
+    </path>
+  </g>
+
+  <!-- Tiny twinkle dots -->
+  <circle cx="35" cy="12" r="0.9" fill="#93c5fd">
+    <animate attributeName="opacity" values="0.3;0.9;0.3;0.1;0.3" dur="4s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="55" cy="10" r="0.7" fill="#a5b4fc">
+    <animate attributeName="opacity" values="0.2;0.8;0.2;0.5;0.2" dur="3.5s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="70" cy="18" r="0.6" fill="#93c5fd">
+    <animate attributeName="opacity" values="0.6;0.1;0.6;0.8;0.6" dur="2.9s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="25" cy="14" r="0.5" fill="#c4b5fd">
+    <animate attributeName="opacity" values="0.4;0.8;0.4;0.1;0.4" dur="3.3s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="48" cy="8" r="0.6" fill="#818cf8">
+    <animate attributeName="opacity" values="0.5;0.15;0.5;0.9;0.5" dur="4.2s" repeatCount="indefinite"/>
+  </circle>
+</svg>
