@@ -51,6 +51,7 @@ asarUnpack:
   - "node_modules/onnxruntime-web/**"
   - "node_modules/gifenc/**"
   - "node_modules/upng-js/**"
+  - "node_modules/pako/**"
   - "node_modules/ffmpeg-static/**"
 
 extraResources:
