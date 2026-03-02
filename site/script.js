@@ -47,7 +47,7 @@
   // --- Scroll-triggered animations ---
   function animateOnScroll() {
     var elements = document.querySelectorAll(
-      '.feature-card, .tool-card, .ai-card, .tech-item, .step, .section-header, .ai-privacy, .hero-video-wrapper, .showcase-item, .ai-screenshot, .animate-step, .animate-demo-video-wrapper'
+      '.feature-card, .tool-card, .ai-card, .tech-item, .step, .section-header, .ai-privacy, .hero-video-wrapper, .showcase-item, .ai-screenshot, .animate-step, .animate-demo-video-wrapper, .segment-tag-step, .segment-tag-video-wrapper'
     );
 
     var observer = new IntersectionObserver(
@@ -58,7 +58,7 @@
             var parent = entry.target.parentElement;
             if (parent) {
               var siblings = parent.querySelectorAll(
-                '.feature-card, .tool-card, .ai-card, .tech-item, .step, .showcase-item, .animate-step'
+                '.feature-card, .tool-card, .ai-card, .tech-item, .step, .showcase-item, .animate-step, .segment-tag-step'
               );
               var index = Array.prototype.indexOf.call(siblings, entry.target);
               if (index >= 0) {
@@ -99,6 +99,38 @@
     headers.forEach(function (el) {
       el.classList.add('fade-in');
       observer.observe(el);
+    });
+  }
+
+  // --- Download dropdown ---
+  function initDownloadDropdowns() {
+    var dropdowns = document.querySelectorAll('.download-dropdown');
+    dropdowns.forEach(function (dropdown) {
+      var toggleBtn = dropdown.querySelector('.download-toggle');
+      if (!toggleBtn) return;
+
+      toggleBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var isOpen = dropdown.classList.contains('open');
+        // Close all dropdowns first
+        dropdowns.forEach(function (d) { d.classList.remove('open'); });
+        if (!isOpen) {
+          dropdown.classList.add('open');
+          toggleBtn.setAttribute('aria-expanded', 'true');
+        } else {
+          toggleBtn.setAttribute('aria-expanded', 'false');
+        }
+      });
+    });
+
+    // Close dropdowns on outside click
+    document.addEventListener('click', function () {
+      dropdowns.forEach(function (d) {
+        d.classList.remove('open');
+        var btn = d.querySelector('.download-toggle');
+        if (btn) btn.setAttribute('aria-expanded', 'false');
+      });
     });
   }
 
@@ -250,11 +282,13 @@
       animateSectionHeaders();
       initSparkleCanvas();
       initCardGlow();
+      initDownloadDropdowns();
     });
   } else {
     animateOnScroll();
     animateSectionHeaders();
     initSparkleCanvas();
     initCardGlow();
+    initDownloadDropdowns();
   }
 })();

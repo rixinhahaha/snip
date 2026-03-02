@@ -98,10 +98,23 @@
         Find any snip later by just describing it.
       </p>
       <div class="hero-actions">
-        <a href="https://github.com/rixinhahaha/snip/releases" class="btn btn-primary" target="_blank" rel="noopener">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          Download for macOS
-        </a>
+        <div class="download-dropdown">
+          <button class="btn btn-primary download-toggle" aria-expanded="false" aria-haspopup="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Download for macOS
+            <svg class="download-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="download-menu">
+            <a href="https://github.com/rixinhahaha/snip/releases/latest/download/Snip-1.0.8-arm64.dmg" class="download-option" rel="noopener">
+              <strong>Apple Silicon</strong>
+              <span>M1, M2, M3, M4</span>
+            </a>
+            <a href="https://github.com/rixinhahaha/snip/releases/latest/download/Snip-1.0.8.dmg" class="download-option" rel="noopener">
+              <strong>Intel</strong>
+              <span>x86_64</span>
+            </a>
+          </div>
+        </div>
         <a href="https://github.com/rixinhahaha/snip" class="btn btn-secondary" target="_blank" rel="noopener">
           View Source
         </a>
@@ -173,7 +186,7 @@
           <div class="feature-icon">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
           </div>
-          <h3>2GIF Animation</h3>
+          <h3>Animate</h3>
           <p>Segment any object from your screenshot, then animate it into a GIF with AI-generated motion presets. Bring your screenshots to life.</p>
         </div>
       </div>
@@ -283,12 +296,44 @@
         <div class="tool-card">
           <div class="tool-key">S</div>
           <h4>Segment</h4>
-          <p>AI-powered object selection with SlimSAM</p>
+          <p>AI-powered object selection with tagging</p>
         </div>
         <div class="tool-card tool-card-accent">
-          <div class="tool-key">2GIF</div>
+          <div class="tool-key">Anim</div>
           <h4>Animate</h4>
-          <p>Turn any segmented object into an animated GIF</p>
+          <p>Turn any segmented object into an animated GIF — powered by fal.ai</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Segment Tagging -->
+  <section class="segment-tag-demo" id="segment-tagging">
+    <div class="section-inner">
+      <div class="section-header">
+        <div class="section-badge">Segment Tagging</div>
+        <h2>Tag what you see.<br>Instantly.</h2>
+        <p>Use AI segmentation to select any object, then add a labeled tag with a leader line — perfect for annotating UI components, diagrams, or anything on screen.</p>
+      </div>
+      <div class="segment-tag-visual">
+        <div class="segment-tag-video-wrapper">
+          <video class="segment-tag-video" autoplay loop muted playsinline poster="assets/segment-tag-poster.jpg">
+            <source src="assets/segment-tag-demo.mp4" type="video/mp4">
+          </video>
+        </div>
+        <div class="segment-tag-steps">
+          <div class="segment-tag-step">
+            <div class="segment-tag-step-num">1</div>
+            <div><strong>Segment</strong><span>Click any object to isolate it with AI</span></div>
+          </div>
+          <div class="segment-tag-step">
+            <div class="segment-tag-step-num">2</div>
+            <div><strong>Tag</strong><span>Click "Tag" to auto-label with a colored outline and leader line</span></div>
+          </div>
+          <div class="segment-tag-step">
+            <div class="segment-tag-step-num">3</div>
+            <div><strong>Customize</strong><span>Drag tags, edit labels, adjust colors and thickness</span></div>
+          </div>
         </div>
       </div>
     </div>
@@ -298,9 +343,9 @@
   <section class="animate-demo" id="animate">
     <div class="section-inner">
       <div class="section-header">
-        <div class="section-badge">2GIF</div>
+        <div class="section-badge badge-animate">Animate <span class="badge-sparkles" aria-hidden="true"><svg class="badge-sparkle badge-sparkle-1" width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0L14.6 9.4L24 12L14.6 14.6L12 24L9.4 14.6L0 12L9.4 9.4Z"/></svg><svg class="badge-sparkle badge-sparkle-2" width="7" height="7" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0L14.6 9.4L24 12L14.6 14.6L12 24L9.4 14.6L0 12L9.4 9.4Z"/></svg><svg class="badge-sparkle badge-sparkle-3" width="6" height="6" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0L14.6 9.4L24 12L14.6 14.6L12 24L9.4 14.6L0 12L9.4 9.4Z"/></svg></span></div>
         <h2>Bring your screenshots<br>to life.</h2>
-        <p>Segment any object, pick an AI-generated motion preset, and turn it into an animated GIF in seconds.</p>
+        <p>Segment any object, pick an AI-generated motion preset, and turn it into an animated GIF in seconds. Powered by <a href="https://fal.ai" target="_blank" rel="noopener" class="inline-link">fal.ai</a> — bring your own API key.</p>
       </div>
       <div class="animate-demo-visual">
         <div class="animate-demo-video-wrapper">
@@ -321,6 +366,18 @@
             <div class="animate-step-num">3</div>
             <div><strong>Export</strong><span>Save as GIF or animated PNG</span></div>
           </div>
+        </div>
+      </div>
+      <div class="animate-setup">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+        <div>
+          <strong>Bring Your Own Key</strong>
+          <p>Animate uses <a href="https://fal.ai" target="_blank" rel="noopener" class="inline-link">fal.ai</a> for AI-powered animation generation. To enable it:</p>
+          <ol>
+            <li>Get a free API key at <a href="https://fal.ai/dashboard/keys" target="_blank" rel="noopener" class="inline-link">fal.ai/dashboard/keys</a></li>
+            <li>Open Snip Settings &rarr; Animation</li>
+            <li>Paste your key and hit Save</li>
+          </ol>
         </div>
       </div>
     </div>
@@ -444,10 +501,23 @@
       <h2>Ready to snip smarter?</h2>
       <p>Free, open source, and built for power users.</p>
       <div class="hero-actions">
-        <a href="https://github.com/rixinhahaha/snip/releases" class="btn btn-primary" target="_blank" rel="noopener">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          Download for macOS
-        </a>
+        <div class="download-dropdown">
+          <button class="btn btn-primary download-toggle" aria-expanded="false" aria-haspopup="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Download for macOS
+            <svg class="download-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="download-menu">
+            <a href="https://github.com/rixinhahaha/snip/releases/latest/download/Snip-1.0.8-arm64.dmg" class="download-option" rel="noopener">
+              <strong>Apple Silicon</strong>
+              <span>M1, M2, M3, M4</span>
+            </a>
+            <a href="https://github.com/rixinhahaha/snip/releases/latest/download/Snip-1.0.8.dmg" class="download-option" rel="noopener">
+              <strong>Intel</strong>
+              <span>x86_64</span>
+            </a>
+          </div>
+        </div>
         <a href="https://github.com/rixinhahaha/snip" class="btn btn-secondary" target="_blank" rel="noopener">
           View on GitHub
         </a>
