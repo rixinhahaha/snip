@@ -150,5 +150,73 @@ const ToolUtils = (() => {
     return maxW;
   }
 
-  return { clampedScenePoint, createMosaicImage, showToast, hideToast, getAccentColor, hexToRgba, measureTextWidth };
+  /**
+   * Recolor a mask image to a flat highlight color.
+   * Only non-transparent pixels get recolored.
+   * @param {string} maskDataURL
+   * @param {string} hexColor - e.g. '#8B5CF6'
+   * @param {number} alpha - 0..1, e.g. 0.3
+   * @param {function} callback - receives recolored data URL
+   */
+  function recolorMaskToHighlight(maskDataURL, hexColor, alpha, callback) {
+    var img = new Image();
+    img.onload = function() {
+      var c = document.createElement('canvas');
+      c.width = img.width;
+      c.height = img.height;
+      var ctx = c.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      ctx.globalCompositeOperation = 'source-in';
+      ctx.fillStyle = hexToRgba(hexColor, alpha);
+      ctx.fillRect(0, 0, c.width, c.height);
+      callback(c.toDataURL('image/png'));
+    };
+    img.src = maskDataURL;
+  }
+
+  /**
+   * Extract the contour of a mask as a colored outline ring.
+   * Subtracts an eroded version from the original to get edge pixels.
+   * @param {string} maskDataURL
+   * @param {string} hexColor - e.g. '#8B5CF6'
+   * @param {number} lineWidth - border thickness in px (default 3)
+   * @param {function} callback - receives outline data URL
+   */
+  function maskToOutline(maskDataURL, hexColor, lineWidth, callback) {
+    lineWidth = lineWidth || 3;
+    var img = new Image();
+    img.onload = function() {
+      var w = img.width, h = img.height;
+
+      // Canvas 1: original mask
+      var c1 = document.createElement('canvas');
+      c1.width = w; c1.height = h;
+      var ctx1 = c1.getContext('2d');
+      ctx1.drawImage(img, 0, 0);
+
+      // Canvas 2: eroded mask (shrunk by lineWidth)
+      var c2 = document.createElement('canvas');
+      c2.width = w; c2.height = h;
+      var ctx2 = c2.getContext('2d');
+      ctx2.drawImage(img, lineWidth, lineWidth, w - lineWidth * 2, h - lineWidth * 2);
+
+      // Subtract eroded from original to get border ring
+      ctx1.globalCompositeOperation = 'destination-out';
+      ctx1.drawImage(c2, 0, 0);
+
+      // Recolor border to desired color
+      ctx1.globalCompositeOperation = 'source-in';
+      ctx1.fillStyle = hexColor;
+      ctx1.fillRect(0, 0, w, h);
+
+      callback(c1.toDataURL('image/png'));
+    };
+    img.src = maskDataURL;
+  }
+
+  return {
+    clampedScenePoint, createMosaicImage, showToast, hideToast,
+    getAccentColor, hexToRgba, measureTextWidth,
+    recolorMaskToHighlight, maskToOutline
+  };
 })();

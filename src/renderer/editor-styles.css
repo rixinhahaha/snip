@@ -413,6 +413,15 @@ select:hover {
   color: var(--segment-reject-hover-text);
 }
 
+.segment-action-btn.tag-segment {
+  background: var(--accent);
+  color: white;
+}
+
+.segment-action-btn.tag-segment:hover {
+  filter: brightness(0.9);
+}
+
 .segment-action-btn kbd {
   display: inline-block;
   padding: 1px 5px;
@@ -430,6 +439,11 @@ select:hover {
 .segment-action-btn.reject kbd {
   background: var(--segment-reject-kbd-bg);
   color: var(--segment-reject-text);
+}
+
+.segment-action-btn.tag-segment kbd {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
 }
 
 /* Segment tutorial modal */

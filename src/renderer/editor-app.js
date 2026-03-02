@@ -96,7 +96,10 @@
       getBackground: EditorCanvasManager.getBackgroundDataURL,
       onCutoutAccepted: function(data) {
         AnimateTool.setCutoutData(data);
-      }
+      },
+      getTagColor: Toolbar.getActiveTagColor,
+      getFont: Toolbar.getActiveFont,
+      getFontSize: Toolbar.getActiveFontSize
     });
 
     // Initialize animate tool (2GIF)

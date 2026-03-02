@@ -46,7 +46,7 @@ Power users on macOS who take 5-50 screenshots per day: developers, designers, P
 | Arrow | A | Point at things |
 | Tag | G | Two-click callout: tip + leader line + text bubble |
 | Blur Brush | B | Paint to pixelate sensitive info |
-| Segment | S | AI-powered object selection (SlimSAM) |
+| Segment | S | AI-powered object selection (SlimSAM) — Apply Cutout or Tag Segment |
 | 2GIF | — | Animate a segment cutout into GIF/APNG via fal.ai cloud API |
 
 ### Save & Export

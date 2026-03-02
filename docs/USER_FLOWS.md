@@ -227,12 +227,22 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 | Step | Action | Expected Result |
 |------|--------|-----------------|
 | 1 | Press S | Segment tool active (only visible if supported) |
-| 2 | -- | First use: tutorial modal appears explaining usage |
+| 2 | -- | First use: tutorial modal explains click, shift+click, tag, and cutout |
 | 3 | Click on an object in the image | Loading indicator while SAM processes |
 | 4 | -- | Segmentation mask overlay appears on the object |
 | 5 | Shift+click to refine | Additional points added, mask recalculated |
-| 6 | Press Enter / Accept | Mask applied to canvas as annotation |
-| 7 | Press Escape / Reject | Mask discarded |
+| 6 | Press Enter / Apply Cutout | Background replaced with cutout (existing behavior) |
+| 7 | Press T / Tag Segment | Highlight overlay + tag bubble placed; textbox enters editing |
+| 7a | Shift+T | Outline mode: colored border ring instead of highlight fill |
+| 7b | Type label, click elsewhere | Overlay + tag parts grouped into selectable annotation |
+| 8 | Press Escape / Cancel | Mask discarded |
+
+**Tag Segment modes:**
+- **Highlight (T):** Translucent color fill over the mask area (30% opacity, uses active tag color)
+- **Outline (Shift+T):** Colored border ring tracing the mask contour (3px width)
+- Both modes attach a tag bubble (tip + leader line + label) at the center-top of the mask
+- Double-click the tag group to re-edit the label text
+- Tag color comes from the active tag color swatch in the toolbar
 
 **Edge cases:**
 - Segment tool hidden if `checkSegmentSupport()` returns false (< 4GB RAM or no system Node)
