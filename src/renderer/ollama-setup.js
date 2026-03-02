@@ -30,6 +30,7 @@
     installBtn.disabled = true;
     installBtn.style.display = 'none';
     document.getElementById('install-progress-section').classList.remove('hidden');
+    skipBtn.textContent = 'Continue in background';
     window.snip.installOllama();
   });
 
@@ -38,6 +39,7 @@
     modelBtn.disabled = true;
     modelBtn.style.display = 'none';
     document.getElementById('model-progress-section').classList.remove('hidden');
+    skipBtn.textContent = 'Continue in background';
     window.snip.pullOllamaModel();
   });
 
@@ -46,6 +48,7 @@
     installBtn.disabled = true;
     installBtn.style.display = 'none';
     document.getElementById('install-progress-section').classList.remove('hidden');
+    skipBtn.textContent = 'Continue in background';
     window.snip.installOllama();
   });
 
@@ -54,6 +57,7 @@
     modelBtn.disabled = true;
     modelBtn.style.display = 'none';
     document.getElementById('model-progress-section').classList.remove('hidden');
+    skipBtn.textContent = 'Continue in background';
     window.snip.pullOllamaModel();
   });
 
@@ -168,7 +172,25 @@
       hideError('install');
     } else {
       installIndicator.className = 'step-indicator active';
-      if (!status.installing) {
+      if (status.installing) {
+        installBtn.style.display = 'none';
+        installBtn.disabled = true;
+        var installProgressSection = document.getElementById('install-progress-section');
+        installProgressSection.classList.remove('hidden');
+        if (status.installProgress) {
+          var ip = status.installProgress;
+          var ipPercent = ip.percent || 0;
+          document.getElementById('install-progress-bar').style.width = ipPercent + '%';
+          document.getElementById('install-scissors').style.left = ipPercent + '%';
+          var labels = {
+            'downloading': 'Downloading Ollama...',
+            'extracting': 'Unpacking...',
+            'installing': 'Moving to Applications...',
+            'launching': 'Starting Ollama...'
+          };
+          document.getElementById('install-progress-detail').textContent = labels[ip.status] || ip.status || 'Preparing...';
+        }
+      } else {
         installBtn.style.display = '';
         installBtn.disabled = false;
       }
@@ -191,7 +213,26 @@
       hideError('model');
     } else if (running) {
       modelIndicator.className = 'step-indicator active';
-      if (!status.pulling) {
+      if (status.pulling) {
+        modelBtn.style.display = 'none';
+        modelBtn.disabled = true;
+        var modelProgressSection = document.getElementById('model-progress-section');
+        modelProgressSection.classList.remove('hidden');
+        if (status.pullProgress) {
+          var pp = status.pullProgress;
+          var ppPercent = pp.percent || 0;
+          document.getElementById('model-progress-bar').style.width = ppPercent + '%';
+          document.getElementById('model-scissors').style.left = ppPercent + '%';
+          var mDetail = document.getElementById('model-progress-detail');
+          if (pp.total > 0) {
+            var downloadedMB = (pp.completed / (1024 * 1024)).toFixed(0);
+            var totalMB = (pp.total / (1024 * 1024)).toFixed(0);
+            mDetail.textContent = downloadedMB + ' / ' + totalMB + ' MB (' + ppPercent + '%)';
+          } else {
+            mDetail.textContent = ppPercent + '%';
+          }
+        }
+      } else {
         modelBtn.style.display = '';
         modelBtn.disabled = false;
       }
@@ -199,6 +240,9 @@
       modelIndicator.className = 'step-indicator';
       modelBtn.disabled = true;
     }
+
+    // Update skip button text based on whether a download is active
+    skipBtn.textContent = (status.installing || status.pulling) ? 'Continue in background' : 'Skip for now';
 
     // All done?
     if (installed && running && modelReady) {
