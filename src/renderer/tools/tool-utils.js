@@ -151,36 +151,66 @@ const ToolUtils = (() => {
   }
 
   /**
-   * Recolor a mask image to a flat highlight color.
-   * Only non-transparent pixels get recolored.
+   * Recolor a mask image to a flat highlight color, cropped to its bounding box.
+   * Uses full-opacity color via source-in; caller sets Fabric opacity for translucency.
    * @param {string} maskDataURL
    * @param {string} hexColor - e.g. '#8B5CF6'
-   * @param {number} alpha - 0..1, e.g. 0.3
-   * @param {function} callback - receives recolored data URL
+   * @param {function} callback - receives { dataURL, x, y, w, h } cropped to mask bounds
    */
-  function recolorMaskToHighlight(maskDataURL, hexColor, alpha, callback) {
+  function recolorMaskToHighlight(maskDataURL, hexColor, callback) {
     var img = new Image();
     img.onload = function() {
+      // Find bounding box of non-transparent pixels
+      var fullC = document.createElement('canvas');
+      fullC.width = img.width;
+      fullC.height = img.height;
+      var fullCtx = fullC.getContext('2d');
+      fullCtx.drawImage(img, 0, 0);
+      var data = fullCtx.getImageData(0, 0, fullC.width, fullC.height).data;
+
+      var minX = fullC.width, minY = fullC.height, maxX = 0, maxY = 0;
+      for (var py = 0; py < fullC.height; py++) {
+        for (var px = 0; px < fullC.width; px++) {
+          if (data[(py * fullC.width + px) * 4 + 3] > 10) {
+            if (px < minX) minX = px;
+            if (px > maxX) maxX = px;
+            if (py < minY) minY = py;
+            if (py > maxY) maxY = py;
+          }
+        }
+      }
+
+      if (maxX < minX) {
+        // No visible pixels — return empty
+        callback({ dataURL: '', x: 0, y: 0, w: 0, h: 0 });
+        return;
+      }
+
+      var bw = maxX - minX + 1;
+      var bh = maxY - minY + 1;
+
+      // Crop to bounding box and recolor with full-opacity hex
       var c = document.createElement('canvas');
-      c.width = img.width;
-      c.height = img.height;
+      c.width = bw;
+      c.height = bh;
       var ctx = c.getContext('2d');
-      ctx.drawImage(img, 0, 0);
+      ctx.drawImage(img, minX, minY, bw, bh, 0, 0, bw, bh);
       ctx.globalCompositeOperation = 'source-in';
-      ctx.fillStyle = hexToRgba(hexColor, alpha);
-      ctx.fillRect(0, 0, c.width, c.height);
-      callback(c.toDataURL('image/png'));
+      ctx.fillStyle = hexColor;
+      ctx.fillRect(0, 0, bw, bh);
+
+      callback({ dataURL: c.toDataURL('image/png'), x: minX, y: minY, w: bw, h: bh });
     };
     img.src = maskDataURL;
   }
 
   /**
-   * Extract the contour of a mask as a colored outline ring.
+   * Extract the contour of a mask as a colored outline ring, cropped to bounding box.
    * Subtracts an eroded version from the original to get edge pixels.
    * @param {string} maskDataURL
    * @param {string} hexColor - e.g. '#8B5CF6'
    * @param {number} lineWidth - border thickness in px (default 3)
-   * @param {function} callback - receives outline data URL
+   * @param {function} callback - receives { dataURL, x, y, w, h } cropped to mask bounds
    */
   function maskToOutline(maskDataURL, hexColor, lineWidth, callback) {
     lineWidth = lineWidth || 3;
@@ -209,7 +239,36 @@ const ToolUtils = (() => {
       ctx1.fillStyle = hexColor;
       ctx1.fillRect(0, 0, w, h);
 
-      callback(c1.toDataURL('image/png'));
+      // Find bounding box of the outline pixels and crop
+      var data = ctx1.getImageData(0, 0, w, h).data;
+      var minX = w, minY = h, maxX = 0, maxY = 0;
+      for (var py = 0; py < h; py++) {
+        for (var px = 0; px < w; px++) {
+          if (data[(py * w + px) * 4 + 3] > 10) {
+            if (px < minX) minX = px;
+            if (px > maxX) maxX = px;
+            if (py < minY) minY = py;
+            if (py > maxY) maxY = py;
+          }
+        }
+      }
+
+      if (maxX < minX) {
+        callback({ dataURL: '', x: 0, y: 0, w: 0, h: 0 });
+        return;
+      }
+
+      var bw = maxX - minX + 1;
+      var bh = maxY - minY + 1;
+
+      // Crop to bounding box
+      var cropC = document.createElement('canvas');
+      cropC.width = bw;
+      cropC.height = bh;
+      var cropCtx = cropC.getContext('2d');
+      cropCtx.drawImage(c1, minX, minY, bw, bh, 0, 0, bw, bh);
+
+      callback({ dataURL: cropC.toDataURL('image/png'), x: minX, y: minY, w: bw, h: bh });
     };
     img.src = maskDataURL;
   }

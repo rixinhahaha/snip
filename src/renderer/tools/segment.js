@@ -148,202 +148,189 @@ const SegmentTool = (() => {
       var tagColor = getTagColor();
       var font = getFont();
       var fontSize = getFontSize();
+      var savedMaskURL = pendingMaskURL; // capture before async clears it
 
+      // Both utilities now return { dataURL, x, y, w, h } cropped to bounding box
       var processFn = mode === 'outline'
-        ? function(cb) { ToolUtils.maskToOutline(pendingMaskURL, tagColor, 3, cb); }
-        : function(cb) { ToolUtils.recolorMaskToHighlight(pendingMaskURL, tagColor, 0.3, cb); };
+        ? function(cb) { ToolUtils.maskToOutline(savedMaskURL, tagColor, 3, cb); }
+        : function(cb) { ToolUtils.recolorMaskToHighlight(savedMaskURL, tagColor, cb); };
 
-      processFn(function(processedDataURL) {
+      processFn(function(result) {
+        if (!result.dataURL) {
+          ToolUtils.showToast('No mask area found', 'error', 3000);
+          return;
+        }
+
         var overlayImg = new Image();
         overlayImg.onload = function() {
           // Remove the preview mask overlay
           removeMaskOverlay();
           removePointMarkers();
 
-          // Create the permanent highlight/outline overlay as a Fabric image
-          var fabricOverlay = new fabric.FabricImage(overlayImg, {
-            left: 0,
-            top: 0,
-            originX: 'left',
-            originY: 'top',
-            scaleX: canvas.width / overlayImg.width,
-            scaleY: canvas.height / overlayImg.height,
-            selectable: false,
-            evented: false
-          });
+          // Scale mask pixel coords to canvas coords
+          // pendingMaskURL image dimensions may differ from canvas dimensions
+          var maskImg = new Image();
+          maskImg.onload = function() {
+            var imgToCanvasX = canvas.width / maskImg.width;
+            var imgToCanvasY = canvas.height / maskImg.height;
 
-          // Find the bounding box of non-transparent pixels for tag placement
-          var bbox = getMaskBoundingBox(overlayImg);
-          var centerX = bbox.x + bbox.w / 2;
-          var tagTipY = bbox.y;
+            // Cropped overlay positioned at its bounding box location in canvas coords
+            var overlayLeft = result.x * imgToCanvasX;
+            var overlayTop = result.y * imgToCanvasY;
+            var overlayW = result.w * imgToCanvasX;
+            var overlayH = result.h * imgToCanvasY;
 
-          // Scale bbox coords to canvas coords
-          var scaleX = canvas.width / overlayImg.width;
-          var scaleY = canvas.height / overlayImg.height;
-          centerX = centerX * scaleX;
-          tagTipY = tagTipY * scaleY;
-
-          // Position tag bubble above the mask center-top
-          var bubbleX = centerX;
-          var bubbleY = Math.max(30, tagTipY - 40);
-          var bubbleHeight = fontSize + TAG_BUBBLE_PADDING * 2;
-
-          // Create tag parts (matching TagTool pattern)
-          var tip = new fabric.Circle({
-            left: centerX,
-            top: tagTipY,
-            radius: TAG_TIP_RADIUS,
-            fill: tagColor,
-            stroke: tagColor,
-            strokeWidth: 1,
-            originX: 'center',
-            originY: 'center',
-            selectable: false,
-            evented: false
-          });
-
-          var line = new fabric.Line([centerX, tagTipY, bubbleX, bubbleY], {
-            stroke: tagColor,
-            strokeWidth: TAG_LINE_WIDTH,
-            selectable: false,
-            evented: false
-          });
-
-          var bubble = new fabric.Rect({
-            left: bubbleX,
-            top: bubbleY - bubbleHeight / 2,
-            width: TAG_BUBBLE_MIN_WIDTH,
-            height: bubbleHeight,
-            rx: TAG_BUBBLE_RX,
-            ry: TAG_BUBBLE_RX,
-            fill: tagColor,
-            stroke: tagColor,
-            strokeWidth: 1,
-            originX: 'left',
-            originY: 'top',
-            selectable: false,
-            evented: false
-          });
-
-          var textbox = new fabric.Textbox('Label', {
-            left: bubbleX + TAG_BUBBLE_PADDING,
-            top: bubbleY - fontSize / 2,
-            width: TAG_BUBBLE_MIN_WIDTH - TAG_BUBBLE_PADDING * 2,
-            fontSize: fontSize,
-            fontFamily: font,
-            fill: '#FFFFFF',
-            editable: true,
-            cursorColor: '#FFFFFF',
-            padding: 2,
-            originX: 'left',
-            originY: 'top',
-            selectable: false,
-            evented: false
-          });
-
-          // Add all parts to canvas for initial editing
-          var items = [fabricOverlay, tip, line, bubble, textbox];
-          for (var i = 0; i < items.length; i++) {
-            canvas.add(items[i]);
-          }
-
-          // Live-resize bubble as user types
-          var onChanged = function() {
-            var minTextWidth = TAG_BUBBLE_MIN_WIDTH - TAG_BUBBLE_PADDING * 2;
-            var measured = ToolUtils.measureTextWidth(textbox.text, textbox.fontSize, textbox.fontFamily);
-            var newTextWidth = Math.max(minTextWidth, measured + 4);
-            if (Math.abs(newTextWidth - textbox.width) > 2) {
-              textbox.set('width', newTextWidth);
-            }
-            var bw = Math.max(TAG_BUBBLE_MIN_WIDTH, textbox.width + TAG_BUBBLE_PADDING * 2);
-            var bh = textbox.height + TAG_BUBBLE_PADDING * 2;
-            bubble.set({
-              width: bw,
-              height: bh,
-              left: textbox.left - TAG_BUBBLE_PADDING,
-              top: textbox.top - TAG_BUBBLE_PADDING
+            var highlightOpacity = mode === 'outline' ? 1.0 : 0.35;
+            var fabricOverlay = new fabric.FabricImage(overlayImg, {
+              left: overlayLeft,
+              top: overlayTop,
+              originX: 'left',
+              originY: 'top',
+              scaleX: overlayW / overlayImg.width,
+              scaleY: overlayH / overlayImg.height,
+              selectable: false,
+              evented: false,
+              opacity: highlightOpacity
             });
-            line.set({
-              x2: bubble.left,
-              y2: bubble.top + bubble.height / 2
+
+            // Tag placement: center-top of the overlay area
+            var centerX = overlayLeft + overlayW / 2;
+            var tagTipY = overlayTop;
+
+            // Position tag bubble above the mask center-top
+            var bubbleX = centerX;
+            var bubbleY = Math.max(30, tagTipY - 40);
+            var bubbleHeight = fontSize + TAG_BUBBLE_PADDING * 2;
+
+            // Create tag parts (matching TagTool pattern)
+            var tip = new fabric.Circle({
+              left: centerX,
+              top: tagTipY,
+              radius: TAG_TIP_RADIUS,
+              fill: tagColor,
+              stroke: tagColor,
+              strokeWidth: 1,
+              originX: 'center',
+              originY: 'center',
+              selectable: false,
+              evented: false
             });
-            canvas.renderAll();
-          };
-          textbox.on('changed', onChanged);
 
-          // Enter editing
-          textbox.set({ selectable: true, evented: true, editable: true });
-          canvas.setActiveObject(textbox);
-          textbox.enterEditing();
-          textbox.selectAll();
-          canvas.renderAll();
+            var line = new fabric.Line([centerX, tagTipY, bubbleX, bubbleY], {
+              stroke: tagColor,
+              strokeWidth: TAG_LINE_WIDTH,
+              selectable: false,
+              evented: false
+            });
 
-          // On editing exit, group everything
-          var onExitEditing = function() {
-            textbox.off('editing:exited', onExitEditing);
-            textbox.off('changed', onChanged);
+            var bubble = new fabric.Rect({
+              left: bubbleX,
+              top: bubbleY - bubbleHeight / 2,
+              width: TAG_BUBBLE_MIN_WIDTH,
+              height: bubbleHeight,
+              rx: TAG_BUBBLE_RX,
+              ry: TAG_BUBBLE_RX,
+              fill: tagColor,
+              stroke: tagColor,
+              strokeWidth: 1,
+              originX: 'left',
+              originY: 'top',
+              selectable: false,
+              evented: false
+            });
 
-            // Final auto-size
-            onChanged();
+            var textbox = new fabric.Textbox('Label', {
+              left: bubbleX + TAG_BUBBLE_PADDING,
+              top: bubbleY - fontSize / 2,
+              width: TAG_BUBBLE_MIN_WIDTH - TAG_BUBBLE_PADDING * 2,
+              fontSize: fontSize,
+              fontFamily: font,
+              fill: '#FFFFFF',
+              editable: true,
+              cursorColor: '#FFFFFF',
+              padding: 2,
+              originX: 'left',
+              originY: 'top',
+              selectable: false,
+              evented: false
+            });
 
-            // Remove all from canvas, regroup
-            for (var j = 0; j < items.length; j++) {
-              canvas.remove(items[j]);
+            // Add all parts to canvas for initial editing
+            var items = [fabricOverlay, tip, line, bubble, textbox];
+            for (var i = 0; i < items.length; i++) {
+              canvas.add(items[i]);
             }
 
-            var group = new fabric.Group(items, {
-              selectable: true,
-              evented: true,
-              subTargetCheck: true
-            });
-            group._snipTagType = true;
-            group._snipSegmentTag = true;
-            group._snipTagColor = tagColor;
-            canvas.add(group);
-            canvas.setActiveObject(group);
+            // Live-resize bubble as user types
+            var onChanged = function() {
+              var minTextWidth = TAG_BUBBLE_MIN_WIDTH - TAG_BUBBLE_PADDING * 2;
+              var measured = ToolUtils.measureTextWidth(textbox.text, textbox.fontSize, textbox.fontFamily);
+              var newTextWidth = Math.max(minTextWidth, measured + 4);
+              if (Math.abs(newTextWidth - textbox.width) > 2) {
+                textbox.set('width', newTextWidth);
+              }
+              var bw = Math.max(TAG_BUBBLE_MIN_WIDTH, textbox.width + TAG_BUBBLE_PADDING * 2);
+              var bh = textbox.height + TAG_BUBBLE_PADDING * 2;
+              bubble.set({
+                width: bw,
+                height: bh,
+                left: textbox.left - TAG_BUBBLE_PADDING,
+                top: textbox.top - TAG_BUBBLE_PADDING
+              });
+              line.set({
+                x2: bubble.left,
+                y2: bubble.top + bubble.height / 2
+              });
+              canvas.renderAll();
+            };
+            textbox.on('changed', onChanged);
+
+            // Enter editing
+            textbox.set({ selectable: true, evented: true, editable: true });
+            canvas.setActiveObject(textbox);
+            textbox.enterEditing();
+            textbox.selectAll();
             canvas.renderAll();
 
-            ToolUtils.showToast('Segment tagged', 'success', 2000);
+            // On editing exit, group everything
+            var onExitEditing = function() {
+              textbox.off('editing:exited', onExitEditing);
+              textbox.off('changed', onChanged);
+
+              // Final auto-size
+              onChanged();
+
+              // Remove all from canvas, regroup
+              for (var j = 0; j < items.length; j++) {
+                canvas.remove(items[j]);
+              }
+
+              var group = new fabric.Group(items, {
+                selectable: true,
+                evented: true,
+                subTargetCheck: true
+              });
+              group._snipTagType = true;
+              group._snipSegmentTag = true;
+              group._snipTagColor = tagColor;
+              canvas.add(group);
+              canvas.setActiveObject(group);
+              canvas.renderAll();
+
+              ToolUtils.showToast('Segment tagged', 'success', 2000);
+            };
+
+            textbox.on('editing:exited', onExitEditing);
+
+            // Clear segment state
+            accumulatedPoints = [];
+            pendingCutoutURL = null;
+            pendingMaskURL = null;
           };
-
-          textbox.on('editing:exited', onExitEditing);
-
-          // Clear segment state
-          accumulatedPoints = [];
-          pendingCutoutURL = null;
-          pendingMaskURL = null;
+          maskImg.src = savedMaskURL;
         };
-        overlayImg.src = processedDataURL;
+        overlayImg.src = result.dataURL;
       });
-    }
-
-    /**
-     * Find the bounding box of non-transparent pixels in an image.
-     * Returns { x, y, w, h } in image pixel coordinates.
-     */
-    function getMaskBoundingBox(imgEl) {
-      var c = document.createElement('canvas');
-      c.width = imgEl.width;
-      c.height = imgEl.height;
-      var ctx = c.getContext('2d');
-      ctx.drawImage(imgEl, 0, 0);
-      var data = ctx.getImageData(0, 0, c.width, c.height).data;
-
-      var minX = c.width, minY = c.height, maxX = 0, maxY = 0;
-      for (var y = 0; y < c.height; y++) {
-        for (var x = 0; x < c.width; x++) {
-          var alpha = data[(y * c.width + x) * 4 + 3];
-          if (alpha > 10) {
-            if (x < minX) minX = x;
-            if (x > maxX) maxX = x;
-            if (y < minY) minY = y;
-            if (y > maxY) maxY = y;
-          }
-        }
-      }
-
-      if (maxX < minX) return { x: 0, y: 0, w: c.width, h: c.height };
-      return { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
     }
 
     function showTutorialIfFirstTime() {
