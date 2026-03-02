@@ -9,8 +9,7 @@
   // --- Download constants (update here for version bumps) ---
   var SNIP_VERSION = '1.0.9';
   var DOWNLOAD_BASE = 'https://github.com/rixinhahaha/snip/releases/latest/download/';
-  var DOWNLOAD_ARM64 = DOWNLOAD_BASE + 'Snip-' + SNIP_VERSION + '-arm64.dmg';
-  var DOWNLOAD_X64 = DOWNLOAD_BASE + 'Snip-' + SNIP_VERSION + '-x64.dmg';
+  var DOWNLOAD_URL = DOWNLOAD_BASE + 'Snip-' + SNIP_VERSION + '-arm64.dmg';
 
   // --- Nav scroll effect ---
   var nav = document.getElementById('nav');
@@ -108,47 +107,11 @@
     });
   }
 
-  // --- Populate download links from constants ---
+  // --- Populate download links ---
   function initDownloadLinks() {
-    var links = document.querySelectorAll('.download-option');
+    var links = document.querySelectorAll('.download-link');
     links.forEach(function (link) {
-      if (link.getAttribute('data-arch') === 'arm64') {
-        link.href = DOWNLOAD_ARM64;
-      } else if (link.getAttribute('data-arch') === 'x64') {
-        link.href = DOWNLOAD_X64;
-      }
-    });
-  }
-
-  // --- Download dropdown ---
-  function initDownloadDropdowns() {
-    var dropdowns = document.querySelectorAll('.download-dropdown');
-    dropdowns.forEach(function (dropdown) {
-      var toggleBtn = dropdown.querySelector('.download-toggle');
-      if (!toggleBtn) return;
-
-      toggleBtn.addEventListener('click', function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-        var isOpen = dropdown.classList.contains('open');
-        // Close all dropdowns first
-        dropdowns.forEach(function (d) { d.classList.remove('open'); });
-        if (!isOpen) {
-          dropdown.classList.add('open');
-          toggleBtn.setAttribute('aria-expanded', 'true');
-        } else {
-          toggleBtn.setAttribute('aria-expanded', 'false');
-        }
-      });
-    });
-
-    // Close dropdowns on outside click
-    document.addEventListener('click', function () {
-      dropdowns.forEach(function (d) {
-        d.classList.remove('open');
-        var btn = d.querySelector('.download-toggle');
-        if (btn) btn.setAttribute('aria-expanded', 'false');
-      });
+      link.href = DOWNLOAD_URL;
     });
   }
 
@@ -301,7 +264,6 @@
       animateSectionHeaders();
       initSparkleCanvas();
       initCardGlow();
-      initDownloadDropdowns();
     });
   } else {
     initDownloadLinks();
@@ -309,6 +271,5 @@
     animateSectionHeaders();
     initSparkleCanvas();
     initCardGlow();
-    initDownloadDropdowns();
   }
 })();

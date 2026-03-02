@@ -1,40 +1,24 @@
 #!/usr/bin/env node
 /**
- * Download ALL models for offline bundling.
+ * Download HuggingFace models for offline bundling.
  *
- * 1. Ollama model (minicpm-v)          — pulled via temporary Ollama server (~5 GB)
- * 2. Xenova/all-MiniLM-L6-v2           — HuggingFace embedding model (~23 MB)
- * 3. Xenova/slimsam-77-uniform         — HuggingFace SAM model (~50 MB)
+ * 1. Xenova/all-MiniLM-L6-v2           — embedding model (~23 MB)
+ * 2. Xenova/slimsam-77-uniform         — SAM segmentation model (~50 MB)
  *
  * Usage:
- *   node scripts/download-models.js               # HuggingFace models only (MiniLM + SlimSAM)
- *   node scripts/download-models.js --ollama       # also pull Ollama model (minicpm-v, ~5 GB)
- *   node scripts/download-models.js --force        # force re-pull (clean partial downloads)
+ *   node scripts/download-models.js
  *
- * Note: Animation (2GIF) no longer uses local models — it calls the fal.ai cloud API.
+ * Ollama models (minicpm-v) are pulled at runtime by the app — not bundled.
  *
  * Prerequisites:
- *   - Ollama binary must exist at vendor/ollama/ollama (run: npm run download-ollama)
  *   - @huggingface/transformers must be installed (npm install)
  */
 
 var path = require('path');
 var fs = require('fs');
-var child_process = require('child_process');
-var http = require('http');
 
 var PROJECT_DIR = path.join(__dirname, '..');
-var VENDOR_OLLAMA = path.join(PROJECT_DIR, 'vendor', 'ollama');
 var VENDOR_MODELS = path.join(PROJECT_DIR, 'vendor', 'models');
-var OLLAMA_MODELS_DIR = path.join(VENDOR_OLLAMA, 'models');
-var OLLAMA_BINARY = path.join(VENDOR_OLLAMA, 'ollama');
-var OLLAMA_PORT = 11435; // non-standard port to avoid conflicts
-var OLLAMA_HOST = '127.0.0.1:' + OLLAMA_PORT;
-var DEFAULT_MODEL = 'minicpm-v';
-
-// ---------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------
 
 function getDirSize(dir) {
   var total = 0;
@@ -60,150 +44,11 @@ function formatBytes(bytes) {
   return (bytes / 1073741824).toFixed(2) + ' GB';
 }
 
-function waitForOllama(timeoutMs) {
-  var deadline = Date.now() + timeoutMs;
-  return new Promise(function (resolve, reject) {
-    function check() {
-      if (Date.now() > deadline) {
-        return reject(new Error('Ollama server did not start within ' + (timeoutMs / 1000) + 's'));
-      }
-      var req = http.get('http://' + OLLAMA_HOST + '/api/version', function () {
-        resolve();
-      });
-      req.on('error', function () {
-        setTimeout(check, 500);
-      });
-      req.setTimeout(2000, function () {
-        req.destroy();
-        setTimeout(check, 500);
-      });
-    }
-    check();
-  });
-}
-
-function findPartials(dir) {
-  var count = 0;
-  try {
-    var entries = fs.readdirSync(dir, { withFileTypes: true });
-    for (var i = 0; i < entries.length; i++) {
-      var entry = entries[i];
-      var fullPath = path.join(dir, entry.name);
-      if (entry.isDirectory()) {
-        count += findPartials(fullPath);
-      } else if (entry.name.includes('-partial')) {
-        count++;
-      }
-    }
-  } catch (_) {}
-  return count;
-}
-
-function cleanPartials(dir) {
-  try {
-    var entries = fs.readdirSync(dir, { withFileTypes: true });
-    for (var i = 0; i < entries.length; i++) {
-      var entry = entries[i];
-      var fullPath = path.join(dir, entry.name);
-      if (entry.isDirectory()) {
-        cleanPartials(fullPath);
-      } else if (entry.name.includes('-partial')) {
-        fs.unlinkSync(fullPath);
-      }
-    }
-  } catch (_) {}
-}
-
-// ---------------------------------------------------------------
-// Ollama model download (minicpm-v)
-// ---------------------------------------------------------------
-
-async function downloadOllamaModel(force) {
-  console.log('\n' + '='.repeat(60));
-  console.log('  Ollama: ' + DEFAULT_MODEL);
-  console.log('='.repeat(60));
-
-  if (!fs.existsSync(OLLAMA_BINARY)) {
-    console.error('ERROR: Ollama binary not found at ' + OLLAMA_BINARY);
-    console.error('Run first:  npm run download-ollama');
-    process.exit(1);
-  }
-
-  fs.mkdirSync(OLLAMA_MODELS_DIR, { recursive: true });
-
-  // Clean partial downloads
-  var partials = findPartials(OLLAMA_MODELS_DIR);
-  if (partials > 0) {
-    console.log('==> Cleaning ' + partials + ' partial blob(s) from interrupted download...');
-    cleanPartials(OLLAMA_MODELS_DIR);
-  }
-
-  // Check if model already exists
-  var manifestDir = path.join(
-    OLLAMA_MODELS_DIR, 'manifests', 'registry.ollama.ai', 'library', DEFAULT_MODEL
-  );
-  if (!force && fs.existsSync(manifestDir)) {
-    try {
-      var files = fs.readdirSync(manifestDir);
-      if (files.length > 0) {
-        console.log('==> Model "' + DEFAULT_MODEL + '" already exists — skipping (use --force to re-pull)');
-        return;
-      }
-    } catch (_) {}
-  }
-
-  // Start temporary Ollama server
-  console.log('==> Starting temporary Ollama server on port ' + OLLAMA_PORT + '...');
-  var ollamaProcess = child_process.spawn(OLLAMA_BINARY, ['serve'], {
-    env: Object.assign({}, process.env, {
-      OLLAMA_MODELS: OLLAMA_MODELS_DIR,
-      OLLAMA_HOST: OLLAMA_HOST
-    }),
-    stdio: ['ignore', 'pipe', 'pipe']
-  });
-
-  try {
-    await waitForOllama(30000);
-    console.log('==> Server ready');
-
-    // Pull model using CLI (shows progress natively)
-    console.log('==> Pulling model "' + DEFAULT_MODEL + '" (this may take a while for ~5 GB)...');
-    child_process.execSync(
-      '"' + OLLAMA_BINARY + '" pull ' + DEFAULT_MODEL,
-      {
-        env: Object.assign({}, process.env, {
-          OLLAMA_MODELS: OLLAMA_MODELS_DIR,
-          OLLAMA_HOST: OLLAMA_HOST
-        }),
-        stdio: 'inherit',
-        timeout: 30 * 60 * 1000 // 30 minute timeout for large model
-      }
-    );
-    console.log('==> Model "' + DEFAULT_MODEL + '" pulled successfully');
-  } finally {
-    // Always stop server
-    try {
-      ollamaProcess.kill('SIGTERM');
-    } catch (_) {}
-  }
-
-  // Verify
-  var remainingPartials = findPartials(OLLAMA_MODELS_DIR);
-  if (remainingPartials > 0) {
-    console.warn('==> WARNING: ' + remainingPartials + ' partial blob(s) remain. Re-run with --force.');
-  }
-
-  console.log('==> Ollama model size: ' + formatBytes(getDirSize(OLLAMA_MODELS_DIR)));
-}
-
-// ---------------------------------------------------------------
-// HuggingFace models (MiniLM + SlimSAM)
-// ---------------------------------------------------------------
-
-async function downloadHuggingFaceModels() {
-  console.log('\n' + '='.repeat(60));
+async function main() {
+  console.log('Snip Model Downloader');
+  console.log('=====================');
   console.log('  HuggingFace: MiniLM + SlimSAM');
-  console.log('='.repeat(60));
+  console.log('');
 
   fs.mkdirSync(VENDOR_MODELS, { recursive: true });
 
@@ -216,7 +61,7 @@ async function downloadHuggingFaceModels() {
   env.allowRemoteModels = true;
 
   // 1. MiniLM embedding model
-  console.log('\n==> [1/2] Downloading MiniLM embedding model (Xenova/all-MiniLM-L6-v2)...');
+  console.log('==> [1/2] Downloading MiniLM embedding model (Xenova/all-MiniLM-L6-v2)...');
   var pipe = await transformers.pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2', {
     quantized: true
   });
@@ -229,43 +74,8 @@ async function downloadHuggingFaceModels() {
   await transformers.AutoProcessor.from_pretrained('Xenova/slimsam-77-uniform');
   console.log('==> SlimSAM model + processor loaded');
 
-  console.log('\n==> HuggingFace model size: ' + formatBytes(getDirSize(VENDOR_MODELS)));
-}
-
-// ---------------------------------------------------------------
-// Main
-// ---------------------------------------------------------------
-
-async function main() {
-  var args = process.argv.slice(2);
-  var force = args.includes('--force');
-  var includeOllama = args.includes('--ollama');
-  var hfOnly = !includeOllama;
-
-  console.log('Snip Model Downloader');
-  console.log('=====================');
-
-  if (includeOllama) {
-    await downloadOllamaModel(force);
-  }
-
-  if (hfOnly || includeOllama) {
-    await downloadHuggingFaceModels();
-  }
-
   // Summary
-  console.log('\n' + '='.repeat(60));
-  console.log('  All done!');
-  console.log('='.repeat(60));
-
-  if (includeOllama && fs.existsSync(OLLAMA_BINARY)) {
-    console.log('  Ollama binary:   ' + formatBytes(fs.statSync(OLLAMA_BINARY).size));
-    console.log('  Ollama models:   ' + formatBytes(getDirSize(OLLAMA_MODELS_DIR)));
-  }
-  if (fs.existsSync(VENDOR_MODELS)) {
-    console.log('  HF models:       ' + formatBytes(getDirSize(VENDOR_MODELS)));
-  }
-  console.log('');
+  console.log('\n==> Done! HF models: ' + formatBytes(getDirSize(VENDOR_MODELS)));
   console.log('These will be bundled into the app via extraResources.');
 }
 

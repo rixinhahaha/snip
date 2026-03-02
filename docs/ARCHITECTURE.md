@@ -10,7 +10,7 @@
 |-----------|---------|---------|
 | Desktop framework | Electron | 33 |
 | Annotation canvas | Fabric.js | 7 |
-| AI categorization | Local vision LLM | Ollama (bundled binary, model pulled on first launch) |
+| AI categorization | Local vision LLM | Ollama (system install, model pulled on first launch) |
 | Semantic embeddings | HuggingFace Transformers.js | all-MiniLM-L6-v2 |
 | Image segmentation | SlimSAM | ONNX Runtime |
 | Animation (fal.ai) | Wan 2.2 I2V via fal.ai cloud API | HTTPS queue API (requires API key) |
@@ -77,10 +77,11 @@ src/
 
 assets/                      # App icons, tray icons
 scripts/                     # Build and generation scripts
-  download-ollama.sh           # Download Ollama binary + minicpm-v model
   download-models.js           # Download MiniLM + SlimSAM to vendor/models/
+  afterPack.js                 # electron-builder afterPack hook (strip unused native modules, pre-sign)
+  build-signed.sh              # Production build: sign + notarize
+  generate-app-icon.js         # Regenerate app icons from SVG template
 vendor/                      # Downloaded at dev time, bundled at build time
-  ollama/                      # Ollama binary + libs (~220 MB, models NOT bundled)
   models/                      # HuggingFace models: MiniLM + SlimSAM (~75 MB)
   (static animation presets inlined in src/main/animation/animation.js)
 ```
@@ -105,13 +106,18 @@ All windows share:
 
 ## Key Architecture Decisions
 
-### Bundled Ollama
-The Ollama **binary and support libraries** (~220 MB) are bundled with the app. The LLM model (`minicpm-v`, ~5 GB) is **NOT bundled** — it is pulled on first launch. The binary lives in `vendor/ollama/` (dev) or `Resources/ollama/` (packaged). Snip spawns its own dedicated Ollama server on port **11435** (not 11434) via `child_process.spawn` to avoid conflicts with the user's own Ollama installation. The port is resolved dynamically — if 11435 is taken, it tries 11436–11445 via `findAvailablePort()`. Models are stored in `~/Library/Application Support/snip/ollama/models/`.
+### System Ollama
+Ollama is **NOT bundled** — the user installs it separately (from [ollama.com](https://ollama.com/download) or via the in-app installer). The LLM model (`minicpm-v`, ~5 GB) is pulled on first launch. Snip connects to the system Ollama server at `http://127.0.0.1:11434` (the default port). Models are stored in Ollama's standard location (`~/.ollama/models/`).
 
-On first launch, `ensureModel()` checks three sources in order:
-1. **Snip's own model store** — `client.list()` checks if the model is already downloaded
-2. **System Ollama** (`~/.ollama/models/`) — `trySymlinkSystemModel()` symlinks blobs from the user's existing Ollama to avoid re-downloading
-3. **Registry pull** — `client.pull({ model, stream: true })` downloads from the Ollama registry with real-time progress pushed to all BrowserWindows via `webContents.send('ollama-pull-progress', progress)`
+On startup, `ollama-manager.js` runs `startOllama()` which:
+1. **Checks if already running** — `checkServer(host)` pings `127.0.0.1:11434`
+2. **Checks if installed** — `findOllamaInstall()` looks for `/Applications/Ollama.app` and known CLI paths (`/usr/local/bin/ollama`, `/opt/homebrew/bin/ollama`)
+3. **Auto-starts if needed** — `autoStartOllama()` runs `open -a Ollama` (for .app) or `ollama serve` (for CLI)
+4. **Not installed** — sets status to `not_installed`, the inline setup overlay prompts the user to install
+
+The in-app installer (`installOllama()`) downloads `Ollama-darwin.zip` from ollama.com, extracts `Ollama.app`, moves it to `/Applications/`, and launches it. Progress is pushed to all BrowserWindows via `webContents.send('ollama-install-progress', progress)`.
+
+Model pull uses `client.pull({ model, stream: true })` with per-digest progress accumulation, pushed via `webContents.send('ollama-pull-progress', progress)`.
 
 All AI runs locally — no cloud API calls (except fal.ai for animations).
 
@@ -233,6 +239,11 @@ The preload script (`preload.js`) exposes `window.snip` with these methods:
 | `onAnimateProgress(cb)` | M -> R | Animation progress (upload, queue, generate, encode) |
 | `saveAnimation(data)` | R -> M | Save GIF/APNG to disk |
 | `openExternalUrl(url)` | R -> M | Open URL in default browser |
+| `installOllama()` | R -> M | Download and install Ollama from ollama.com |
+| `pullOllamaModel()` | R -> M | Pull the configured model (minicpm-v) |
+| `onOllamaInstallProgress(cb)` | M -> R | Real-time install progress (downloading, extracting, installing, launching) |
+| `onOllamaStatusChanged(cb)` | M -> R | Ollama status broadcast (installed, running, modelReady) |
+| `onShowSetupOverlay(cb)` | M -> R | Main process triggers inline setup overlay in home window |
 
 *(R = Renderer, M = Main)*
 
@@ -291,8 +302,7 @@ The native Liquid Glass layer is always present (macOS 26+). Dark and Light them
 | Animations | `~/Documents/snip/screenshots/animations/` | same |
 | Index | `~/Documents/snip/screenshots/.index.json` | same |
 | Config | `~/Library/Application Support/snip/snip-config.json` | same |
-| Ollama binary | `vendor/ollama/ollama` | `Resources/ollama/ollama` |
-| Ollama models (runtime) | `~/Library/Application Support/snip/ollama/models/` | same (pulled on first launch) |
-| System Ollama models | `~/.ollama/models/` | same (symlinked if available) |
+| Ollama (system) | `/Applications/Ollama.app` or `/usr/local/bin/ollama` | same (user-installed) |
+| Ollama models | `~/.ollama/models/` | same (managed by system Ollama) |
 | HF models (MiniLM + SlimSAM) | `vendor/models/` | `Resources/models/` |
 | Animation presets | Inlined in `src/main/animation/animation.js` | same (bundled in asar) |

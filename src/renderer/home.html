@@ -169,40 +169,49 @@
           </div>
         </div>
 
-        <div class="settings-section">
-          <h3>AI Assistant</h3>
-          <p>AI-powered snip organization runs locally on your machine.</p>
-          <div class="ollama-status-row">
-            <span id="ollama-status-dot" class="status-dot"></span>
-            <span id="ollama-status-text">Checking...</span>
-          </div>
-          <div id="model-download-section" class="model-download-section hidden">
-            <div class="model-download-label">Downloading AI model...</div>
-            <div class="model-download-bar-track">
-              <div id="model-download-bar" class="model-download-bar-fill"></div>
+        <div class="settings-section" id="ai-assistant-section">
+          <h3>Local AI Assistant</h3>
+          <p>AI-powered snip organization runs locally on your machine using Ollama.</p>
+
+          <div class="ollama-checklist">
+            <div class="checklist-item">
+              <span id="check-installed" class="check-icon pending">○</span>
+              <span class="checklist-label">Ollama installed</span>
             </div>
-            <div id="model-download-detail" class="model-download-detail">Preparing...</div>
-          </div>
-          <div class="current-model-card">
-            <span class="current-model-label">Active Model</span>
-            <div class="current-model-header">
-              <span id="current-model-name" class="current-model-name">—</span>
-              <button class="icon-btn model-info-btn" id="model-info-btn" title="Model info">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <circle cx="12" cy="12" r="10"/>
-                  <path d="M12 16v-4"/>
-                  <circle cx="12" cy="8" r="0.5" fill="currentColor" stroke="none"/>
-                </svg>
-              </button>
+            <div class="checklist-item">
+              <span id="check-running" class="check-icon pending">○</span>
+              <span class="checklist-label">Ollama running</span>
             </div>
-            <div id="model-info-tooltip" class="model-info-tooltip hidden">
-              <table class="model-info-table">
-                <tr><td class="model-info-label">Model</td><td id="info-model">—</td></tr>
-                <tr><td class="model-info-label">Parameters</td><td id="info-params">—</td></tr>
-                <tr><td class="model-info-label">Size</td><td id="info-size">—</td></tr>
-                <tr><td class="model-info-label">Quantization</td><td id="info-quant">—</td></tr>
-                <tr><td class="model-info-label">Description</td><td id="info-desc">—</td></tr>
-              </table>
+            <div class="checklist-item">
+              <span id="check-model" class="check-icon pending">○</span>
+              <span class="checklist-label">Model downloaded</span>
+            </div>
+          </div>
+
+          <button id="ollama-setup-btn" class="ollama-action-btn" style="margin-top: 12px;">Set up</button>
+
+          <div id="ollama-ready-info" class="hidden" style="margin-top: 12px;">
+            <div class="current-model-card">
+              <span class="current-model-label">Active Model</span>
+              <div class="current-model-header">
+                <span id="current-model-name" class="current-model-name">—</span>
+                <button class="icon-btn model-info-btn" id="model-info-btn" title="Model info">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"/>
+                    <path d="M12 16v-4"/>
+                    <circle cx="12" cy="8" r="0.5" fill="currentColor" stroke="none"/>
+                  </svg>
+                </button>
+              </div>
+              <div id="model-info-tooltip" class="model-info-tooltip hidden">
+                <table class="model-info-table">
+                  <tr><td class="model-info-label">Model</td><td id="info-model">—</td></tr>
+                  <tr><td class="model-info-label">Parameters</td><td id="info-params">—</td></tr>
+                  <tr><td class="model-info-label">Size</td><td id="info-size">—</td></tr>
+                  <tr><td class="model-info-label">Quantization</td><td id="info-quant">—</td></tr>
+                  <tr><td class="model-info-label">Description</td><td id="info-desc">—</td></tr>
+                </table>
+              </div>
             </div>
           </div>
         </div>
@@ -221,7 +230,11 @@
                   <circle cx="12" cy="12" r="3"/>
                 </svg>
               </button>
-              <button class="animation-api-key-save" id="fal-api-key-save">Save</button>
+              <button class="animation-api-key-save" id="fal-api-key-save" title="Save key">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+              </button>
             </div>
             <div class="animation-api-key-status" id="fal-api-key-status"></div>
             <div class="animation-api-key-help">
@@ -301,6 +314,151 @@
             </tbody>
           </table>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Setup overlay -->
+  <div id="setup-overlay" class="setup-overlay hidden">
+    <div id="setup-sparkles" class="setup-sparkles"></div>
+
+    <!-- Steps view (install / running / model) -->
+    <div id="setup-steps-view" class="setup-view">
+      <div class="setup-header">
+        <div class="setup-header-icon">
+          <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+            <!-- Wand stick -->
+            <rect x="22" y="20" width="4" height="24" rx="2" transform="rotate(-45 22 20)" fill="var(--accent)" opacity="0.85"/>
+            <!-- Star at tip -->
+            <path d="M14 6L16 11.5L21.5 13L16 15L14 20.5L12 15L6.5 13L12 11.5L14 6Z" fill="var(--accent)"/>
+            <!-- Small sparkles -->
+            <path d="M8 24L9 26.5L11.5 27.5L9 28.5L8 31L7 28.5L4.5 27.5L7 26.5L8 24Z" fill="var(--accent)" opacity="0.5"/>
+            <path d="M26 4L26.8 6L28.8 6.8L26.8 7.6L26 9.6L25.2 7.6L23.2 6.8L25.2 6L26 4Z" fill="var(--accent)" opacity="0.4"/>
+            <circle cx="21" cy="3" r="1.2" fill="var(--accent)" opacity="0.35"/>
+            <circle cx="4" cy="16" r="1" fill="var(--accent)" opacity="0.3"/>
+          </svg>
+        </div>
+        <h2>Setting up your local assistant</h2>
+        <p>We use Ollama to organize your snips with AI — everything runs on your machine.</p>
+      </div>
+
+      <div class="setup-cards">
+        <div class="setup-card" id="setup-card-install">
+          <div class="setup-card-ind" id="setup-ind-install"><span>1</span></div>
+          <div class="setup-card-body">
+            <div class="setup-card-title">Install Ollama</div>
+            <div class="setup-card-desc">Free, open-source local AI runtime.</div>
+            <div id="setup-install-actions" class="setup-card-actions hidden">
+              <button id="setup-install-btn" class="setup-btn-icon" title="Install Ollama">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                  <polyline points="7 10 12 15 17 10"/>
+                  <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                Install
+              </button>
+              <div id="setup-install-progress" class="setup-progress hidden">
+                <div class="setup-progress-track">
+                  <div id="setup-install-bar" class="setup-progress-fill"></div>
+                </div>
+                <div id="setup-install-detail" class="setup-progress-text">Downloading...</div>
+              </div>
+              <div id="setup-install-error" class="setup-error hidden">
+                <span id="setup-install-error-text"></span>
+                <button id="setup-install-retry" class="setup-btn-retry">Try again</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="setup-card" id="setup-card-running">
+          <div class="setup-card-ind" id="setup-ind-running"><span>2</span></div>
+          <div class="setup-card-body">
+            <div class="setup-card-title">Ollama Running</div>
+            <div class="setup-card-desc">The Ollama server needs to be active.</div>
+            <div id="setup-running-actions" class="setup-card-actions hidden">
+              <div class="setup-spinner-row">
+                <svg class="setup-spinner-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.5">
+                  <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+                </svg>
+                <span>Waiting for Ollama to start...</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="setup-card" id="setup-card-model">
+          <div class="setup-card-ind" id="setup-ind-model"><span>3</span></div>
+          <div class="setup-card-body">
+            <div class="setup-card-title">Download MiniCPM-V</div>
+            <div class="setup-card-desc">Vision model that names, tags, and organizes your snips locally (~5 GB).</div>
+            <div id="setup-model-actions" class="setup-card-actions hidden">
+              <button id="setup-model-btn" class="setup-btn-icon" title="Download MiniCPM-V">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                  <polyline points="7 10 12 15 17 10"/>
+                  <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                Download
+              </button>
+              <div id="setup-model-progress" class="setup-progress hidden">
+                <div class="setup-progress-track">
+                  <div id="setup-model-bar" class="setup-progress-fill"></div>
+                </div>
+                <div id="setup-model-detail" class="setup-progress-text">Preparing...</div>
+              </div>
+              <div id="setup-model-error" class="setup-error hidden">
+                <span id="setup-model-error-text"></span>
+                <button id="setup-model-retry" class="setup-btn-retry">Try again</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <button id="setup-skip-btn" class="setup-btn-skip">Skip for now</button>
+    </div>
+
+    <!-- Welcome view -->
+    <div id="setup-welcome-view" class="setup-view hidden">
+      <div class="setup-welcome-icon">
+        <svg width="64" height="64" viewBox="0 0 48 48" fill="none">
+          <!-- Wand stick -->
+          <rect x="22" y="20" width="4" height="24" rx="2" transform="rotate(-45 22 20)" fill="var(--accent)"/>
+          <!-- Star at tip -->
+          <path d="M14 6L16 11.5L21.5 13L16 15L14 20.5L12 15L6.5 13L12 11.5L14 6Z" fill="var(--accent)"/>
+          <!-- Sparkles -->
+          <path d="M8 24L9 26.5L11.5 27.5L9 28.5L8 31L7 28.5L4.5 27.5L7 26.5L8 24Z" fill="var(--accent)" opacity="0.6"/>
+          <path d="M26 4L26.8 6L28.8 6.8L26.8 7.6L26 9.6L25.2 7.6L23.2 6.8L25.2 6L26 4Z" fill="var(--accent)" opacity="0.5"/>
+          <path d="M38 14L38.7 15.8L40.5 16.5L38.7 17.2L38 19L37.3 17.2L35.5 16.5L37.3 15.8L38 14Z" fill="var(--accent)" opacity="0.4"/>
+          <circle cx="21" cy="3" r="1.2" fill="var(--accent)" opacity="0.4"/>
+          <circle cx="4" cy="16" r="1" fill="var(--accent)" opacity="0.3"/>
+          <circle cx="32" cy="8" r="1" fill="var(--accent)" opacity="0.3"/>
+        </svg>
+      </div>
+      <h2 class="setup-welcome-title">Welcome to Snip</h2>
+      <button id="setup-get-started" class="setup-btn-icon setup-btn-glow" title="Get Started">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M5 12h14"/>
+          <path d="M12 5l7 7-7 7"/>
+        </svg>
+        Let's go
+      </button>
+    </div>
+
+    <!-- Failed view -->
+    <div id="setup-failed-view" class="setup-view hidden">
+      <div class="setup-failed-icon">
+        <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+          <rect x="22" y="20" width="4" height="24" rx="2" transform="rotate(-45 22 20)" fill="var(--text-muted)" opacity="0.6"/>
+          <path d="M14 6L16 11.5L21.5 13L16 15L14 20.5L12 15L6.5 13L12 11.5L14 6Z" fill="var(--text-muted)" opacity="0.5"/>
+        </svg>
+      </div>
+      <h2 class="setup-failed-title">Snip works great without AI too</h2>
+      <p class="setup-failed-desc">You can capture, annotate, and save snips. AI organization can be set up later from Settings.</p>
+      <div class="setup-failed-btns">
+        <button id="setup-continue-without" class="setup-btn-primary">Continue without AI</button>
+        <button id="setup-try-again" class="setup-btn-secondary">Try again</button>
       </div>
     </div>
   </div>

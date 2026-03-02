@@ -6,7 +6,7 @@ const { registerIpcHandlers } = require('./ipc-handlers');
 const { captureScreen } = require('./capturer');
 const { initStore } = require('./store');
 const { startWatcher } = require('./organizer/watcher');
-const { startOllama, stopOllama } = require('./ollama-manager');
+const { startOllama, stopOllama, setOnInstallComplete } = require('./ollama-manager');
 const { BASE_WEB_PREFERENCES } = require('./constants');
 
 // Native Liquid Glass (macOS 26+) — safe no-op on older systems
@@ -216,6 +216,18 @@ function showHomeWindow() {
   createHomeWindow();
 }
 
+function sendToHomeWindow(channel) {
+  if (homeWindow && !homeWindow.isDestroyed()) {
+    if (homeWindow.webContents.isLoading()) {
+      homeWindow.webContents.once('did-finish-load', () => {
+        homeWindow.webContents.send(channel);
+      });
+    } else {
+      homeWindow.webContents.send(channel);
+    }
+  }
+}
+
 function showSearchPage() {
   showHomeWindow();
   // Send IPC to switch to search page after window is ready
@@ -247,9 +259,24 @@ app.whenReady().then(() => {
   // Start background organizer
   startWatcher();
 
-  // Start embedded Ollama server (downloads binary on first launch)
-  startOllama().catch(function (err) {
+  // Show setup overlay when Ollama install completes so user can accept model download
+  setOnInstallComplete(function () {
+    sendToHomeWindow('show-setup-overlay');
+  });
+
+  // Detect system Ollama and connect (no bundled binary)
+  startOllama().then(async function () {
+    var { checkModel, isReady } = require('./ollama-manager');
+    await checkModel();
+    // Show setup overlay if Ollama is not fully ready
+    var ready = await isReady();
+    if (!ready) {
+      sendToHomeWindow('show-setup-overlay');
+    }
+  }).catch(function (err) {
     console.error('[Snip] Ollama startup failed:', err.message);
+    // Not installed or failed — show setup overlay
+    sendToHomeWindow('show-setup-overlay');
   });
 
   // Pre-warm SAM segmentation model

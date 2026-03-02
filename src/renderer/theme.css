@@ -175,11 +175,11 @@
  * CSS backdrop-filter disabled — the native layer handles blur.
  */
 [data-theme="glass"] {
-  --bg-body: rgba(25, 12, 50, 0.18);
-  --bg-primary: rgba(30, 15, 60, 0.25);
-  --bg-secondary: rgba(25, 12, 50, 0.38);
-  --bg-elevated: rgba(40, 20, 80, 0.40);
-  --bg-toolbar: rgba(25, 12, 50, 0.35);
+  --bg-body: rgba(25, 12, 50, 0.12);
+  --bg-primary: rgba(25, 12, 50, 0.20);
+  --bg-secondary: rgba(25, 12, 50, 0.30);
+  --bg-elevated: rgba(30, 15, 60, 0.32);
+  --bg-toolbar: rgba(25, 12, 50, 0.28);
   --bg-hover: rgba(139, 92, 246, 0.20);
   --bg-hover-strong: rgba(139, 92, 246, 0.30);
   --bg-input: rgba(139, 92, 246, 0.16);
@@ -188,7 +188,7 @@
   --bg-overlay: rgba(0, 0, 0, 0.4);
 
   --text-primary: #f0eafa;
-  --text-secondary: #b8b0cc;
+  --text-secondary: #d0c8e0;
   --text-muted: #7e7694;
   --text-bright: #fff;
   --text-dim: #ddd4ee;
@@ -222,10 +222,10 @@
   --shadow-modal: 0 12px 40px rgba(20, 8, 40, 0.60), inset 0 1px 0 0 rgba(255, 255, 255, 0.12);
   --shadow-image: 0 0 0 1px rgba(139, 92, 246, 0.22), 0 4px 12px rgba(25, 10, 50, 0.40);
 
-  --kbd-bg: rgba(139, 92, 246, 0.30);
-  --kbd-border: rgba(139, 92, 246, 0.45);
-  --kbd-shadow: rgba(139, 92, 246, 0.15);
-  --kbd-text: #f0eafa;
+  --kbd-bg: rgba(30, 18, 55, 0.45);
+  --kbd-border: rgba(139, 92, 246, 0.30);
+  --kbd-shadow: rgba(0, 0, 0, 0.15);
+  --kbd-text: #d0c8e0;
 
   --btn-secondary-bg: rgba(139, 92, 246, 0.16);
   --btn-secondary-hover: rgba(139, 92, 246, 0.26);

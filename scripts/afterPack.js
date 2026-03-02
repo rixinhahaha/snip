@@ -7,6 +7,8 @@
  *   2. Removes non-macOS onnxruntime binaries (used by @huggingface/transformers)
  *   3. Removes wrong-arch darwin binaries (keep only the target arch)
  *   4. Pre-signs remaining .node and .dylib files with Developer ID cert
+ *
+ * Note: Ollama is NOT bundled — users install it separately via ollama.com.
  */
 
 const path = require('path');
@@ -165,18 +167,6 @@ module.exports = async function afterPack(context) {
 
   var nativeDir = path.join(resourcesDir, 'native');
   findFiles(nativeDir, nativeBinaryPattern, binaries);
-
-  // Also sign the bundled Ollama binary and its support libraries (.dylib, .so, .metallib)
-  var ollamaDir = path.join(resourcesDir, 'ollama');
-  if (fs.existsSync(ollamaDir)) {
-    var ollamaBinaryPattern = /\.(dylib|so|metallib)$/;
-    findFiles(ollamaDir, ollamaBinaryPattern, binaries);
-    // Sign the main ollama executable too
-    var ollamaExe = path.join(ollamaDir, 'ollama');
-    if (fs.existsSync(ollamaExe)) {
-      binaries.push(ollamaExe);
-    }
-  }
 
   if (binaries.length === 0) {
     console.log('[afterPack] No native binaries found to pre-sign');

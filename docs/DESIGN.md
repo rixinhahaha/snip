@@ -146,11 +146,26 @@ fabric.FabricObject.ownDefaults.cornerColor = accent;
 
 This affects all canvas objects (rectangles, arrows, textboxes, blur images).
 
-### AI Assistant Settings (Model Card)
+### Setting Up Your AI Assistant (Inline Overlay)
 
-The settings page "AI Assistant" section uses:
+The setup wizard is an **inline overlay** (`#setup-overlay`) inside the home window — `position: fixed; inset: 0; z-index: 100`. Fully opaque per-theme backgrounds: dark `#111113`, light `#f5f3ef`, glass `rgba(20,20,24,0.92)` with 40px backdrop blur.
 
-- **Current model card**: `--bg-elevated` with `--border-card`, 10px radius. Shows "Active Model" uppercase label, large bold model name, and circular info button.
+**Three views** (one visible at a time):
+
+1. **Steps view** — centered header (purple SVG magic wand icon with sparkle accents, title, subtitle) with 3 step cards. Step cards: `--bg-elevated` with `--border-card`, 12px radius. Numbered indicators (28px circles): pending (default border), active (`--accent` border/bg), done (`--success` bg with white checkmark). Action areas per step contain buttons, progress bars, or spinner.
+
+2. **Welcome view** — large purple SVG magic wand (64px, filled at 15% opacity, `setup-pop-in` animation: scale 0.5→1 with bounce easing), "Welcome to Snip" title (24px, 700 weight), accent glow button (`box-shadow: 0 0 20px rgba(139,92,246,0.4)`).
+
+3. **Failed view** — muted SVG magic wand icon (`--text-muted` stroke), "Snip works great without AI too" title, description text, two buttons (primary "Continue without AI" + secondary "Try again").
+
+**Sparkle particles** (`#setup-sparkles`): Randomly positioned divs with `sparkle-float` keyframe (opacity 0 → 0.8 → 0, translateY upward, scale 0.5→1.2). Two shapes: circles (`border-radius: 50%`) and 4-point stars (`clip-path: polygon(...)`). Color: `var(--accent)`. Spawned every ~400ms during welcome screen; burst of 30 on transition to welcome.
+
+- **Progress bar**: 5px track in `--bg-tertiary` with accent gradient fill (`linear-gradient(90deg, --accent, --accent-hover)`) and subtle purple glow (`box-shadow: 0 0 8px rgba(139,92,246,0.3)`).
+- **Error state**: flex row with `--error-bg` background, error text in `--error`, retry button with `--error` border.
+- **Screen transitions**: `setup-fade-in` keyframe (opacity 0→1, translateY 10px→0, 0.35s ease).
+
+**Settings page** (when overlay is not showing):
+- **Current model card** (ready state): `--bg-elevated` with `--border-card`, 10px radius. Shows "Active Model" uppercase label, large bold model name, and circular info button.
 - **Info tooltip**: Per-theme backgrounds (dark: `rgba(30,30,30,0.95)`, light: `rgba(255,255,255,0.95)`, glass: `rgba(15,8,30,0.85)` with backdrop blur). Positioned below card, `z-index: 20`. Contains a specs table with label column in `--text-secondary` and value column in `--text-primary`.
 
 ### Buttons

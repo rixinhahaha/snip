@@ -26,14 +26,9 @@ npm install
 # Compile native modules for Electron's ABI
 npm run rebuild
 
-# Download Ollama binary (run once, ~70 MB)
-npm run download-ollama
-
 # Download HuggingFace models (run once, ~75 MB total)
 #   - MiniLM (~23 MB) — embedding model for semantic search
 #   - SlimSAM (~50 MB) — segmentation model for object selection
-# Note: minicpm-v (~5 GB) is NOT bundled — it is pulled automatically
-# on first launch via Ollama's client.pull() API
 npm run download-models
 
 # Launch in dev mode (verbose logging)
@@ -44,6 +39,8 @@ npm start
 ```
 
 The app runs as a **tray-only** process (no Dock icon). Look for the scissors icon in the menu bar.
+
+**Note:** Ollama is NOT bundled. Install it separately from [ollama.com](https://ollama.com/download) or let the in-app setup wizard install it for you on first launch. The minicpm-v model (~5 GB) is pulled on first launch via Ollama's API.
 
 ---
 
@@ -59,10 +56,7 @@ The app runs as a **tray-only** process (no Dock icon). Look for the scissors ic
 | `npm run sign:adhoc` | Ad-hoc `codesign` for local use (no Developer ID needed) |
 | `./scripts/build-signed.sh` | Production build: loads `.env` creds, validates cert, builds + signs + notarizes |
 | `node scripts/generate-app-icon.js` | Regenerate `assets/icon.png` and `assets/icon.icns` from SVG template |
-| `npm run download-ollama` | Download Ollama binary to `vendor/ollama/` (~70 MB) |
-| `npm run download-models` | Download HuggingFace models: MiniLM (~23 MB), SlimSAM (~50 MB). Note: minicpm-v is pulled at runtime, not bundled. |
-| `npm run download-all` | `download-ollama` + `download-models` in one command |
-| `npm run download-all` | Run both download scripts |
+| `npm run download-models` | Download HuggingFace models: MiniLM (~23 MB), SlimSAM (~50 MB). Note: Ollama and minicpm-v are NOT bundled — installed at runtime. |
 
 ---
 
@@ -113,23 +107,22 @@ npm run build
 1. `node-gyp rebuild` compiles `window_utils.node`
 2. `electron-builder --mac` packages the app
 3. `afterPack` hook in `electron-builder.yml`:
-   - Removes unused native modules (`canvas`, `sharp`, `@img/*`)
+   - Removes unused native modules (`canvas`)
    - Strips non-macOS ONNX Runtime binaries
    - Removes wrong-arch `electron-liquid-glass` prebuilds
-   - Pre-signs remaining `.node`, `.dylib`, `.so`, `.metallib` files (including bundled Ollama binary)
+   - Pre-signs remaining `.node` and `.dylib` files
 4. No `CSC_LINK` detected -> `sign:adhoc` runs `codesign --force --deep --sign -`
 5. Output: `dist/mac-arm64/Snip.app` + `Snip-{version}-arm64.dmg`
 
 ### DMG Naming Convention
 
-All DMGs use the format `Snip-{version}-{arch}.dmg` (configured via `artifactName` in `electron-builder.yml`):
+DMGs use the format `Snip-{version}-arm64.dmg` (configured via `artifactName` in `electron-builder.yml`):
 
 | Architecture | Example |
 |-------------|---------|
-| Apple Silicon | `Snip-1.0.8-arm64.dmg` |
-| Intel | `Snip-1.0.8-x64.dmg` |
+| Apple Silicon | `Snip-1.0.9-arm64.dmg` |
 
-The CI release workflow renames the x64 build to include the `-x64` suffix (electron-builder omits it by default). The Homebrew cask URL template `Snip-#{version}-#{arch}.dmg` relies on this convention.
+Only Apple Silicon (arm64) is supported. Intel (x64) builds are not produced.
 
 ### Production Build (Signed + Notarized)
 
@@ -158,7 +151,7 @@ base64 -i certificate.p12 | tr -d '\n' | pbcopy
 1. Loads `.env` credentials, validates cert type
 2. `npm run prebuild` compiles native addon
 3. `electron-builder --mac` assembles + signs with Developer ID cert
-4. `afterPack` hook cleans unused modules, removes wrong-arch prebuilds, pre-signs all native binaries + Ollama binary
+4. `afterPack` hook cleans unused modules, removes wrong-arch prebuilds, pre-signs native binaries
 5. App submitted to Apple notary service
 6. Notarization ticket stapled to DMG on success
 7. Output: signed + notarized `dist/Snip-{version}-{arch}.dmg`
@@ -181,7 +174,7 @@ git tag v1.0.9
 git push origin v1.0.9
 ```
 
-The workflow builds DMGs for both `arm64` and `x64`, creates a GitHub release, and auto-updates the Homebrew cask.
+The workflow downloads HuggingFace models, builds an arm64 DMG (with models bundled), creates a GitHub release, and auto-updates the Homebrew cask.
 
 ### Homebrew
 
@@ -203,8 +196,8 @@ The cask is hosted at [`rixinhahaha/homebrew-snip`](https://github.com/rixinhaha
 | Category subfolders | `~/Documents/snip/screenshots/<category>/` | AI agent when organizing |
 | Index | `~/Documents/snip/screenshots/.index.json` | Store module |
 | Config | `~/Library/Application Support/snip/snip-config.json` | Electron defaults |
-| Ollama binary | `vendor/ollama/ollama` (dev) / `Resources/ollama/ollama` (packaged) | Bundled — `npm run download-ollama` |
-| Ollama models (runtime) | `~/Library/Application Support/snip/ollama/models/` | Pulled on first launch via `client.pull()`, or symlinked from `~/.ollama/models/` |
+| Ollama (system) | `/Applications/Ollama.app` or `/usr/local/bin/ollama` | User-installed (or installed via in-app setup wizard) |
+| Ollama models | `~/.ollama/models/` | Managed by system Ollama; minicpm-v pulled on first launch |
 | HF models (MiniLM + SlimSAM) | `vendor/models/` (dev) / `Resources/models/` (packaged) | Bundled — `npm run download-models --hf` (~75 MB) |
 | Animation presets | Inlined in `src/main/animation/animation.js` | 6 static text-prompt presets (fallback when Ollama AI presets unavailable) |
 

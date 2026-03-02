@@ -111,6 +111,33 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn) {
     return ollamaManager.getPullProgress();
   });
 
+  ipcMain.handle('install-ollama', async () => {
+    return ollamaManager.installOllama();
+  });
+
+  ipcMain.handle('pull-ollama-model', async () => {
+    return ollamaManager.pullModel();
+  });
+
+  ipcMain.handle('check-ollama-model', async () => {
+    return ollamaManager.checkModel();
+  });
+
+  // Setup overlay controls (broadcast to all windows)
+  ipcMain.handle('close-setup-overlay', async () => {
+    for (const win of BrowserWindow.getAllWindows()) {
+      if (!win.isDestroyed()) win.webContents.send('hide-setup-overlay');
+    }
+    return true;
+  });
+
+  ipcMain.handle('open-setup-overlay', async () => {
+    for (const win of BrowserWindow.getAllWindows()) {
+      if (!win.isDestroyed()) win.webContents.send('show-setup-overlay');
+    }
+    return true;
+  });
+
   // Settings: Animation (fal.ai)
   ipcMain.handle('get-animation-config', async () => {
     return { falApiKey: getFalApiKey() };

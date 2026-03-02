@@ -89,8 +89,8 @@ These are non-negotiable rules. Violating them causes crashes or broken UX:
 | Preload (IPC bridge) | `src/preload/preload.js` |
 | AI agent | `src/main/organizer/agent.js` + `worker.js` |
 | Ollama manager | `src/main/ollama-manager.js` |
-| Ollama binary (bundled) | `vendor/ollama/ollama` (dev) / `Resources/ollama/ollama` (packaged) |
-| Ollama models (runtime) | `~/Library/Application Support/snip/ollama/models/` (pulled on first launch or symlinked from `~/.ollama/models/`) |
+| Ollama (system) | `/Applications/Ollama.app` or `/usr/local/bin/ollama` (user-installed) |
+| Ollama models | `~/.ollama/models/` (managed by system Ollama) |
 | Config | `~/Library/Application Support/snip/snip-config.json` |
 | Screenshots | `~/Documents/snip/screenshots/` |
 | Index | `~/Documents/snip/screenshots/.index.json` |

@@ -53,6 +53,7 @@
     initAnimationSettings();
     loadTags();
     initThemeToggle();
+    initSetupOverlay();
   }
 
   // ── Theme toggle ──
@@ -293,15 +294,20 @@
     hideContextMenu();
   });
 
-  // ── Settings: AI Assistant (Ollama) ──
+  // ── Settings: Local AI Assistant (Ollama) ──
 
-  // Static specs for model info tooltip
   var MODEL_SPECS = {
     'minicpm-v': { params: '8B', size: '~5.1 GB', quant: 'Q4_K_M', description: 'Best balance of accuracy and speed for screenshot analysis.' }
   };
 
   async function initOllamaSettings() {
-    // Setup info tooltip toggle (click to show, click-outside to dismiss)
+    // Setup button opens the inline overlay
+    var setupBtn = document.getElementById('ollama-setup-btn');
+    setupBtn.addEventListener('click', function() {
+      if (window._showSetupOverlay) window._showSetupOverlay();
+    });
+
+    // Info tooltip toggle
     var infoBtn = document.getElementById('model-info-btn');
     var tooltip = document.getElementById('model-info-tooltip');
 
@@ -316,106 +322,86 @@
       }
     });
 
-    // Listen for model download progress push events
-    if (window.snip.onOllamaPullProgress) {
-      window.snip.onOllamaPullProgress(function(progress) {
-        updateDownloadProgress(progress);
+    // Listen for status changes from main process
+    if (window.snip.onOllamaStatusChanged) {
+      window.snip.onOllamaStatusChanged(function(status) {
+        applyOllamaChecklist(status);
       });
     }
 
-    // Initial status refresh
-    refreshOllamaStatus();
+    // Initial check
+    refreshOllamaChecklist();
   }
 
-  async function refreshOllamaStatus() {
-    var dot = document.getElementById('ollama-status-dot');
-    var text = document.getElementById('ollama-status-text');
-
-    var config = await window.snip.getOllamaConfig();
-    var modelName = config.model || 'minicpm-v';
-
+  async function refreshOllamaChecklist() {
     try {
       var status = await window.snip.getOllamaStatus();
-      if (status.running && status.modelReady) {
-        dot.className = 'status-dot running';
-        text.textContent = 'Running';
-        hideDownloadProgress();
-      } else if (status.pulling) {
-        dot.className = 'status-dot stopped';
-        text.textContent = 'Downloading model...';
-        updateDownloadProgress(status.pullProgress);
-        setTimeout(refreshOllamaStatus, 3000);
-      } else if (status.running && !status.modelReady) {
-        dot.className = 'status-dot stopped';
-        text.textContent = 'Preparing model...';
-        setTimeout(refreshOllamaStatus, 3000);
-      } else {
-        dot.className = 'status-dot stopped';
-        text.textContent = status.error ? 'Starting... (' + status.error + ')' : 'Starting...';
-        // Retry in a few seconds (server may still be booting)
-        setTimeout(refreshOllamaStatus, 3000);
-      }
+      applyOllamaChecklist(status);
     } catch (err) {
-      dot.className = 'status-dot stopped';
-      text.textContent = 'Error: ' + err.message;
+      applyOllamaChecklist({ installed: false, running: false, modelReady: false });
     }
-
-    updateCurrentModelCard(modelName);
   }
 
-  function updateDownloadProgress(progress) {
-    var section = document.getElementById('model-download-section');
-    var bar = document.getElementById('model-download-bar');
-    var detail = document.getElementById('model-download-detail');
+  function applyOllamaChecklist(status) {
+    var checkInstalled = document.getElementById('check-installed');
+    var checkRunning = document.getElementById('check-running');
+    var checkModel = document.getElementById('check-model');
+    var setupBtn = document.getElementById('ollama-setup-btn');
+    var readyInfo = document.getElementById('ollama-ready-info');
 
-    if (!section) return;
+    setCheckIcon(checkInstalled, status.installed);
+    setCheckIcon(checkRunning, status.running);
+    setCheckIcon(checkModel, status.modelReady);
 
-    if (progress.status === 'ready') {
-      hideDownloadProgress();
-      var dot = document.getElementById('ollama-status-dot');
-      var text = document.getElementById('ollama-status-text');
-      if (dot) dot.className = 'status-dot running';
-      if (text) text.textContent = 'Running';
-      return;
-    }
+    var allReady = status.installed && status.running && status.modelReady;
 
-    if (progress.status === 'error') {
-      section.classList.remove('hidden');
-      bar.style.width = '0%';
-      detail.textContent = 'Download failed: ' + (progress.error || 'unknown error');
-      return;
-    }
-
-    if (progress.status === 'idle') return;
-
-    // Show download progress
-    section.classList.remove('hidden');
-    bar.style.width = progress.percent + '%';
-
-    if (progress.total > 0) {
-      var downloadedMB = (progress.completed / (1024 * 1024)).toFixed(0);
-      var totalMB = (progress.total / (1024 * 1024)).toFixed(0);
-      detail.textContent = progress.status + ' — ' + downloadedMB + ' / ' + totalMB + ' MB (' + progress.percent + '%)';
+    if (allReady) {
+      setupBtn.style.display = 'none';
+      readyInfo.classList.remove('hidden');
+      updateCurrentModelCard(status.currentModel || 'minicpm-v');
     } else {
-      detail.textContent = progress.status || 'Preparing...';
+      readyInfo.classList.add('hidden');
+      setupBtn.style.display = '';
+      // Smart button text based on state
+      if (!status.installed) {
+        setupBtn.textContent = 'Set up';
+      } else if (!status.running) {
+        setupBtn.textContent = 'Reconnect';
+      } else if (!status.modelReady) {
+        setupBtn.textContent = 'Finish setup';
+      }
+      // Keep polling if partially ready
+      if (status.installed && !status.running) {
+        setTimeout(refreshOllamaChecklist, 3000);
+      }
     }
   }
 
-  function hideDownloadProgress() {
-    var section = document.getElementById('model-download-section');
-    if (section) section.classList.add('hidden');
+  function setCheckIcon(el, done) {
+    if (done) {
+      el.textContent = '\u2713';
+      el.className = 'check-icon done';
+    } else {
+      el.textContent = '\u25CB';
+      el.className = 'check-icon pending';
+    }
   }
 
   function updateCurrentModelCard(modelName) {
     var nameEl = document.getElementById('current-model-name');
-    nameEl.textContent = modelName;
+    if (nameEl) nameEl.textContent = modelName;
 
-    var specs = MODEL_SPECS[modelName] || { params: '—', size: '—', quant: '—', description: 'Custom model' };
-    document.getElementById('info-model').textContent = modelName;
-    document.getElementById('info-params').textContent = specs.params;
-    document.getElementById('info-size').textContent = specs.size;
-    document.getElementById('info-quant').textContent = specs.quant;
-    document.getElementById('info-desc').textContent = specs.description;
+    var specs = MODEL_SPECS[modelName] || { params: '\u2014', size: '\u2014', quant: '\u2014', description: 'Custom model' };
+    var infoModel = document.getElementById('info-model');
+    if (infoModel) infoModel.textContent = modelName;
+    var infoParams = document.getElementById('info-params');
+    if (infoParams) infoParams.textContent = specs.params;
+    var infoSize = document.getElementById('info-size');
+    if (infoSize) infoSize.textContent = specs.size;
+    var infoQuant = document.getElementById('info-quant');
+    if (infoQuant) infoQuant.textContent = specs.quant;
+    var infoDesc = document.getElementById('info-desc');
+    if (infoDesc) infoDesc.textContent = specs.description;
   }
 
 
@@ -771,6 +757,322 @@
       card.appendChild(img);
       card.appendChild(info);
       grid.appendChild(card);
+    }
+  }
+
+  // ── Setup overlay ──
+  var setupFailCount = 0;
+  var sparkleInterval = null;
+  var setupFromSettings = false;
+  var INSTALL_LABELS = {
+    'downloading': 'Downloading Ollama...',
+    'extracting': 'Unpacking...',
+    'installing': 'Moving to Applications...',
+    'launching': 'Starting Ollama...'
+  };
+  var FALLBACK_STATUS = { installed: false, running: false, modelReady: false };
+
+  // Shared helpers
+  function startSetupAction(section, actionBtn, skipBtn, action) {
+    hideSetupError(section);
+    actionBtn.disabled = true;
+    actionBtn.style.display = 'none';
+    document.getElementById('setup-' + section + '-progress').classList.remove('hidden');
+    skipBtn.textContent = 'Continue in background';
+    action();
+  }
+
+  function updateSetupProgress(section, percent, detail) {
+    document.getElementById('setup-' + section + '-bar').style.width = percent + '%';
+    document.getElementById('setup-' + section + '-detail').textContent = detail;
+  }
+
+  function handleSetupError(section, skipBtn, error) {
+    document.getElementById('setup-' + section + '-progress').classList.add('hidden');
+    showSetupError(section, friendlyError(error));
+    skipBtn.textContent = 'Skip for now';
+    setupFailCount++;
+    if (setupFailCount >= 3) showSetupView('failed');
+  }
+
+  function applySetupStatus(status) {
+    var screen = determineSetupScreen(status);
+    if (screen) {
+      applySetupScreen(screen, status);
+    } else {
+      showSetupView('welcome');
+      burstSparkles(30);
+    }
+    return screen;
+  }
+
+  function formatPullDetail(progress) {
+    var percent = progress.percent || 0;
+    if (progress.total > 0) {
+      var dlMB = (progress.completed / (1024 * 1024)).toFixed(0);
+      var totMB = (progress.total / (1024 * 1024)).toFixed(0);
+      return dlMB + ' / ' + totMB + ' MB (' + percent + '%)';
+    }
+    return percent + '%';
+  }
+
+  function restoreSetupBtn(section) {
+    var btn = document.getElementById('setup-' + section + '-btn');
+    btn.style.display = '';
+    btn.disabled = false;
+    document.getElementById('setup-' + section + '-progress').classList.add('hidden');
+  }
+
+  function initSetupOverlay() {
+    var overlay = document.getElementById('setup-overlay');
+    if (!overlay) return;
+
+    var installBtn = document.getElementById('setup-install-btn');
+    var modelBtn = document.getElementById('setup-model-btn');
+    var skipBtn = document.getElementById('setup-skip-btn');
+
+    // Action buttons — both primary and retry share the same handler
+    var installAction = function() { startSetupAction('install', installBtn, skipBtn, window.snip.installOllama); };
+    var modelAction = function() { startSetupAction('model', modelBtn, skipBtn, window.snip.pullOllamaModel); };
+
+    installBtn.addEventListener('click', installAction);
+    document.getElementById('setup-install-retry').addEventListener('click', installAction);
+    modelBtn.addEventListener('click', modelAction);
+    document.getElementById('setup-model-retry').addEventListener('click', modelAction);
+
+    // Dismiss buttons all hide the overlay
+    var dismissBtns = [skipBtn, document.getElementById('setup-get-started'), document.getElementById('setup-continue-without')];
+    for (var i = 0; i < dismissBtns.length; i++) {
+      dismissBtns[i].addEventListener('click', hideSetupOverlay);
+    }
+
+    document.getElementById('setup-try-again').addEventListener('click', function() {
+      setupFailCount = 0;
+      showSetupOverlay();
+    });
+
+    // IPC progress listeners
+    window.snip.onOllamaInstallProgress(function(progress) {
+      if (overlay.classList.contains('hidden')) return;
+      if (progress.status === 'done') { refreshSetupOverlay(); return; }
+      if (progress.status === 'error') { handleSetupError('install', skipBtn, progress.error); return; }
+      var percent = progress.percent || 0;
+      updateSetupProgress('install', percent, INSTALL_LABELS[progress.status] || progress.status || 'Preparing...');
+    });
+
+    window.snip.onOllamaPullProgress(function(progress) {
+      if (overlay.classList.contains('hidden')) return;
+      if (progress.status === 'ready') { refreshSetupOverlay(); return; }
+      if (progress.status === 'error') { handleSetupError('model', skipBtn, progress.error); return; }
+      if (progress.status === 'idle') return;
+      var percent = progress.percent || 0;
+      updateSetupProgress('model', percent, formatPullDetail(progress));
+    });
+
+    window.snip.onOllamaStatusChanged(function() { refreshSetupOverlay(); });
+
+    if (window.snip.onShowSetupOverlay) {
+      window.snip.onShowSetupOverlay(function() { showSetupOverlay(); });
+    }
+
+    window._showSetupOverlay = function() {
+      setupFromSettings = true;
+      showSetupOverlay();
+    };
+
+    checkAndShowSetup();
+  }
+
+  async function checkAndShowSetup() {
+    try {
+      var status = await window.snip.getOllamaStatus();
+      if (determineSetupScreen(status)) {
+        document.getElementById('setup-overlay').classList.remove('hidden');
+        applySetupScreen(determineSetupScreen(status), status);
+      }
+    } catch (err) {
+      document.getElementById('setup-overlay').classList.remove('hidden');
+      applySetupScreen('install', FALLBACK_STATUS);
+    }
+  }
+
+  async function showSetupOverlay() {
+    document.getElementById('setup-overlay').classList.remove('hidden');
+    try {
+      applySetupStatus(await window.snip.getOllamaStatus());
+    } catch (err) {
+      applySetupScreen('install', FALLBACK_STATUS);
+    }
+  }
+
+  function hideSetupOverlay() {
+    document.getElementById('setup-overlay').classList.add('hidden');
+    stopSparkles();
+    setupFromSettings = false;
+  }
+
+  async function refreshSetupOverlay() {
+    if (document.getElementById('setup-overlay').classList.contains('hidden')) return;
+    try {
+      applySetupStatus(await window.snip.getOllamaStatus());
+    } catch (err) { /* ignore */ }
+  }
+
+  function determineSetupScreen(status) {
+    if (!status.installed) return 'install';
+    if (!status.running) return 'running';
+    if (!status.modelReady) return 'model';
+    return null;
+  }
+
+  function showSetupView(viewName) {
+    var views = { steps: 'setup-steps-view', welcome: 'setup-welcome-view', failed: 'setup-failed-view' };
+    var keys = Object.keys(views);
+    for (var i = 0; i < keys.length; i++) {
+      document.getElementById(views[keys[i]]).classList.add('hidden');
+    }
+
+    if (viewName === 'welcome') {
+      document.getElementById(views.welcome).classList.remove('hidden');
+      var welcomeTitle = document.querySelector('.setup-welcome-title');
+      if (welcomeTitle) {
+        welcomeTitle.textContent = setupFromSettings ? 'Your AI assistant is ready!' : 'Welcome to Snip';
+      }
+      startSparkles();
+    } else if (viewName === 'failed') {
+      document.getElementById(views.failed).classList.remove('hidden');
+      stopSparkles();
+    } else {
+      document.getElementById(views.steps).classList.remove('hidden');
+    }
+  }
+
+  function applySetupScreen(screen, status) {
+    showSetupView('steps');
+
+    var indicators = [
+      { id: 'setup-ind-install', done: status.installed },
+      { id: 'setup-ind-running', done: status.running },
+      { id: 'setup-ind-model', done: status.modelReady }
+    ];
+    var sections = ['install', 'running', 'model'];
+
+    // Reset all indicators and hide all action areas
+    for (var i = 0; i < indicators.length; i++) {
+      document.getElementById(indicators[i].id).className = indicators[i].done ? 'setup-card-ind done' : 'setup-card-ind';
+      document.getElementById('setup-' + sections[i] + '-actions').classList.add('hidden');
+    }
+
+    var skipBtn = document.getElementById('setup-skip-btn');
+
+    if (screen === 'install') {
+      document.getElementById('setup-ind-install').className = 'setup-card-ind active';
+      document.getElementById('setup-install-actions').classList.remove('hidden');
+      if (status.installing) {
+        document.getElementById('setup-install-btn').style.display = 'none';
+        document.getElementById('setup-install-progress').classList.remove('hidden');
+        if (status.installProgress) {
+          var ip = status.installProgress;
+          updateSetupProgress('install', ip.percent || 0, INSTALL_LABELS[ip.status] || ip.status || 'Preparing...');
+        }
+      } else {
+        restoreSetupBtn('install');
+      }
+    } else if (screen === 'running') {
+      document.getElementById('setup-ind-install').className = 'setup-card-ind done';
+      document.getElementById('setup-ind-running').className = 'setup-card-ind active';
+      document.getElementById('setup-running-actions').classList.remove('hidden');
+    } else if (screen === 'model') {
+      document.getElementById('setup-ind-install').className = 'setup-card-ind done';
+      document.getElementById('setup-ind-running').className = 'setup-card-ind done';
+      document.getElementById('setup-ind-model').className = 'setup-card-ind active';
+      document.getElementById('setup-model-actions').classList.remove('hidden');
+      if (status.pulling) {
+        document.getElementById('setup-model-btn').style.display = 'none';
+        document.getElementById('setup-model-progress').classList.remove('hidden');
+        if (status.pullProgress) {
+          updateSetupProgress('model', status.pullProgress.percent || 0, formatPullDetail(status.pullProgress));
+        }
+      } else {
+        restoreSetupBtn('model');
+      }
+    }
+
+    skipBtn.textContent = (status.installing || status.pulling) ? 'Continue in background' : 'Skip for now';
+  }
+
+  function friendlyError(raw) {
+    if (!raw) return 'Something went wrong. Please try again.';
+    var lower = raw.toLowerCase();
+    if (lower.indexOf('fetch failed') !== -1 || lower.indexOf('econnrefused') !== -1) return 'Could not connect to Ollama. It may have stopped — try again to reconnect.';
+    if (lower.indexOf('terminated') !== -1) return 'Connection to Ollama was interrupted. Try again to reconnect.';
+    if (lower.indexOf('network') !== -1 || lower.indexOf('etimedout') !== -1 || lower.indexOf('enotfound') !== -1) return 'Network error. Check your internet connection and try again.';
+    if (lower.indexOf('not running') !== -1 || lower.indexOf('not installed') !== -1) return raw;
+    return raw.charAt(0).toUpperCase() + raw.slice(1);
+  }
+
+  function showSetupError(section, message) {
+    var errorDiv = document.getElementById('setup-' + section + '-error');
+    var errorText = document.getElementById('setup-' + section + '-error-text');
+    if (errorDiv) {
+      errorText.textContent = message;
+      errorDiv.classList.remove('hidden');
+    }
+  }
+
+  function hideSetupError(section) {
+    var errorDiv = document.getElementById('setup-' + section + '-error');
+    if (errorDiv) errorDiv.classList.add('hidden');
+  }
+
+  // Sparkle system
+  function createSparkle() {
+    var sparkles = document.getElementById('setup-sparkles');
+    if (!sparkles) return;
+    var particle = document.createElement('div');
+    particle.className = 'setup-sparkle';
+
+    var size = 4 + Math.random() * 8;
+    var x = Math.random() * 100;
+    var y = 50 + Math.random() * 50;
+    var duration = 1.5 + Math.random() * 2;
+    var delay = Math.random() * 0.3;
+
+    particle.style.width = size + 'px';
+    particle.style.height = size + 'px';
+    particle.style.left = x + '%';
+    particle.style.top = y + '%';
+    particle.style.animationDuration = duration + 's';
+    particle.style.animationDelay = delay + 's';
+
+    if (Math.random() > 0.5) {
+      particle.classList.add('setup-sparkle-star');
+    }
+
+    sparkles.appendChild(particle);
+
+    setTimeout(function() {
+      if (particle.parentNode) particle.parentNode.removeChild(particle);
+    }, (duration + delay) * 1000 + 100);
+  }
+
+  function startSparkles() {
+    stopSparkles();
+    sparkleInterval = setInterval(createSparkle, 400);
+  }
+
+  function stopSparkles() {
+    if (sparkleInterval) {
+      clearInterval(sparkleInterval);
+      sparkleInterval = null;
+    }
+    var sparkles = document.getElementById('setup-sparkles');
+    if (sparkles) sparkles.innerHTML = '';
+  }
+
+  function burstSparkles(count) {
+    for (var i = 0; i < count; i++) {
+      createSparkle();
     }
   }
 

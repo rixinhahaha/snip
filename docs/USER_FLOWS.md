@@ -21,9 +21,12 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 | 5 | -- | Home window opens with Gallery page showing "No screenshots yet" empty state |
 | 6 | -- | SAM segmentation model begins loading in background (logged: `[Segmentation Worker] Loading SlimSAM model...`) |
 | 7 | -- | File watcher starts monitoring screenshots directory (logged: `[Organizer] Watching: ...`) |
-| 8 | -- | Ollama server starts on dedicated port 11435 (logged: `[Ollama] Starting server...`) |
-| 9 | -- | If minicpm-v model not found locally: pull begins from Ollama registry with progress bar in Settings |
-| 9a | -- | If user has minicpm-v in system Ollama (`~/.ollama/models/`): model blobs symlinked (instant, no download) |
+| 8 | -- | Ollama detection runs: checks `127.0.0.1:11434` for running server, then checks known install paths |
+| 8a | -- | If Ollama running: connects immediately (logged: `[Ollama] Server already running`) |
+| 8b | -- | If Ollama installed but not running: auto-starts via `open -a Ollama` or `ollama serve` |
+| 8c | -- | If Ollama not installed: Settings shows "Setting Up Your AI Assistant" with Install button |
+| 9 | -- | If connected and minicpm-v model found: status shows "Running" immediately |
+| 9a | -- | If connected but model missing: Settings shows "Download Model" button (~5 GB) |
 
 ### 1.2 Native Glass Layer Initialization
 
@@ -587,38 +590,75 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 
 ## 8. Settings
 
-### 8.1 AI Assistant Settings
+### 8.1 Setting Up Your AI Assistant (Inline Overlay)
+
+The setup wizard appears as a **full-window inline overlay** inside the home window (not a separate popup). It auto-shows on first launch if Ollama is not fully ready, and can be reopened from the Settings "Set up" button.
+
+**Overlay structure:** Three views — Steps (install/running/model), Welcome, Failed. Only one visible at a time. Step cards show numbered indicators (pending → active → done with checkmark).
 
 | Step | Action | Expected Result |
 |------|--------|-----------------|
-| 1 | Navigate to Settings page | "AI Assistant" section shown |
-| 2 | -- | Status dot: green "Running" if Ollama server is active, red "Starting..." if not |
-| 3 | -- | **Current model card**: shows active model name (minicpm-v) with info (ⓘ) button |
-| 4 | Click info button on model card | Tooltip appears below card showing specs table (model, parameters, size, quantization, description) |
-| 5 | Click outside tooltip | Tooltip dismisses |
+| 1 | App launches without Ollama ready | Inline overlay covers home window with step-by-step wizard |
+| 2 | -- | App auto-detects current state and shows appropriate step |
 
-### 8.2 Ollama First Launch & Model Download
+**Step: Install Ollama**
 
 | Step | Action | Expected Result |
 |------|--------|-----------------|
-| 1 | First app launch | Ollama server spawns on dedicated port 11435 (auto-finds next available port if taken) |
-| 2 | -- | `ensureModel()` checks if minicpm-v exists in Snip's model store |
-| 3a | Model found in Snip's store | Status shows "Running" immediately |
-| 3b | Model found in system Ollama (`~/.ollama/models/`) | Blobs symlinked to Snip's store (instant), status shows "Running" |
-| 3c | Model not found anywhere | Download begins from Ollama registry |
-| 4 | -- | Settings shows "Downloading AI model..." with progress bar |
-| 5 | -- | Progress bar shows percentage + downloaded MB / total MB |
-| 6 | -- | Progress pushed in real-time via `ollama-pull-progress` IPC events |
-| 7 | Download completes | Progress bar disappears, status shows "Running" |
+| 1 | Ollama not detected on system | Step 1 card active with "Install Ollama" button |
+| 2 | Click "Install Ollama" | Download begins, progress bar animates with accent gradient fill |
+| 3 | -- | Progress: Downloading → Extracting → Installing → Launching |
+| 4 | -- | Ollama.app moved to `/Applications/` and launched automatically |
+| 5 | -- | Auto-advances to running step, then model step |
+
+**Step: Ollama Running**
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Ollama installed but starting | Step 2 active with spinner "Waiting for Ollama to start..." |
+| 2 | -- | Auto-advances when server responds |
+
+**Step: Download Model**
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Ollama running but minicpm-v not found | Step 3 card active with "Download MiniCPM-V" button |
+| 2 | Click "Download MiniCPM-V" | Model pull begins (~5 GB), progress bar shows MB / total MB |
+| 3 | Download completes | Transitions to Welcome screen |
+
+**Welcome Screen**
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | All steps complete | Welcome view: purple magic wand SVG with pop-in animation, "Welcome to Snip" title |
+| 2 | -- | Sparkle particles float upward in background (circles and 4-point stars) |
+| 3 | Click "Get Started" | Overlay dismissed, user lands on gallery |
+
+**Failed Screen**
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | 3+ consecutive errors during install/download | Failed view: "Snip works great without AI too" |
+| 2 | Click "Continue without AI" | Overlay dismissed, app works normally without AI |
+| 3 | Click "Try again" | Resets failure count, returns to appropriate setup step |
+
+**Settings "Set up" Button**
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Navigate to Settings page | Checklist shows installed/running/model status |
+| 2 | If not all ready, "Set up" button visible | Click reopens inline overlay at correct step |
+| 3 | If all ready | "Set up" button hidden, model info card shown |
 
 **Edge cases:**
 
 | Condition | Expected Behavior |
 |-----------|-------------------|
-| No internet on first launch | Pull fails gracefully, status shows error. App works for capture/annotate, no AI organization. |
-| Pull interrupted (app quit mid-download) | On next launch, `ensureModel()` re-runs and resumes the download |
-| Port 11435 taken (user's own Ollama or other service) | Auto-finds next available port (11436–11445). If all taken, `startupError` set. |
-| User has system Ollama on port 11434 | No conflict — Snip uses its own port (11435+). Both run independently. |
+| No internet during install/pull | Inline error with retry button. After 3 failures → failed screen |
+| Ollama installed but not running | Auto-started; overlay shows spinner while waiting |
+| Skip button clicked | Overlay dismissed, setup continues in background |
+| "Continue in background" | Shown when download is active, dismisses overlay |
+| App works without Ollama | Capture/annotate work normally, no AI organization |
 
 ### 8.3 Theme Toggle
 

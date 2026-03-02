@@ -16,7 +16,7 @@ Capture a region of your screen, annotate with shapes, text, blur, or AI segment
 brew install --cask rixinhahaha/snip/snip
 ```
 
-Or download the DMG directly from [Releases](https://github.com/rixinhahaha/snip/releases) (Apple Silicon and Intel builds available).
+Or download the DMG directly from [Releases](https://github.com/rixinhahaha/snip/releases) (Apple Silicon only).
 
 ## Quick Start (Development)
 
@@ -26,7 +26,9 @@ npm run rebuild   # compile native modules
 npm start         # launch (tray icon appears in menu bar)
 ```
 
-Requires **macOS 10.13+**, **Node.js 18+**, and **Xcode CLT** (`xcode-select --install`). macOS 26+ recommended for native Liquid Glass effects.
+Requires **macOS 14+**, **Node.js 18+**, and **Xcode CLT** (`xcode-select --install`). macOS 26+ recommended for native Liquid Glass effects.
+
+For AI-powered organization, install [Ollama](https://ollama.com/download) separately. Snip detects your system Ollama and guides you through setup in Settings.
 
 ## How It Works
 
