@@ -15,7 +15,7 @@ const ollamaManager = require('./ollama-manager');
 let pendingEditorData = null;
 let editorWindowRef = null;
 
-function registerIpcHandlers(getOverlayWindow, createEditorWindowFn) {
+function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, { openSetupWindow, closeSetupWindow } = {}) {
   // Copy annotated image to clipboard
   ipcMain.handle('copy-to-clipboard', async (event, dataURL) => {
     const image = nativeImage.createFromDataURL(dataURL);
@@ -109,6 +109,29 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn) {
 
   ipcMain.handle('get-ollama-pull-progress', async () => {
     return ollamaManager.getPullProgress();
+  });
+
+  ipcMain.handle('install-ollama', async () => {
+    return ollamaManager.installOllama();
+  });
+
+  ipcMain.handle('pull-ollama-model', async () => {
+    return ollamaManager.pullModel();
+  });
+
+  ipcMain.handle('check-ollama-model', async () => {
+    return ollamaManager.checkModel();
+  });
+
+  // Setup window controls
+  ipcMain.handle('close-setup-window', async () => {
+    if (closeSetupWindow) closeSetupWindow();
+    return true;
+  });
+
+  ipcMain.handle('open-setup-window', async () => {
+    if (openSetupWindow) openSetupWindow();
+    return true;
   });
 
   // Settings: Animation (fal.ai)

@@ -29,6 +29,7 @@ if (!gotTheLock) {
 let overlayWindow = null;
 let homeWindow = null;
 let editorWindow = null;
+let setupWindow = null;
 
 function createOverlayWindow() {
   // Destroy old overlay if it exists
@@ -216,6 +217,61 @@ function showHomeWindow() {
   createHomeWindow();
 }
 
+function createSetupWindow() {
+  if (setupWindow && !setupWindow.isDestroyed()) {
+    setupWindow.show();
+    setupWindow.focus();
+    return;
+  }
+
+  const setupOpts = {
+    width: 440,
+    height: 520,
+    title: 'Set Up AI Assistant',
+    titleBarStyle: 'hiddenInset',
+    trafficLightPosition: { x: 14, y: 14 },
+    transparent: true,
+    backgroundColor: '#00000000',
+    resizable: false,
+    minimizable: false,
+    maximizable: false,
+    webPreferences: { ...BASE_WEB_PREFERENCES }
+  };
+
+  if (!liquidGlass) {
+    setupOpts.vibrancy = 'under-window';
+  }
+
+  setupWindow = new BrowserWindow(setupOpts);
+  setupWindow.loadFile(path.join(__dirname, '..', 'renderer', 'ollama-setup.html'));
+
+  if (liquidGlass) {
+    setupWindow.setWindowButtonVisibility(true);
+    setupWindow.webContents.once('did-finish-load', () => {
+      try {
+        var glassId = liquidGlass.addView(setupWindow.getNativeWindowHandle(), {
+          cornerRadius: 12,
+          tintColor: '#22000008'
+        });
+        if (glassId < 0) throw new Error('addView returned ' + glassId);
+      } catch (e) {
+        setupWindow.setVibrancy('under-window');
+      }
+    });
+  }
+
+  setupWindow.on('closed', () => {
+    setupWindow = null;
+  });
+}
+
+function closeSetupWindow() {
+  if (setupWindow && !setupWindow.isDestroyed()) {
+    setupWindow.close();
+    setupWindow = null;
+  }
+}
+
 function showSearchPage() {
   showHomeWindow();
   // Send IPC to switch to search page after window is ready
@@ -242,14 +298,27 @@ app.whenReady().then(() => {
 
   createTray(triggerCapture, showSearchPage, showHomeWindow);
   registerShortcuts(triggerCapture, showSearchPage);
-  registerIpcHandlers(getOverlayWindow, createEditorWindow);
+  registerIpcHandlers(getOverlayWindow, createEditorWindow, {
+    openSetupWindow: createSetupWindow,
+    closeSetupWindow: closeSetupWindow
+  });
 
   // Start background organizer
   startWatcher();
 
-  // Start embedded Ollama server (downloads binary on first launch)
-  startOllama().catch(function (err) {
+  // Detect system Ollama and connect (no bundled binary)
+  startOllama().then(async function () {
+    var { checkModel, isReady } = require('./ollama-manager');
+    await checkModel();
+    // Show setup popup if Ollama is not fully ready
+    var ready = await isReady();
+    if (!ready) {
+      createSetupWindow();
+    }
+  }).catch(function (err) {
     console.error('[Snip] Ollama startup failed:', err.message);
+    // Not installed or failed — show setup popup
+    createSetupWindow();
   });
 
   // Pre-warm SAM segmentation model

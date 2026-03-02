@@ -293,15 +293,20 @@
     hideContextMenu();
   });
 
-  // ── Settings: AI Assistant (Ollama) ──
+  // ── Settings: Local AI Assistant (Ollama) ──
 
-  // Static specs for model info tooltip
   var MODEL_SPECS = {
     'minicpm-v': { params: '8B', size: '~5.1 GB', quant: 'Q4_K_M', description: 'Best balance of accuracy and speed for screenshot analysis.' }
   };
 
   async function initOllamaSettings() {
-    // Setup info tooltip toggle (click to show, click-outside to dismiss)
+    // Setup button opens the popup window
+    var setupBtn = document.getElementById('ollama-setup-btn');
+    setupBtn.addEventListener('click', function() {
+      window.snip.openSetupWindow();
+    });
+
+    // Info tooltip toggle
     var infoBtn = document.getElementById('model-info-btn');
     var tooltip = document.getElementById('model-info-tooltip');
 
@@ -316,106 +321,78 @@
       }
     });
 
-    // Listen for model download progress push events
-    if (window.snip.onOllamaPullProgress) {
-      window.snip.onOllamaPullProgress(function(progress) {
-        updateDownloadProgress(progress);
+    // Listen for status changes from main process
+    if (window.snip.onOllamaStatusChanged) {
+      window.snip.onOllamaStatusChanged(function(status) {
+        applyOllamaChecklist(status);
       });
     }
 
-    // Initial status refresh
-    refreshOllamaStatus();
+    // Initial check
+    refreshOllamaChecklist();
   }
 
-  async function refreshOllamaStatus() {
-    var dot = document.getElementById('ollama-status-dot');
-    var text = document.getElementById('ollama-status-text');
-
-    var config = await window.snip.getOllamaConfig();
-    var modelName = config.model || 'minicpm-v';
-
+  async function refreshOllamaChecklist() {
     try {
       var status = await window.snip.getOllamaStatus();
-      if (status.running && status.modelReady) {
-        dot.className = 'status-dot running';
-        text.textContent = 'Running';
-        hideDownloadProgress();
-      } else if (status.pulling) {
-        dot.className = 'status-dot stopped';
-        text.textContent = 'Downloading model...';
-        updateDownloadProgress(status.pullProgress);
-        setTimeout(refreshOllamaStatus, 3000);
-      } else if (status.running && !status.modelReady) {
-        dot.className = 'status-dot stopped';
-        text.textContent = 'Preparing model...';
-        setTimeout(refreshOllamaStatus, 3000);
-      } else {
-        dot.className = 'status-dot stopped';
-        text.textContent = status.error ? 'Starting... (' + status.error + ')' : 'Starting...';
-        // Retry in a few seconds (server may still be booting)
-        setTimeout(refreshOllamaStatus, 3000);
-      }
+      applyOllamaChecklist(status);
     } catch (err) {
-      dot.className = 'status-dot stopped';
-      text.textContent = 'Error: ' + err.message;
+      applyOllamaChecklist({ installed: false, running: false, modelReady: false });
     }
-
-    updateCurrentModelCard(modelName);
   }
 
-  function updateDownloadProgress(progress) {
-    var section = document.getElementById('model-download-section');
-    var bar = document.getElementById('model-download-bar');
-    var detail = document.getElementById('model-download-detail');
+  function applyOllamaChecklist(status) {
+    var checkInstalled = document.getElementById('check-installed');
+    var checkRunning = document.getElementById('check-running');
+    var checkModel = document.getElementById('check-model');
+    var setupBtn = document.getElementById('ollama-setup-btn');
+    var readyInfo = document.getElementById('ollama-ready-info');
 
-    if (!section) return;
+    setCheckIcon(checkInstalled, status.installed);
+    setCheckIcon(checkRunning, status.running);
+    setCheckIcon(checkModel, status.modelReady);
 
-    if (progress.status === 'ready') {
-      hideDownloadProgress();
-      var dot = document.getElementById('ollama-status-dot');
-      var text = document.getElementById('ollama-status-text');
-      if (dot) dot.className = 'status-dot running';
-      if (text) text.textContent = 'Running';
-      return;
-    }
+    var allReady = status.installed && status.running && status.modelReady;
 
-    if (progress.status === 'error') {
-      section.classList.remove('hidden');
-      bar.style.width = '0%';
-      detail.textContent = 'Download failed: ' + (progress.error || 'unknown error');
-      return;
-    }
-
-    if (progress.status === 'idle') return;
-
-    // Show download progress
-    section.classList.remove('hidden');
-    bar.style.width = progress.percent + '%';
-
-    if (progress.total > 0) {
-      var downloadedMB = (progress.completed / (1024 * 1024)).toFixed(0);
-      var totalMB = (progress.total / (1024 * 1024)).toFixed(0);
-      detail.textContent = progress.status + ' — ' + downloadedMB + ' / ' + totalMB + ' MB (' + progress.percent + '%)';
+    if (allReady) {
+      setupBtn.style.display = 'none';
+      readyInfo.classList.remove('hidden');
+      updateCurrentModelCard(status.currentModel || 'minicpm-v');
     } else {
-      detail.textContent = progress.status || 'Preparing...';
+      setupBtn.style.display = '';
+      readyInfo.classList.add('hidden');
+      // Keep polling if partially ready
+      if (status.installed && !status.running) {
+        setTimeout(refreshOllamaChecklist, 3000);
+      }
     }
   }
 
-  function hideDownloadProgress() {
-    var section = document.getElementById('model-download-section');
-    if (section) section.classList.add('hidden');
+  function setCheckIcon(el, done) {
+    if (done) {
+      el.textContent = '\u2713';
+      el.className = 'check-icon done';
+    } else {
+      el.textContent = '\u25CB';
+      el.className = 'check-icon pending';
+    }
   }
 
   function updateCurrentModelCard(modelName) {
     var nameEl = document.getElementById('current-model-name');
-    nameEl.textContent = modelName;
+    if (nameEl) nameEl.textContent = modelName;
 
-    var specs = MODEL_SPECS[modelName] || { params: '—', size: '—', quant: '—', description: 'Custom model' };
-    document.getElementById('info-model').textContent = modelName;
-    document.getElementById('info-params').textContent = specs.params;
-    document.getElementById('info-size').textContent = specs.size;
-    document.getElementById('info-quant').textContent = specs.quant;
-    document.getElementById('info-desc').textContent = specs.description;
+    var specs = MODEL_SPECS[modelName] || { params: '\u2014', size: '\u2014', quant: '\u2014', description: 'Custom model' };
+    var infoModel = document.getElementById('info-model');
+    if (infoModel) infoModel.textContent = modelName;
+    var infoParams = document.getElementById('info-params');
+    if (infoParams) infoParams.textContent = specs.params;
+    var infoSize = document.getElementById('info-size');
+    if (infoSize) infoSize.textContent = specs.size;
+    var infoQuant = document.getElementById('info-quant');
+    if (infoQuant) infoQuant.textContent = specs.quant;
+    var infoDesc = document.getElementById('info-desc');
+    if (infoDesc) infoDesc.textContent = specs.description;
   }
 
 

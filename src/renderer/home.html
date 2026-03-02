@@ -169,40 +169,49 @@
           </div>
         </div>
 
-        <div class="settings-section">
-          <h3>AI Assistant</h3>
-          <p>AI-powered snip organization runs locally on your machine.</p>
-          <div class="ollama-status-row">
-            <span id="ollama-status-dot" class="status-dot"></span>
-            <span id="ollama-status-text">Checking...</span>
-          </div>
-          <div id="model-download-section" class="model-download-section hidden">
-            <div class="model-download-label">Downloading AI model...</div>
-            <div class="model-download-bar-track">
-              <div id="model-download-bar" class="model-download-bar-fill"></div>
+        <div class="settings-section" id="ai-assistant-section">
+          <h3>Local AI Assistant</h3>
+          <p>AI-powered snip organization runs locally on your machine using Ollama.</p>
+
+          <div class="ollama-checklist">
+            <div class="checklist-item">
+              <span id="check-installed" class="check-icon pending">○</span>
+              <span class="checklist-label">Ollama installed</span>
             </div>
-            <div id="model-download-detail" class="model-download-detail">Preparing...</div>
-          </div>
-          <div class="current-model-card">
-            <span class="current-model-label">Active Model</span>
-            <div class="current-model-header">
-              <span id="current-model-name" class="current-model-name">—</span>
-              <button class="icon-btn model-info-btn" id="model-info-btn" title="Model info">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <circle cx="12" cy="12" r="10"/>
-                  <path d="M12 16v-4"/>
-                  <circle cx="12" cy="8" r="0.5" fill="currentColor" stroke="none"/>
-                </svg>
-              </button>
+            <div class="checklist-item">
+              <span id="check-running" class="check-icon pending">○</span>
+              <span class="checklist-label">Ollama running</span>
             </div>
-            <div id="model-info-tooltip" class="model-info-tooltip hidden">
-              <table class="model-info-table">
-                <tr><td class="model-info-label">Model</td><td id="info-model">—</td></tr>
-                <tr><td class="model-info-label">Parameters</td><td id="info-params">—</td></tr>
-                <tr><td class="model-info-label">Size</td><td id="info-size">—</td></tr>
-                <tr><td class="model-info-label">Quantization</td><td id="info-quant">—</td></tr>
-                <tr><td class="model-info-label">Description</td><td id="info-desc">—</td></tr>
-              </table>
+            <div class="checklist-item">
+              <span id="check-model" class="check-icon pending">○</span>
+              <span class="checklist-label">Model downloaded</span>
+            </div>
+          </div>
+
+          <button id="ollama-setup-btn" class="ollama-action-btn" style="margin-top: 12px;">Set up</button>
+
+          <div id="ollama-ready-info" class="hidden" style="margin-top: 12px;">
+            <div class="current-model-card">
+              <span class="current-model-label">Active Model</span>
+              <div class="current-model-header">
+                <span id="current-model-name" class="current-model-name">—</span>
+                <button class="icon-btn model-info-btn" id="model-info-btn" title="Model info">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"/>
+                    <path d="M12 16v-4"/>
+                    <circle cx="12" cy="8" r="0.5" fill="currentColor" stroke="none"/>
+                  </svg>
+                </button>
+              </div>
+              <div id="model-info-tooltip" class="model-info-tooltip hidden">
+                <table class="model-info-table">
+                  <tr><td class="model-info-label">Model</td><td id="info-model">—</td></tr>
+                  <tr><td class="model-info-label">Parameters</td><td id="info-params">—</td></tr>
+                  <tr><td class="model-info-label">Size</td><td id="info-size">—</td></tr>
+                  <tr><td class="model-info-label">Quantization</td><td id="info-quant">—</td></tr>
+                  <tr><td class="model-info-label">Description</td><td id="info-desc">—</td></tr>
+                </table>
+              </div>
             </div>
           </div>
         </div>

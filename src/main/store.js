@@ -86,7 +86,7 @@ function setOllamaModel(model) {
 }
 
 function getOllamaUrl() {
-  return loadConfig().ollamaUrl || 'http://127.0.0.1:11435';
+  return loadConfig().ollamaUrl || 'http://127.0.0.1:11434';
 }
 
 function setOllamaUrl(url) {

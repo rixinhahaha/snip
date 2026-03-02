@@ -20,10 +20,23 @@ contextBridge.exposeInMainWorld('snip', {
   setOllamaConfig: (config) => ipcRenderer.invoke('set-ollama-config', config),
   getOllamaStatus: () => ipcRenderer.invoke('get-ollama-status'),
   getOllamaPullProgress: () => ipcRenderer.invoke('get-ollama-pull-progress'),
+  installOllama: () => ipcRenderer.invoke('install-ollama'),
+  pullOllamaModel: () => ipcRenderer.invoke('pull-ollama-model'),
+  checkOllamaModel: () => ipcRenderer.invoke('check-ollama-model'),
   onOllamaPullProgress: (callback) => {
     var handler = (event, progress) => callback(progress);
     ipcRenderer.on('ollama-pull-progress', handler);
     return () => ipcRenderer.removeListener('ollama-pull-progress', handler);
+  },
+  onOllamaInstallProgress: (callback) => {
+    var handler = (event, progress) => callback(progress);
+    ipcRenderer.on('ollama-install-progress', handler);
+    return () => ipcRenderer.removeListener('ollama-install-progress', handler);
+  },
+  onOllamaStatusChanged: (callback) => {
+    var handler = (event, status) => callback(status);
+    ipcRenderer.on('ollama-status-changed', handler);
+    return () => ipcRenderer.removeListener('ollama-status-changed', handler);
   },
   getCategories: () => ipcRenderer.invoke('get-categories'),
   addCategory: (category) => ipcRenderer.invoke('add-category', category),
@@ -54,6 +67,10 @@ contextBridge.exposeInMainWorld('snip', {
   segmentAtPoint: ({ points, cssWidth, cssHeight }) =>
     ipcRenderer.invoke('segment-at-point', { points, cssWidth, cssHeight }),
   checkSegmentSupport: () => ipcRenderer.invoke('check-segment-support'),
+
+  // Setup window
+  closeSetupWindow: () => ipcRenderer.invoke('close-setup-window'),
+  openSetupWindow: () => ipcRenderer.invoke('open-setup-window'),
 
   // External URL
   openExternalUrl: (url) => ipcRenderer.invoke('open-external-url', url),

@@ -32,8 +32,7 @@ Thumbs.db
 # Logs
 *.log
 
-# Bundled vendor models (downloaded via npm run download-all)
-vendor/ollama/
+# Bundled vendor models (downloaded via node scripts/download-models.js)
 vendor/models/
 
 # Claude Code (user-specific session data)
