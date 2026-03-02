@@ -86,27 +86,17 @@
   }
 
   /**
-   * Re-render the overlay image for a segment tag when color or thickness changes.
-   * Loads the stored mask, reprocesses it, and swaps the old overlay on canvas.
+   * Re-render the highlight overlay for a segment tag when color changes.
+   * Uses recolorMaskWithOutline to produce a translucent fill + outline ring.
    */
-  function reprocessSegmentOverlay(labelGroup) {
-    var tagId = labelGroup._snipTagId;
-    var maskURL = labelGroup._snipMaskURL;
-    var mode = labelGroup._snipTagMode;
-    var color = labelGroup._snipTagColor;
-    var thickness = labelGroup._snipOutlineWidth || 8;
+  function _reprocessOverlay(tagId, maskURL, color) {
     if (!tagId || !maskURL) return;
 
-    var processFn = mode === 'outline'
-      ? function(cb) { ToolUtils.maskToOutline(maskURL, color, thickness, cb); }
-      : function(cb) { ToolUtils.recolorMaskToHighlight(maskURL, color, cb); };
-
-    processFn(function(result) {
+    ToolUtils.recolorMaskWithOutline(maskURL, color, ToolUtils.SEGMENT_OUTLINE_WIDTH, function(result) {
       if (!result.dataURL) return;
 
       var overlayImg = new Image();
       overlayImg.onload = function() {
-        // Load original mask to get dimensions for scaling
         var maskImg = new Image();
         maskImg.onload = function() {
           var imgToCanvasX = canvas.width / maskImg.width;
@@ -116,12 +106,12 @@
           var overlayTop = result.y * imgToCanvasY;
           var overlayW = result.w * imgToCanvasX;
           var overlayH = result.h * imgToCanvasY;
-          var highlightOpacity = mode === 'outline' ? 1.0 : 0.55;
 
-          // Find and remove old overlay
-          var oldOverlay = null;
-          canvas.getObjects().forEach(function(obj) {
-            if (obj._snipTagId === tagId && obj._snipTagRole === 'overlay') oldOverlay = obj;
+          // Remove old overlay first
+          canvas.getObjects().slice().forEach(function(obj) {
+            if (obj._snipTagId === tagId && obj._snipTagRole === 'overlay') {
+              canvas.remove(obj);
+            }
           });
 
           var newOverlay = new fabric.FabricImage(overlayImg, {
@@ -133,26 +123,73 @@
             scaleY: overlayH / overlayImg.height,
             selectable: false,
             evented: false,
-            opacity: highlightOpacity
+            opacity: ToolUtils.SEGMENT_OVERLAY_OPACITY
           });
           newOverlay._snipTagId = tagId;
           newOverlay._snipTagRole = 'overlay';
 
-          if (oldOverlay) {
-            // Insert new overlay at old overlay's z-index
-            var idx = canvas.getObjects().indexOf(oldOverlay);
-            canvas.remove(oldOverlay);
-            canvas.insertAt(newOverlay, idx);
-          } else {
-            canvas.add(newOverlay);
-            canvas.sendObjectToBack(newOverlay);
-          }
+          // Add new overlay and send to back of z-stack
+          canvas.add(newOverlay);
+          canvas.sendObjectToBack(newOverlay);
           canvas.renderAll();
         };
         maskImg.src = maskURL;
       };
       overlayImg.src = result.dataURL;
     });
+  }
+
+  function reprocessSegmentOverlay(labelGroup) {
+    _reprocessOverlay(labelGroup._snipTagId, labelGroup._snipMaskURL, labelGroup._snipTagColor);
+  }
+
+  /**
+   * Apply a color change to a tag's linked parts (bubble, textbox, tip, line, overlay).
+   * Shared by both onTagColorChange and onSegmentColorChange callbacks.
+   */
+  function _applyTagColor(active, color) {
+    if (!active) return;
+
+    if (active._snipTagType) {
+      // Label group is selected — update bubble + textbox sub-objects
+      active.getObjects().forEach(function(obj) {
+        if (obj.type === 'textbox') obj.set({ fill: '#FFFFFF', cursorColor: '#FFFFFF' });
+        else if (obj.type === 'rect') obj.set({ stroke: color, fill: color });
+      });
+      active._snipTagColor = color;
+      // Update linked parts (tip, line) on canvas
+      if (active._snipTagId) {
+        canvas.getObjects().forEach(function(obj) {
+          if (obj._snipTagId === active._snipTagId && obj !== active) {
+            if (obj._snipTagRole === 'tip') obj.set({ fill: color, stroke: color, borderColor: color });
+            else if (obj._snipTagRole === 'line') obj.set({ stroke: color });
+          }
+        });
+      }
+      // Re-render highlight overlay for segment tags
+      if (active._snipSegmentTag && active._snipMaskURL) {
+        reprocessSegmentOverlay(active);
+      }
+      canvas.renderAll();
+    } else if (active.type === 'textbox' && active._snipEditingTagId) {
+      // Textbox being edited inside a tag
+      var editTagId = active._snipEditingTagId;
+      active._snipEditingTagColor = color;
+      canvas.getObjects().forEach(function(obj) {
+        if (obj._snipEditingTagId === editTagId && obj.type === 'rect') {
+          obj.set({ stroke: color, fill: color });
+        }
+        if (obj._snipTagId === editTagId) {
+          if (obj._snipTagRole === 'tip') obj.set({ fill: color, stroke: color, borderColor: color });
+          else if (obj._snipTagRole === 'line') obj.set({ stroke: color });
+        }
+      });
+      // Re-render overlay for segment tags during editing
+      if (active._snipEditingSegmentTag && active._snipEditingMaskURL) {
+        _reprocessOverlay(editTagId, active._snipEditingMaskURL, color);
+      }
+      canvas.renderAll();
+    }
   }
 
   function setupTools() {
@@ -170,10 +207,9 @@
       onComplete: function() {
         Toolbar.setTool(TOOLS.SELECT);
       },
-      getTagColor: Toolbar.getActiveTagColor,
+      getTagColor: Toolbar.getActiveSegmentColor,
       getFont: Toolbar.getActiveFont,
-      getFontSize: Toolbar.getActiveFontSize,
-      getOutlineWidth: Toolbar.getActiveOutlineWidth
+      getFontSize: Toolbar.getActiveFontSize
     });
 
     // Initialize animate tool (2GIF)
@@ -191,31 +227,8 @@
           canvas.renderAll();
         }
       },
-      onTagColorChange: function(color) {
-        var active = canvas.getActiveObject();
-        if (active && active._snipTagType) {
-          // Update label group sub-objects (bubble + textbox)
-          active.getObjects().forEach(function(obj) {
-            if (obj.type === 'textbox') obj.set({ fill: '#FFFFFF', cursorColor: '#FFFFFF' });
-            else if (obj.type === 'rect') obj.set({ stroke: color, fill: color });
-          });
-          active._snipTagColor = color;
-          // Update linked parts (tip, line) on canvas
-          if (active._snipTagId) {
-            canvas.getObjects().forEach(function(obj) {
-              if (obj._snipTagId === active._snipTagId && obj !== active) {
-                if (obj._snipTagRole === 'tip') obj.set({ fill: color, stroke: color });
-                else if (obj._snipTagRole === 'line') obj.set({ stroke: color });
-              }
-            });
-          }
-          // Re-render overlay for segment tags
-          if (active._snipSegmentTag && active._snipMaskURL) {
-            reprocessSegmentOverlay(active);
-          }
-          canvas.renderAll();
-        }
-      },
+      onTagColorChange: function(color) { _applyTagColor(canvas.getActiveObject(), color); },
+      onSegmentColorChange: function(color) { _applyTagColor(canvas.getActiveObject(), color); },
       onStrokeWidthChange: function(width) {
         var active = canvas.getActiveObject();
         if (active && active.type !== 'textbox') {
@@ -229,7 +242,8 @@
           active.getObjects().forEach(function(obj) {
             if (obj.type === 'textbox') obj.set('fontFamily', font);
           });
-          canvas.renderAll();
+          // Refresh group to resize bubble for new font
+          TagTool.refreshTagGroup(canvas, active);
         } else if (active && active.type === 'textbox') {
           active.set('fontFamily', font);
           canvas.renderAll();
@@ -241,17 +255,11 @@
           active.getObjects().forEach(function(obj) {
             if (obj.type === 'textbox') obj.set('fontSize', size);
           });
-          canvas.renderAll();
+          // Refresh group to resize bubble for new font size
+          TagTool.refreshTagGroup(canvas, active);
         } else if (active && active.type === 'textbox') {
           active.set('fontSize', size);
           canvas.renderAll();
-        }
-      },
-      onOutlineWidthChange: function(width) {
-        var active = canvas.getActiveObject();
-        if (active && active._snipSegmentTag && active._snipMaskURL) {
-          active._snipOutlineWidth = width;
-          reprocessSegmentOverlay(active);
         }
       },
       onRectModeChange: function(mode) {
@@ -351,47 +359,138 @@
       TagTool.enterTagEditing(canvas, target);
     });
 
-    // Show tag color swatches (and outline controls for segment tags) when selected
+    // Show contextual toolbar controls when selecting objects in any mode
     function onSelectionChange() {
       var active = canvas.getActiveObject();
       var tagColorGroup = document.getElementById('tag-color-group');
+      var segmentColorGroup = document.getElementById('segment-color-group');
       var colorPicker = document.getElementById('color-picker');
-      var outlineWidthGroup = document.getElementById('outline-width-group');
+      var fontGroup = document.getElementById('font-group');
+
       if (active && active._snipTagType) {
-        tagColorGroup.classList.remove('hidden');
+        fontGroup.classList.remove('hidden');
         colorPicker.classList.add('hidden');
-        if (active._snipTagColor) {
-          Toolbar.setActiveTagColor(active._snipTagColor);
-        }
-        // Show outline thickness control for segment tags with outline mode
-        if (active._snipSegmentTag && active._snipTagMode === 'outline') {
-          outlineWidthGroup.classList.remove('hidden');
-          if (active._snipOutlineWidth) {
-            Toolbar.setActiveOutlineWidth(active._snipOutlineWidth);
+
+        // Segment tags use limited color palette; regular tags use full palette
+        if (active._snipSegmentTag) {
+          segmentColorGroup.classList.remove('hidden');
+          tagColorGroup.classList.add('hidden');
+          if (active._snipTagColor) {
+            Toolbar.setActiveSegmentColor(active._snipTagColor);
           }
         } else {
-          outlineWidthGroup.classList.add('hidden');
+          tagColorGroup.classList.remove('hidden');
+          segmentColorGroup.classList.add('hidden');
+          if (active._snipTagColor) {
+            Toolbar.setActiveTagColor(active._snipTagColor);
+          }
         }
-      } else if (Toolbar.getActiveTool() !== TOOLS.TAG) {
-        tagColorGroup.classList.add('hidden');
+        // Sync font from tag's textbox
+        active.getObjects().forEach(function(obj) {
+          if (obj.type === 'textbox') {
+            Toolbar.setActiveFont(obj.fontFamily);
+            Toolbar.setActiveFontSize(obj.fontSize);
+          }
+        });
+        ensureToolbarFits();
+      } else if (active && active.type === 'textbox' && active._snipEditingTagId) {
+        // Textbox being edited as part of a tag
+        fontGroup.classList.remove('hidden');
+        colorPicker.classList.add('hidden');
+
+        if (active._snipEditingSegmentTag) {
+          segmentColorGroup.classList.remove('hidden');
+          tagColorGroup.classList.add('hidden');
+          if (active._snipEditingTagColor) {
+            Toolbar.setActiveSegmentColor(active._snipEditingTagColor);
+          }
+        } else {
+          tagColorGroup.classList.remove('hidden');
+          segmentColorGroup.classList.add('hidden');
+          if (active._snipEditingTagColor) {
+            Toolbar.setActiveTagColor(active._snipEditingTagColor);
+          }
+        }
+        Toolbar.setActiveFont(active.fontFamily);
+        Toolbar.setActiveFontSize(active.fontSize);
+        ensureToolbarFits();
+      } else if (active && active.type === 'textbox') {
+        // Standalone textbox selected: show font controls + color picker
+        fontGroup.classList.remove('hidden');
         colorPicker.classList.remove('hidden');
-        outlineWidthGroup.classList.add('hidden');
+        tagColorGroup.classList.add('hidden');
+        segmentColorGroup.classList.add('hidden');
+        // Sync font/size from the selected textbox
+        Toolbar.setActiveFont(active.fontFamily);
+        Toolbar.setActiveFontSize(active.fontSize);
+        ensureToolbarFits();
+      } else if (Toolbar.getActiveTool() !== TOOLS.TAG) {
+        // Other object type: restore defaults
+        tagColorGroup.classList.add('hidden');
+        segmentColorGroup.classList.add('hidden');
+        colorPicker.classList.remove('hidden');
+        if (Toolbar.getActiveTool() !== TOOLS.TEXT) {
+          fontGroup.classList.add('hidden');
+        }
       }
     }
     canvas.on('selection:created', onSelectionChange);
     canvas.on('selection:updated', onSelectionChange);
     canvas.on('selection:cleared', function() {
       var tagColorGroup = document.getElementById('tag-color-group');
+      var segmentColorGroup = document.getElementById('segment-color-group');
       var colorPicker = document.getElementById('color-picker');
-      var outlineWidthGroup = document.getElementById('outline-width-group');
-      if (Toolbar.getActiveTool() !== TOOLS.TAG) {
+      var fontGroup = document.getElementById('font-group');
+      var tool = Toolbar.getActiveTool();
+      if (tool !== TOOLS.TAG) {
         tagColorGroup.classList.add('hidden');
         colorPicker.classList.remove('hidden');
       }
-      outlineWidthGroup.classList.add('hidden');
+      segmentColorGroup.classList.add('hidden');
+      // Only show font group if TEXT or TAG tool is active
+      if (tool !== TOOLS.TEXT && tool !== TOOLS.TAG) {
+        fontGroup.classList.add('hidden');
+      }
     });
 
-    // Update leader line when a tag label group is dragged
+    // Click-to-edit: clicking an already-selected textbox or tag enters editing
+    var _clickEditState = { wasSelected: false, downX: 0, downY: 0 };
+
+    canvas.on('mouse:down', function(opt) {
+      _clickEditState.wasSelected = false;
+      if (Toolbar.getActiveTool() !== TOOLS.SELECT) return;
+      var target = opt.target;
+      if (!target) return;
+      var active = canvas.getActiveObject();
+      if (target === active) {
+        _clickEditState.wasSelected = true;
+        _clickEditState.downX = opt.e.clientX;
+        _clickEditState.downY = opt.e.clientY;
+      }
+    });
+
+    canvas.on('mouse:up', function(opt) {
+      if (!_clickEditState.wasSelected) return;
+      _clickEditState.wasSelected = false;
+      if (Toolbar.getActiveTool() !== TOOLS.SELECT) return;
+
+      // Skip if it was a drag (mouse moved more than 5px)
+      var dx = opt.e.clientX - _clickEditState.downX;
+      var dy = opt.e.clientY - _clickEditState.downY;
+      if (Math.sqrt(dx * dx + dy * dy) > 5) return;
+
+      var target = opt.target;
+      if (!target) return;
+
+      if (target.type === 'textbox' && !target.isEditing) {
+        target.enterEditing();
+        canvas.renderAll();
+      } else if (target._snipTagType) {
+        TagTool.enterTagEditing(canvas, target);
+      }
+    });
+
+    // Update leader line when a tag label group or tip anchor is dragged
     canvas.on('object:moving', function(opt) {
       var target = opt.target;
       if (!target || !target._snipTagId) return;
@@ -399,17 +498,31 @@
       var tagId = target._snipTagId;
       var tipObj = null;
       var tagLine = null;
+      var labelGroup = null;
 
       canvas.getObjects().forEach(function(obj) {
         if (obj._snipTagId === tagId && obj._snipTagRole === 'tip') tipObj = obj;
         if (obj._snipTagId === tagId && obj._snipTagRole === 'line') tagLine = obj;
+        if (obj._snipTagId === tagId && obj._snipTagType) labelGroup = obj;
       });
 
-      if (tipObj && tagLine) {
-        var bounds = target.getBoundingRect();
-        var endpoint = ToolUtils.lineEndpointForTag(tipObj.left, tipObj.top, bounds);
-        tagLine.set({ x1: tipObj.left, y1: tipObj.top, x2: endpoint.x, y2: endpoint.y });
-        tagLine.setCoords();
+      if (target._snipTagRole === 'tip') {
+        // Tip anchor is being dragged — update line from tip to label group edge
+        if (tagLine && labelGroup) {
+          var groupBounds = labelGroup.getBoundingRect();
+          var endpoint = ToolUtils.lineEndpointForTag(target.left, target.top, groupBounds);
+          tagLine.set({ x1: target.left, y1: target.top, x2: endpoint.x, y2: endpoint.y });
+          tagLine.setCoords();
+          canvas.renderAll();
+        }
+      } else if (target._snipTagType) {
+        // Label group is being dragged — update line from tip to new label position
+        if (tipObj && tagLine) {
+          var movingBounds = target.getBoundingRect();
+          var endpoint = ToolUtils.lineEndpointForTag(tipObj.left, tipObj.top, movingBounds);
+          tagLine.set({ x1: tipObj.left, y1: tipObj.top, x2: endpoint.x, y2: endpoint.y });
+          tagLine.setCoords();
+        }
       }
     });
   }
@@ -481,7 +594,18 @@
       return;
     }
 
-    if (e.key === 'Escape' || e.key === 'Enter') {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      var currentTool = Toolbar.getActiveTool();
+      if (currentTool === TOOLS.RECT || currentTool === TOOLS.ARROW || currentTool === TOOLS.BLUR_BRUSH) {
+        // Finish drawing session: switch to select mode
+        Toolbar.setTool(TOOLS.SELECT);
+      } else {
+        await copyToClipboardAndClose();
+      }
+    }
+
+    if (e.key === 'Escape') {
       e.preventDefault();
       await copyToClipboardAndClose();
     }
@@ -525,7 +649,7 @@
     }
   });
 
-  // Capture-phase: Enter finishes textbox editing, Shift+Enter inserts newline
+  // Capture-phase: Enter finishes textbox editing and returns to cursor mode, Shift+Enter inserts newline
   document.addEventListener('keydown', function(e) {
     if (!canvas) return;
     var active = canvas.getActiveObject();
@@ -535,6 +659,8 @@
       e.stopPropagation();
       active.exitEditing();
       canvas.renderAll();
+      // Switch to cursor (select) mode after confirming text
+      Toolbar.setTool(TOOLS.SELECT);
     }
     // Shift+Enter falls through to Fabric.js default (inserts newline)
   }, true);

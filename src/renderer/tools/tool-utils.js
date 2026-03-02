@@ -150,125 +150,102 @@ const ToolUtils = (() => {
     return maxW;
   }
 
-  /**
-   * Recolor a mask image to a flat highlight color, cropped to its bounding box.
-   * Uses full-opacity color via source-in; caller sets Fabric opacity for translucency.
-   * @param {string} maskDataURL
-   * @param {string} hexColor - e.g. '#8B5CF6'
-   * @param {function} callback - receives { dataURL, x, y, w, h } cropped to mask bounds
-   */
-  function recolorMaskToHighlight(maskDataURL, hexColor, callback) {
-    var img = new Image();
-    img.onload = function() {
-      // Find bounding box of non-transparent pixels
-      var fullC = document.createElement('canvas');
-      fullC.width = img.width;
-      fullC.height = img.height;
-      var fullCtx = fullC.getContext('2d');
-      fullCtx.drawImage(img, 0, 0);
-      var data = fullCtx.getImageData(0, 0, fullC.width, fullC.height).data;
+  // ── Shared segment tag constants ──
 
-      var minX = fullC.width, minY = fullC.height, maxX = 0, maxY = 0;
-      for (var py = 0; py < fullC.height; py++) {
-        for (var px = 0; px < fullC.width; px++) {
-          if (data[(py * fullC.width + px) * 4 + 3] > 10) {
-            if (px < minX) minX = px;
-            if (px > maxX) maxX = px;
-            if (py < minY) minY = py;
-            if (py > maxY) maxY = py;
-          }
+  /** Fixed outline width (px) for the highlight overlay border ring. */
+  var SEGMENT_OUTLINE_WIDTH = 10;
+
+  /** Opacity used for the segment highlight overlay on canvas. */
+  var SEGMENT_OVERLAY_OPACITY = 0.35;
+
+  /**
+   * Find the bounding box of non-transparent pixels on a canvas context.
+   * @returns {{ minX, minY, w, h }} or null if no visible pixels.
+   */
+  function _findMaskBounds(ctx, w, h) {
+    var data = ctx.getImageData(0, 0, w, h).data;
+    var minX = w, minY = h, maxX = 0, maxY = 0;
+    for (var py = 0; py < h; py++) {
+      for (var px = 0; px < w; px++) {
+        if (data[(py * w + px) * 4 + 3] > 10) {
+          if (px < minX) minX = px;
+          if (px > maxX) maxX = px;
+          if (py < minY) minY = py;
+          if (py > maxY) maxY = py;
         }
       }
-
-      if (maxX < minX) {
-        // No visible pixels — return empty
-        callback({ dataURL: '', x: 0, y: 0, w: 0, h: 0 });
-        return;
-      }
-
-      var bw = maxX - minX + 1;
-      var bh = maxY - minY + 1;
-
-      // Crop to bounding box and recolor with full-opacity hex
-      var c = document.createElement('canvas');
-      c.width = bw;
-      c.height = bh;
-      var ctx = c.getContext('2d');
-      ctx.drawImage(img, minX, minY, bw, bh, 0, 0, bw, bh);
-      ctx.globalCompositeOperation = 'source-in';
-      ctx.fillStyle = hexColor;
-      ctx.fillRect(0, 0, bw, bh);
-
-      callback({ dataURL: c.toDataURL('image/png'), x: minX, y: minY, w: bw, h: bh });
-    };
-    img.src = maskDataURL;
+    }
+    if (maxX < minX) return null;
+    return { minX: minX, minY: minY, w: maxX - minX + 1, h: maxY - minY + 1 };
   }
 
   /**
-   * Extract the contour of a mask as a colored outline ring, cropped to bounding box.
-   * Subtracts an eroded version from the original to get edge pixels.
+   * Crop a canvas to a bounding box and return a data URL.
+   */
+  function _cropCanvas(srcCanvas, bounds) {
+    var c = document.createElement('canvas');
+    c.width = bounds.w;
+    c.height = bounds.h;
+    c.getContext('2d').drawImage(srcCanvas, bounds.minX, bounds.minY, bounds.w, bounds.h, 0, 0, bounds.w, bounds.h);
+    return c.toDataURL('image/png');
+  }
+
+  /**
+   * Recolor a mask to a highlight fill with an outline ring on top, cropped to bounding box.
+   * Produces a translucent fill + dilation-based outline ring on a single canvas so that
+   * both highlight and outline thickness are always visible and adjustable.
    * @param {string} maskDataURL
    * @param {string} hexColor - e.g. '#8B5CF6'
-   * @param {number} lineWidth - border thickness in px (default 3)
-   * @param {function} callback - receives { dataURL, x, y, w, h } cropped to mask bounds
+   * @param {number} outlineWidth - border thickness in px (default 16)
+   * @param {function} callback - receives { dataURL, x, y, w, h } cropped to combined bounds
    */
-  function maskToOutline(maskDataURL, hexColor, lineWidth, callback) {
-    lineWidth = lineWidth || 3;
+  function recolorMaskWithOutline(maskDataURL, hexColor, outlineWidth, callback) {
+    outlineWidth = outlineWidth || 16;
     var img = new Image();
     img.onload = function() {
       var w = img.width, h = img.height;
 
-      // Canvas 1: original mask
-      var c1 = document.createElement('canvas');
-      c1.width = w; c1.height = h;
-      var ctx1 = c1.getContext('2d');
-      ctx1.drawImage(img, 0, 0);
+      // Final compositing canvas
+      var c = document.createElement('canvas');
+      c.width = w; c.height = h;
+      var ctx = c.getContext('2d');
 
-      // Canvas 2: eroded mask (shrunk by lineWidth)
-      var c2 = document.createElement('canvas');
-      c2.width = w; c2.height = h;
-      var ctx2 = c2.getContext('2d');
-      ctx2.drawImage(img, lineWidth, lineWidth, w - lineWidth * 2, h - lineWidth * 2);
+      // Step 1: Draw highlight fill (mask recolored to hexColor)
+      ctx.drawImage(img, 0, 0);
+      ctx.globalCompositeOperation = 'source-in';
+      ctx.fillStyle = hexColor;
+      ctx.fillRect(0, 0, w, h);
+      ctx.globalCompositeOperation = 'source-over';
 
-      // Subtract eroded from original to get border ring
-      ctx1.globalCompositeOperation = 'destination-out';
-      ctx1.drawImage(c2, 0, 0);
+      // Step 2: Create outline ring via dilation on a separate canvas
+      var oc = document.createElement('canvas');
+      oc.width = w; oc.height = h;
+      var octx = oc.getContext('2d');
 
-      // Recolor border to desired color
-      ctx1.globalCompositeOperation = 'source-in';
-      ctx1.fillStyle = hexColor;
-      ctx1.fillRect(0, 0, w, h);
-
-      // Find bounding box of the outline pixels and crop
-      var data = ctx1.getImageData(0, 0, w, h).data;
-      var minX = w, minY = h, maxX = 0, maxY = 0;
-      for (var py = 0; py < h; py++) {
-        for (var px = 0; px < w; px++) {
-          if (data[(py * w + px) * 4 + 3] > 10) {
-            if (px < minX) minX = px;
-            if (px > maxX) maxX = px;
-            if (py < minY) minY = py;
-            if (py > maxY) maxY = py;
-          }
-        }
+      var steps = 24;
+      for (var i = 0; i < steps; i++) {
+        var angle = (2 * Math.PI * i) / steps;
+        var dx = Math.cos(angle) * outlineWidth;
+        var dy = Math.sin(angle) * outlineWidth;
+        octx.drawImage(img, dx, dy);
       }
+      octx.globalCompositeOperation = 'destination-out';
+      octx.drawImage(img, 0, 0);
+      octx.globalCompositeOperation = 'source-in';
+      octx.fillStyle = hexColor;
+      octx.fillRect(0, 0, w, h);
 
-      if (maxX < minX) {
+      // Step 3: Composite outline on top of highlight
+      ctx.drawImage(oc, 0, 0);
+
+      // Find bounding box and crop
+      var bounds = _findMaskBounds(ctx, w, h);
+      if (!bounds) {
         callback({ dataURL: '', x: 0, y: 0, w: 0, h: 0 });
         return;
       }
 
-      var bw = maxX - minX + 1;
-      var bh = maxY - minY + 1;
-
-      // Crop to bounding box
-      var cropC = document.createElement('canvas');
-      cropC.width = bw;
-      cropC.height = bh;
-      var cropCtx = cropC.getContext('2d');
-      cropCtx.drawImage(c1, minX, minY, bw, bh, 0, 0, bw, bh);
-
-      callback({ dataURL: cropC.toDataURL('image/png'), x: minX, y: minY, w: bw, h: bh });
+      callback({ dataURL: _cropCanvas(c, bounds), x: bounds.minX, y: bounds.minY, w: bounds.w, h: bounds.h });
     };
     img.src = maskDataURL;
   }
@@ -310,9 +287,10 @@ const ToolUtils = (() => {
   }
 
   return {
+    SEGMENT_OUTLINE_WIDTH, SEGMENT_OVERLAY_OPACITY,
     clampedScenePoint, createMosaicImage, showToast, hideToast,
     getAccentColor, hexToRgba, measureTextWidth,
-    recolorMaskToHighlight, maskToOutline,
+    recolorMaskWithOutline,
     nextTagId, lineEndpointForTag
   };
 })();

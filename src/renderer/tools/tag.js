@@ -45,6 +45,9 @@ var TagTool = (function() {
   function enterTagEditing(canvas, group) {
     var tagId = group._snipTagId;
     var tagColor = group._snipTagColor;
+    // Preserve segment-specific properties for re-editing
+    var segmentTag = group._snipSegmentTag;
+    var maskURL = group._snipMaskURL;
 
     var items = group.removeAll();
     canvas.remove(group);
@@ -63,6 +66,14 @@ var TagTool = (function() {
     }
 
     if (!textbox) return;
+
+    // Mark textbox as part of a tag edit so toolbar can show tag controls
+    textbox._snipEditingTagId = tagId;
+    textbox._snipEditingTagColor = tagColor;
+    textbox._snipEditingSegmentTag = segmentTag || false;
+    textbox._snipEditingMaskURL = maskURL || null;
+    // Also mark bubbleRect for color updates during editing
+    if (bubbleRect) bubbleRect._snipEditingTagId = tagId;
 
     // Find linked line on canvas for live resize updates
     var tagLine = null;
@@ -104,10 +115,18 @@ var TagTool = (function() {
       });
       newGroup._snipTagType = true;
       newGroup._snipTagId = tagId;
-      if (tagColor) newGroup._snipTagColor = tagColor;
+      // Use latest tag color (may have been changed via toolbar during editing)
+      var finalColor = textbox._snipEditingTagColor || tagColor;
+      if (finalColor) newGroup._snipTagColor = finalColor;
       // Preserve tag color from the bubble fill if not set
-      if (!tagColor && bubbleRect) {
+      if (!finalColor && bubbleRect) {
         newGroup._snipTagColor = bubbleRect.fill;
+      }
+      // Restore segment-specific properties (use latest values from editing markers)
+      var finalSegmentTag = textbox._snipEditingSegmentTag || segmentTag;
+      if (finalSegmentTag) {
+        newGroup._snipSegmentTag = true;
+        newGroup._snipMaskURL = textbox._snipEditingMaskURL || maskURL;
       }
       canvas.add(newGroup);
 
@@ -130,6 +149,81 @@ var TagTool = (function() {
     };
 
     textbox.on('editing:exited', onExitEditing);
+  }
+
+  /**
+   * Temporarily ungroup a tag, resize bubble to match current text, and regroup.
+   * Called when font size/family changes on a selected tag via toolbar.
+   * Returns the new group (old reference is stale).
+   */
+  function refreshTagGroup(canvas, group) {
+    var tagId = group._snipTagId;
+    var tagColor = group._snipTagColor;
+    var segmentTag = group._snipSegmentTag;
+    var maskURL = group._snipMaskURL;
+
+    var items = group.removeAll();
+    canvas.remove(group);
+
+    var textbox = null;
+    var bubbleRect = null;
+    for (var i = 0; i < items.length; i++) {
+      canvas.add(items[i]);
+      if (items[i].type === 'textbox') textbox = items[i];
+      else if (items[i].type === 'rect') bubbleRect = items[i];
+    }
+
+    if (!textbox || !bubbleRect) return group;
+
+    // Find linked line for resize update
+    var tagLine = null;
+    if (tagId) {
+      canvas.getObjects().forEach(function(obj) {
+        if (obj._snipTagId === tagId && obj._snipTagRole === 'line') tagLine = obj;
+      });
+    }
+
+    // Resize bubble to match current text dimensions
+    resizeTagParts(canvas, textbox, bubbleRect, tagLine);
+
+    // Remove items and regroup
+    for (var j = 0; j < items.length; j++) {
+      canvas.remove(items[j]);
+    }
+
+    var newGroup = new fabric.Group(items, {
+      selectable: true,
+      evented: true,
+      subTargetCheck: true,
+      lockRotation: true,
+      hasControls: false
+    });
+    newGroup._snipTagType = true;
+    newGroup._snipTagId = tagId;
+    if (tagColor) newGroup._snipTagColor = tagColor;
+    if (segmentTag) {
+      newGroup._snipSegmentTag = true;
+      newGroup._snipMaskURL = maskURL;
+    }
+    canvas.add(newGroup);
+
+    // Update line endpoint
+    if (tagLine && tagId) {
+      var tipObj = null;
+      canvas.getObjects().forEach(function(obj) {
+        if (obj._snipTagId === tagId && obj._snipTagRole === 'tip') tipObj = obj;
+      });
+      if (tipObj) {
+        var bounds = newGroup.getBoundingRect();
+        var endpoint = ToolUtils.lineEndpointForTag(tipObj.left, tipObj.top, bounds);
+        tagLine.set({ x2: endpoint.x, y2: endpoint.y });
+        tagLine.setCoords();
+      }
+    }
+
+    canvas.setActiveObject(newGroup);
+    canvas.renderAll();
+    return newGroup;
   }
 
   function attach(canvas, getTagColor, getFont, getFontSize) {
@@ -193,14 +287,20 @@ var TagTool = (function() {
       var tip = new fabric.Circle({
         left: tx,
         top: ty,
-        radius: TIP_RADIUS,
+        radius: TIP_RADIUS + 2,
         fill: color,
         stroke: color,
         strokeWidth: 1,
         originX: 'center',
         originY: 'center',
         selectable: false,
-        evented: false
+        evented: false,
+        hasControls: false,
+        hasBorders: true,
+        borderColor: color,
+        padding: 4,
+        lockRotation: true,
+        hoverCursor: 'move'
       });
 
       var bubbleHeight = fontSize + BUBBLE_PADDING * 2;
@@ -324,9 +424,10 @@ var TagTool = (function() {
           labelGroup._snipTagColor = color;
           labelGroup._snipTagId = tagId;
 
-          // Mark tip and line as linked non-interactive parts
+          // Mark tip and line as linked parts
           parts.tip._snipTagId = tagId;
           parts.tip._snipTagRole = 'tip';
+          parts.tip.set({ selectable: true, evented: true });
           parts.line._snipTagId = tagId;
           parts.line._snipTagRole = 'line';
 
@@ -401,5 +502,5 @@ var TagTool = (function() {
     };
   }
 
-  return { attach: attach, enterTagEditing: enterTagEditing };
+  return { attach: attach, enterTagEditing: enterTagEditing, refreshTagGroup: refreshTagGroup };
 })();

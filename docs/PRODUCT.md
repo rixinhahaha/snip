@@ -44,9 +44,9 @@ Power users on macOS who take 5-50 screenshots per day: developers, designers, P
 | Rectangle | R | Outline, highlight, or blur modes |
 | Text | T | Editable text with font/size pickers |
 | Arrow | A | Point at things |
-| Tag | G | Two-click callout: draggable label group + anchored tip with leader line |
+| Tag | G | Two-click callout: draggable label group + draggable anchor tip with leader line |
 | Blur Brush | B | Paint to pixelate sensitive info |
-| Segment | S | AI-powered object selection (SlimSAM) — Apply Cutout or Tag Segment |
+| Segment | S | AI-powered object selection (SlimSAM) — Apply Cutout or Tag Segment (4-color palette: Red/Yellow/Green/Blue) |
 | 2GIF | — | Animate a segment cutout into GIF/APNG via fal.ai cloud API |
 
 ### Save & Export

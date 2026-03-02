@@ -60,7 +60,7 @@ src/
     toolbar.js               # Editor toolbar state machine
     theme.css                # ALL theme tokens (Dark, Light, Glass + solid fallback)
     tools/
-      tool-utils.js          # Shared: getAccentColor(), hexToRgba(), createMosaicImage(), recolorMaskToHighlight(), maskToOutline(), nextTagId(), lineEndpointForTag()
+      tool-utils.js          # Shared: SEGMENT_OUTLINE_WIDTH, SEGMENT_OVERLAY_OPACITY, getAccentColor(), hexToRgba(), createMosaicImage(), recolorMaskWithOutline() (highlight fill + dilation outline), nextTagId(), lineEndpointForTag()
       rectangle.js           # Rectangle tool (outline/highlight/blur modes)
       textbox.js             # Text annotation tool
       arrow.js               # Arrow annotation tool
@@ -186,6 +186,22 @@ Only app-saved files trigger AI processing. The `pendingFiles` Set in `watcher.j
 - `ToolUtils.getAccentColor()` — reads `--accent` CSS variable (don't duplicate)
 - `ToolUtils.hexToRgba(hex, alpha)` — color conversion (don't duplicate)
 - `ToolUtils.createMosaicImage()` — pixelation for blur effects
+- `ToolUtils.SEGMENT_OUTLINE_WIDTH` — outline ring thickness (10px) for segment highlights
+- `ToolUtils.SEGMENT_OVERLAY_OPACITY` — opacity (0.35) for segment highlight overlays
+
+### Tag Linkage System
+Tags (both regular and segment tags) consist of multiple Fabric.js objects linked by a shared `_snipTagId` (e.g., `'snip-tag-1'`). Each part has a `_snipTagRole` to identify it:
+
+| Property | Set On | Values | Purpose |
+|----------|--------|--------|---------|
+| `_snipTagId` | all parts | `'snip-tag-N'` | Groups tip, line, label group (and overlay for segment tags) |
+| `_snipTagRole` | tip, line, overlay | `'tip'`, `'line'`, `'overlay'` | Identifies the part's role for targeted updates |
+| `_snipTagType` | label group | `true` | Marks the group as a tag (for selection, editing, toolbar) |
+| `_snipTagColor` | label group | hex color | Current tag color (synced to all parts on change) |
+| `_snipSegmentTag` | label group | `true` | Marks as a segment tag (has overlay + mask) |
+| `_snipMaskURL` | label group | data URL | Original SAM mask for overlay recoloring |
+
+During text editing, temporary `_snipEditingTagId` / `_snipEditingTagColor` markers are set on the textbox and bubble rect so toolbar color changes propagate correctly. `_applyTagColor()` in `editor-app.js` finds all linked parts by ID and updates them. The `object:moving` handler in `editor-app.js` updates the leader line when either the label group or the tip anchor is dragged.
 
 ---
 

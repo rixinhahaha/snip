@@ -14,16 +14,16 @@ const SegmentTool = (() => {
     var getBackground = callbacks.getBackground;
     var onCutoutAccepted = callbacks.onCutoutAccepted || null;
     var onComplete = callbacks.onComplete || null;
-    var getTagColor = callbacks.getTagColor || function() { return '#64748B'; };
+    var getTagColor = callbacks.getTagColor || function() { return '#EF4444'; };
     var getFont = callbacks.getFont || function() { return 'Plus Jakarta Sans'; };
     var getFontSize = callbacks.getFontSize || function() { return 16; };
-    var getOutlineWidth = callbacks.getOutlineWidth || function() { return 8; };
 
     let maskOverlay = null;
     let pendingCutoutURL = null;
     let pendingMaskURL = null;
     let previousBackgroundURL = null;
     let isProcessing = false;
+    let isTagging = false;
     let accumulatedPoints = [];
     let pointMarkers = [];
     let actionBarVisible = false;
@@ -91,8 +91,7 @@ const SegmentTool = (() => {
         } else if (e.key === 't' || e.key === 'T') {
           e.preventDefault();
           e.stopPropagation();
-          var mode = e.shiftKey ? 'outline' : 'highlight';
-          tagSegment(mode);
+          tagSegment();
         }
       };
       // Use capture phase so it fires before editor-app's keydown handler
@@ -143,25 +142,19 @@ const SegmentTool = (() => {
     }
 
     /**
-     * Tag the segmented area with a colored overlay/outline and a label bubble.
-     * @param {'highlight'|'outline'} mode
+     * Tag the segmented area with a colored highlight overlay and a label bubble.
      */
-    function tagSegment(mode) {
+    function tagSegment() {
       if (!pendingMaskURL) return;
       hideActionBar();
+      isTagging = true;
 
       var tagColor = getTagColor();
       var font = getFont();
       var fontSize = getFontSize();
-      var outlineWidth = getOutlineWidth();
       var savedMaskURL = pendingMaskURL; // capture before async clears it
 
-      // Both utilities now return { dataURL, x, y, w, h } cropped to bounding box
-      var processFn = mode === 'outline'
-        ? function(cb) { ToolUtils.maskToOutline(savedMaskURL, tagColor, outlineWidth, cb); }
-        : function(cb) { ToolUtils.recolorMaskToHighlight(savedMaskURL, tagColor, cb); };
-
-      processFn(function(result) {
+      ToolUtils.recolorMaskWithOutline(savedMaskURL, tagColor, ToolUtils.SEGMENT_OUTLINE_WIDTH, function(result) {
         if (!result.dataURL) {
           ToolUtils.showToast('No mask area found', 'error', 3000);
           return;
@@ -186,7 +179,6 @@ const SegmentTool = (() => {
             var overlayW = result.w * imgToCanvasX;
             var overlayH = result.h * imgToCanvasY;
 
-            var highlightOpacity = mode === 'outline' ? 1.0 : 0.55;
             var fabricOverlay = new fabric.FabricImage(overlayImg, {
               left: overlayLeft,
               top: overlayTop,
@@ -196,14 +188,15 @@ const SegmentTool = (() => {
               scaleY: overlayH / overlayImg.height,
               selectable: false,
               evented: false,
-              opacity: highlightOpacity
+              opacity: ToolUtils.SEGMENT_OVERLAY_OPACITY
             });
 
-            // Tag placement: center-top of the overlay area
+            // Tag placement: center of the mask area
             var centerX = overlayLeft + overlayW / 2;
-            var tagTipY = overlayTop;
+            var centerY = overlayTop + overlayH / 2;
+            var tagTipY = centerY;
 
-            // Position tag bubble above the mask center-top
+            // Position tag bubble above the mask center
             var bubbleX = centerX;
             var bubbleY = Math.max(30, tagTipY - 40);
             var bubbleHeight = fontSize + TAG_BUBBLE_PADDING * 2;
@@ -212,14 +205,20 @@ const SegmentTool = (() => {
             var tip = new fabric.Circle({
               left: centerX,
               top: tagTipY,
-              radius: TAG_TIP_RADIUS,
+              radius: TAG_TIP_RADIUS + 2,
               fill: tagColor,
               stroke: tagColor,
               strokeWidth: 1,
               originX: 'center',
               originY: 'center',
               selectable: false,
-              evented: false
+              evented: false,
+              hasControls: false,
+              hasBorders: true,
+              borderColor: tagColor,
+              padding: 4,
+              lockRotation: true,
+              hoverCursor: 'move'
             });
 
             var line = new fabric.Line([centerX, tagTipY, bubbleX, bubbleY], {
@@ -261,6 +260,18 @@ const SegmentTool = (() => {
               evented: false
             });
 
+            // Generate tag ID early so color changes work during editing
+            var tagId = ToolUtils.nextTagId();
+
+            // Mark linked parts so _applyTagColor can find them
+            fabricOverlay._snipTagId = tagId;
+            fabricOverlay._snipTagRole = 'overlay';
+            tip._snipTagId = tagId;
+            tip._snipTagRole = 'tip';
+            line._snipTagId = tagId;
+            line._snipTagRole = 'line';
+            bubble._snipEditingTagId = tagId;
+
             // Add all parts to canvas for initial editing
             var allItems = [fabricOverlay, tip, line, bubble, textbox];
             for (var i = 0; i < allItems.length; i++) {
@@ -291,11 +302,27 @@ const SegmentTool = (() => {
             };
             textbox.on('changed', onChanged);
 
-            // Enter editing
+            // Mark textbox with editing markers so toolbar color changes work
+            textbox._snipEditingTagId = tagId;
+            textbox._snipEditingTagColor = tagColor;
+            textbox._snipEditingSegmentTag = true;
+            textbox._snipEditingMaskURL = savedMaskURL;
+
+            // Enter editing and show segment toolbar controls
             textbox.set({ selectable: true, evented: true, editable: true });
             canvas.setActiveObject(textbox);
             textbox.enterEditing();
             textbox.selectAll();
+
+            // Show segment color swatches + font controls during initial tag creation
+            document.getElementById('segment-color-group').classList.remove('hidden');
+            document.getElementById('font-group').classList.remove('hidden');
+            document.getElementById('color-picker').classList.add('hidden');
+            // Sync active swatch to match the actual tag color
+            document.querySelectorAll('.segment-color-swatch').forEach(function(s) {
+              s.classList.toggle('active', s.dataset.color === tagColor);
+            });
+
             canvas.renderAll();
 
             // On editing exit, create linked objects
@@ -306,13 +333,30 @@ const SegmentTool = (() => {
               // Final auto-size
               onChanged();
 
-              // Remove all from canvas
+              // Use latest color (may have changed via toolbar during editing)
+              var finalColor = textbox._snipEditingTagColor || tagColor;
+
+              // Find the current overlay — may have been replaced by _reprocessOverlay
+              // if the user changed color during editing
+              var currentOverlay = null;
+              canvas.getObjects().forEach(function(obj) {
+                if (obj._snipTagId === tagId && obj._snipTagRole === 'overlay') {
+                  currentOverlay = obj;
+                }
+              });
+
+              // Remove all original items from canvas (some may already be gone
+              // if _reprocessOverlay replaced the overlay)
               for (var j = 0; j < allItems.length; j++) {
                 canvas.remove(allItems[j]);
               }
+              // Also remove the current overlay if it was replaced (not the original)
+              if (currentOverlay && currentOverlay !== fabricOverlay) {
+                canvas.remove(currentOverlay);
+              }
 
-              // Generate unique tag ID for linkage
-              var tagId = ToolUtils.nextTagId();
+              // Use the current overlay (recolored) if available, else the original
+              var overlayToAdd = currentOverlay || fabricOverlay;
 
               // Create label group (bubble + textbox only) — movable
               var labelGroup = new fabric.Group([bubble, textbox], {
@@ -324,22 +368,15 @@ const SegmentTool = (() => {
               });
               labelGroup._snipTagType = true;
               labelGroup._snipSegmentTag = true;
-              labelGroup._snipTagColor = tagColor;
+              labelGroup._snipTagColor = finalColor;
               labelGroup._snipTagId = tagId;
               labelGroup._snipMaskURL = savedMaskURL;
-              labelGroup._snipTagMode = mode;
-              labelGroup._snipOutlineWidth = outlineWidth;
 
-              // Mark linked parts
-              fabricOverlay._snipTagId = tagId;
-              fabricOverlay._snipTagRole = 'overlay';
-              tip._snipTagId = tagId;
-              tip._snipTagRole = 'tip';
-              line._snipTagId = tagId;
-              line._snipTagRole = 'line';
+              // Make tip interactive now that editing is done
+              tip.set({ selectable: true, evented: true });
 
               // Add in z-order: overlay (bottom), tip, line, label group (top)
-              canvas.add(fabricOverlay);
+              canvas.add(overlayToAdd);
               canvas.add(tip);
               canvas.add(line);
               canvas.add(labelGroup);
@@ -355,7 +392,7 @@ const SegmentTool = (() => {
 
               ToolUtils.showToast('Segment tagged', 'success', 2000);
 
-              // Switch to select mode
+              isTagging = false;
               if (onComplete) onComplete();
             };
 
@@ -392,7 +429,7 @@ const SegmentTool = (() => {
     }
 
     async function onMouseDown(opt) {
-      if (isProcessing) return;
+      if (isProcessing || isTagging) return;
       if (opt.target && opt.target === maskOverlay) return;
 
       var pointer = ToolUtils.clampedScenePoint(canvas, opt.e);
@@ -418,7 +455,7 @@ const SegmentTool = (() => {
 
       var pointCount = accumulatedPoints.length;
       var toastMsg = pointCount === 1
-        ? 'Segmenting\u2026 (first run downloads model)'
+        ? 'Segmenting\u2026'
         : 'Refining with ' + pointCount + ' points\u2026';
       ToolUtils.showToast(toastMsg, 'processing');
 
@@ -489,7 +526,7 @@ const SegmentTool = (() => {
     var tagBtn = document.getElementById('segment-tag');
     if (acceptBtn) acceptBtn.addEventListener('click', acceptCutout);
     if (rejectBtn) rejectBtn.addEventListener('click', rejectCutout);
-    if (tagBtn) tagBtn.addEventListener('click', function() { tagSegment('highlight'); });
+    if (tagBtn) tagBtn.addEventListener('click', function() { tagSegment(); });
 
     return {
       activate() {
@@ -508,6 +545,7 @@ const SegmentTool = (() => {
         accumulatedPoints = [];
         pendingCutoutURL = null;
         pendingMaskURL = null;
+        isTagging = false;
         ToolUtils.hideToast();
         canvas.selection = true;
         canvas.defaultCursor = 'default';

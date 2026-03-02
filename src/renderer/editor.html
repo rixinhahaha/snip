@@ -106,13 +106,14 @@
           <button class="tag-color-swatch" data-color="#7C3AED" style="background:#7C3AED" title="Violet"></button>
         </div>
       </div>
-      <div id="outline-width-group" class="toolbar-group hidden">
-        <span class="toolbar-label">Outline</span>
-        <select id="outline-width" title="Outline Thickness">
-          <option value="4">Thin</option>
-          <option value="8" selected>Medium</option>
-          <option value="14">Thick</option>
-        </select>
+      <div id="segment-color-group" class="toolbar-group hidden">
+        <span class="toolbar-label">Color</span>
+        <div class="tag-color-swatches">
+          <button class="segment-color-swatch tag-color-swatch active" data-color="#EF4444" style="background:#EF4444" title="Red"></button>
+          <button class="segment-color-swatch tag-color-swatch" data-color="#EAB308" style="background:#EAB308" title="Yellow"></button>
+          <button class="segment-color-swatch tag-color-swatch" data-color="#22C55E" style="background:#22C55E" title="Green"></button>
+          <button class="segment-color-swatch tag-color-swatch" data-color="#3B82F6" style="background:#3B82F6" title="Blue"></button>
+        </div>
       </div>
       <div id="brush-group" class="toolbar-group hidden">
         <span class="toolbar-label">Brush</span>
@@ -177,8 +178,7 @@
           <strong>Click</strong> on any object to automatically select it.<br>
           <strong>Shift + Click</strong> to add more points and refine the selection.<br>
           Then choose: <strong>Tag Segment (T)</strong> to highlight and label,<br>
-          or <strong>Apply Cutout (Enter)</strong> to isolate.<br>
-          Hold <strong>Shift + T</strong> for outline mode instead of highlight.
+          or <strong>Apply Cutout (Enter)</strong> to isolate.
         </div>
         <button id="segment-tutorial-dismiss" class="tutorial-dismiss-btn">Got it</button>
       </div>
