@@ -7,7 +7,7 @@
   'use strict';
 
   // --- Download constants (update here for version bumps) ---
-  var SNIP_VERSION = '1.0.10';
+  var SNIP_VERSION = '1.0.11';
   var DOWNLOAD_BASE = 'https://github.com/rixinhahaha/snip/releases/latest/download/';
   var DOWNLOAD_URL = DOWNLOAD_BASE + 'Snip-' + SNIP_VERSION + '-arm64.dmg';
 
