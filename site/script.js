@@ -6,6 +6,12 @@
 (function () {
   'use strict';
 
+  // --- Download constants (update here for version bumps) ---
+  var SNIP_VERSION = '1.0.9';
+  var DOWNLOAD_BASE = 'https://github.com/rixinhahaha/snip/releases/latest/download/';
+  var DOWNLOAD_ARM64 = DOWNLOAD_BASE + 'Snip-' + SNIP_VERSION + '-arm64.dmg';
+  var DOWNLOAD_X64 = DOWNLOAD_BASE + 'Snip-' + SNIP_VERSION + '-x64.dmg';
+
   // --- Nav scroll effect ---
   var nav = document.getElementById('nav');
   var lastScroll = 0;
@@ -99,6 +105,18 @@
     headers.forEach(function (el) {
       el.classList.add('fade-in');
       observer.observe(el);
+    });
+  }
+
+  // --- Populate download links from constants ---
+  function initDownloadLinks() {
+    var links = document.querySelectorAll('.download-option');
+    links.forEach(function (link) {
+      if (link.getAttribute('data-arch') === 'arm64') {
+        link.href = DOWNLOAD_ARM64;
+      } else if (link.getAttribute('data-arch') === 'x64') {
+        link.href = DOWNLOAD_X64;
+      }
     });
   }
 
@@ -278,6 +296,7 @@
   // Init
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function () {
+      initDownloadLinks();
       animateOnScroll();
       animateSectionHeaders();
       initSparkleCanvas();
@@ -285,6 +304,7 @@
       initDownloadDropdowns();
     });
   } else {
+    initDownloadLinks();
     animateOnScroll();
     animateSectionHeaders();
     initSparkleCanvas();
