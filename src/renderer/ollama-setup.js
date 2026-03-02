@@ -97,6 +97,7 @@
     if (progress.status === 'error') {
       document.getElementById('install-progress-section').classList.add('hidden');
       showError('install', progress.error || 'Installation failed. Check your internet connection and try again.');
+      skipBtn.textContent = 'Skip for now';
       return;
     }
 
@@ -127,6 +128,7 @@
     if (progress.status === 'error') {
       document.getElementById('model-progress-section').classList.add('hidden');
       showError('model', progress.error || 'Model download failed. Check your internet connection and try again.');
+      skipBtn.textContent = 'Skip for now';
       return;
     }
 
