@@ -68,7 +68,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          repository: rixinhahaha/homebrew-tap
+          repository: rixinhahaha/homebrew-snip
           token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
 
       - name: Update cask version and checksum
@@ -77,8 +77,8 @@ jobs:
           DMG_URL="https://github.com/rixinhahaha/snip/releases/download/v${VERSION}/Snip-${VERSION}-arm64.dmg"
           SHA256=$(curl -sL "$DMG_URL" | shasum -a 256 | cut -d' ' -f1)
 
-          cat > Casks/snip-app.rb << EOF
-          cask "snip-app" do
+          cat > Casks/snip.rb << EOF
+          cask "snip" do
             version "${VERSION}"
             sha256 "${SHA256}"
 
@@ -110,6 +110,6 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add Casks/snip-app.rb
-          git commit -m "Update snip-app to ${GITHUB_REF#refs/tags/v}"
+          git add Casks/snip.rb
+          git commit -m "Update snip to ${GITHUB_REF#refs/tags/v}"
           git push
