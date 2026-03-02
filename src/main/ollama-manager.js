@@ -26,6 +26,7 @@ let modelReady = false;
 // Install state
 let installInProgress = false;
 let installProgress = { status: 'idle', percent: 0 };
+let onInstallComplete = null;
 
 // Known install paths for macOS (packaged apps don't inherit shell PATH)
 var KNOWN_PATHS = [
@@ -318,6 +319,7 @@ async function installOllama() {
     installProgress = { status: 'done', percent: 100 };
     emitInstallProgress(installProgress);
     emitStatus();
+    if (onInstallComplete) onInstallComplete();
 
     console.log('[Ollama] Installed and running');
     return { success: true };
@@ -527,6 +529,10 @@ function getClient() {
   return client;
 }
 
+function setOnInstallComplete(fn) {
+  onInstallComplete = fn;
+}
+
 module.exports = {
   startOllama,
   stopOllama,
@@ -536,5 +542,6 @@ module.exports = {
   isReady,
   getStatus,
   getPullProgress,
-  getClient
+  getClient,
+  setOnInstallComplete
 };
