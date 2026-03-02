@@ -10,7 +10,7 @@
 |-----------|---------|---------|
 | Desktop framework | Electron | 33 |
 | Annotation canvas | Fabric.js | 7 |
-| AI categorization | Local vision LLM | Ollama (system install, model pulled on first launch) |
+| AI categorization | Local vision LLM | Ollama (system install, managed process on dynamic port, model pulled on first launch) |
 | Semantic embeddings | HuggingFace Transformers.js | all-MiniLM-L6-v2 |
 | Image segmentation | SlimSAM | ONNX Runtime |
 | Animation (fal.ai) | Wan 2.2 I2V via fal.ai cloud API | HTTPS queue API (requires API key) |
@@ -34,14 +34,14 @@ src/
     ipc-handlers.js          # All IPC channel handlers
     tray.js                  # Menu-bar tray icon and context menu
     shortcuts.js             # Global keyboard shortcuts (Cmd+Shift+2, Cmd+Shift+F)
-    store.js                 # Config persistence, index I/O, fal.ai API key storage
+    store.js                 # Config persistence, index I/O, fal.ai API key storage, reloadConfig()
     constants.js             # Shared constants (BASE_WEB_PREFERENCES)
-    ollama-manager.js        # Ollama binary lifecycle (start/stop/ready/status/model pull)
+    ollama-manager.js        # Ollama process lifecycle (spawn/kill on dynamic port, ready/status/model pull)
     model-paths.js           # Bundled model path resolution (dev vs packaged)
     organizer/               # AI screenshot organization pipeline
       agent.js               # Ollama vision prompt + response parsing
       worker.js              # Background worker thread for AI processing
-      watcher.js             # Chokidar file watcher + pendingFiles queue
+      watcher.js             # Chokidar file watcher + pendingFiles queue + setOllamaHost() + generateEmbeddingForEntry()
       embeddings.js          # HuggingFace transformer embedding generation
     segmentation/            # SAM image segmentation (isolated from organizer)
       segmentation.js        # SAM model orchestration (spawns subprocess)
@@ -106,18 +106,26 @@ All windows share:
 
 ## Key Architecture Decisions
 
-### System Ollama
-Ollama is **NOT bundled** — the user installs it separately (from [ollama.com](https://ollama.com/download) or via the in-app installer). The LLM model (`minicpm-v`, ~5 GB) is pulled on first launch. Snip connects to the system Ollama server at `http://127.0.0.1:11434` (the default port). Models are stored in Ollama's standard location (`~/.ollama/models/`).
+### Managed Ollama Process
+Ollama is **NOT bundled** — the user installs it separately (from [ollama.com](https://ollama.com/download) or via the in-app installer). The LLM model (`minicpm-v`, ~5 GB) is pulled on first launch. Models are stored in Ollama's standard location (`~/.ollama/models/`).
+
+Snip **owns the Ollama server lifecycle** — it spawns a dedicated `ollama serve` process on a dynamically-assigned port at app start, and kills it on app quit. The process is NOT detached, so it dies with the parent even on a crash.
 
 On startup, `ollama-manager.js` runs `startOllama()` which:
-1. **Checks if already running** — `checkServer(host)` pings `127.0.0.1:11434`
-2. **Checks if installed** — `findOllamaInstall()` looks for `/Applications/Ollama.app` and known CLI paths (`/usr/local/bin/ollama`, `/opt/homebrew/bin/ollama`)
-3. **Auto-starts if needed** — `autoStartOllama()` runs `open -a Ollama` (for .app) or `ollama serve` (for CLI)
-4. **Not installed** — sets status to `not_installed`, the inline setup overlay prompts the user to install
+1. **Finds the binary** — `findOllamaBinary()` checks CLI paths (`/usr/local/bin/ollama`, `/opt/homebrew/bin/ollama`) then the binary inside `/Applications/Ollama.app/Contents/Resources/ollama`
+2. **Not found** — sets status to `not_installed`, the inline setup overlay prompts the user to install
+3. **Finds a free port** — `findFreePort()` binds to port 0 and reads the assigned port
+4. **Spawns `ollama serve`** — with env `OLLAMA_HOST=127.0.0.1:<port>`, NOT detached, NOT unref'd
+5. **Waits for health check** — `waitForServer()` polls the new URL
+6. **Pushes host URL via message passing** — calls `watcher.setOllamaHost(host)` which forwards to the worker thread, which calls `agent.setOllamaHost(host)` to set a module-level override
 
-The in-app installer (`installOllama()`) downloads `Ollama-darwin.zip` from ollama.com, extracts `Ollama.app`, moves it to `/Applications/`, and launches it. Progress is pushed to all BrowserWindows via `webContents.send('ollama-install-progress', progress)`.
+On quit, `stopOllama()` sends SIGTERM to the managed process, waits up to 3s, then SIGKILL as fallback. Resets `managedHost`, `client`, and all state.
 
-Model pull uses `client.pull({ model, stream: true })` with per-digest progress accumulation, pushed via `webContents.send('ollama-pull-progress', progress)`.
+The active Ollama host URL is communicated via **message passing** (not env vars): `ollama-manager.js` → `watcher.js:setOllamaHost()` → worker thread → `agent.js:setOllamaHost()`. The agent's `createClient()` reads the `ollamaHostOverride` module variable first, falling back to the user-configured URL. The animation module uses `ollamaManager.getClient()` directly.
+
+The in-app installer (`installOllama()`) downloads `Ollama-darwin.zip` from ollama.com, extracts `Ollama.app`, moves it to `/Applications/`, then calls `startOllama()` to spawn the managed server (does NOT launch the Ollama GUI app). Progress is pushed to all BrowserWindows via `webContents.send('ollama-install-progress', progress)`.
+
+Model pull uses `client.pull({ model, stream: true })` with per-digest progress accumulation, pushed via `webContents.send('ollama-pull-progress', progress)`. If the server is down during a pull, `pullModel()` attempts to restart the managed instance via `startOllama()`.
 
 All AI runs locally — no cloud API calls (except fal.ai for animations).
 
@@ -230,7 +238,24 @@ The preload script (`preload.js`) exposes `window.snip` with these methods:
 | `resizeEditor(width)` | R -> M | Widen editor for toolbar |
 | `getSystemFonts()` | R -> M | List installed fonts |
 | `checkSegmentSupport()` | R -> M | Check SAM availability |
-| `segmentImage(data)` | R -> M | Run SAM segmentation |
+| `segmentAtPoint(data)` | R -> M | Run SAM segmentation at click points |
+| `getScreenshotIndex()` | R -> M | Get full search index |
+| `getThumbnail(path)` | R -> M | Get thumbnail data URL |
+| `revealInFinder(path)` | R -> M | Reveal file in Finder |
+| `searchScreenshots(query)` | R -> M | Semantic/text search with relevance scores |
+| `refreshIndex()` | R -> M | Prune stale entries + regenerate missing embeddings |
+| `getScreenshotsDir()` | R -> M | Get screenshots directory path |
+| `listFolder(subdir)` | R -> M | List folder contents |
+| `openScreenshotsFolder()` | R -> M | Open screenshots dir in Finder |
+| `deleteScreenshot(path)` | R -> M | Move screenshot to Trash + remove from index |
+| `deleteFolder(path)` | R -> M | Move folder to Trash + remove entries from index |
+| `onNavigateToSearch(cb)` | M -> R | Navigate to search page |
+| `onTagsChanged(cb)` | M -> R | Tags/categories changed (live refresh in settings) |
+| `getCategories()` / `addCategory()` / `removeCategory()` | R -> M | Category management |
+| `getTagsWithDescriptions()` | R -> M | All tags with descriptions for settings |
+| `setTagDescription(tag, desc)` | R -> M | Update tag description |
+| `addCategoryWithDescription(name, desc)` | R -> M | Add category with description |
+| `checkOllamaModel()` | R -> M | Check if configured model is available |
 | `getAnimationConfig()` / `setAnimationConfig(cfg)` | R -> M | fal.ai API key settings |
 | `checkAnimateSupport()` | R -> M | Check animation availability (true only if fal.ai API key configured) |
 | `listAnimationPresets()` | R -> M | List static text-based animation presets (fallback) |
@@ -302,7 +327,7 @@ The native Liquid Glass layer is always present (macOS 26+). Dark and Light them
 | Animations | `~/Documents/snip/screenshots/animations/` | same |
 | Index | `~/Documents/snip/screenshots/.index.json` | same |
 | Config | `~/Library/Application Support/snip/snip-config.json` | same |
-| Ollama (system) | `/Applications/Ollama.app` or `/usr/local/bin/ollama` | same (user-installed) |
-| Ollama models | `~/.ollama/models/` | same (managed by system Ollama) |
+| Ollama binary | `/usr/local/bin/ollama`, `/opt/homebrew/bin/ollama`, or `/Applications/Ollama.app/Contents/Resources/ollama` | same (user-installed) |
+| Ollama models | `~/.ollama/models/` | same (shared with system Ollama) |
 | HF models (MiniLM + SlimSAM) | `vendor/models/` | `Resources/models/` |
 | Animation presets | Inlined in `src/main/animation/animation.js` | same (bundled in asar) |

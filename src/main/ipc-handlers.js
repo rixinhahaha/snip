@@ -299,6 +299,30 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn) {
     }
   });
 
+  // Refresh index: prune stale entries and regenerate missing embeddings
+  ipcMain.handle('refresh-index', async () => {
+    const before = readIndex().length;
+    const cleaned = rebuildIndex();
+    const pruned = before - cleaned.length;
+    console.log('[Snip] Refresh: pruned %d stale entries', pruned);
+
+    // Find entries missing embeddings and regenerate them
+    const { generateEmbeddingForEntry } = require('./organizer/watcher');
+    const needsEmbedding = cleaned.filter(e => !e.embedding && e.name && e.description);
+    let generated = 0;
+    for (const entry of needsEmbedding) {
+      const textToEmbed = `${entry.name} ${entry.description || ''} ${(entry.tags || []).join(' ')}`;
+      try {
+        await generateEmbeddingForEntry(entry.path, textToEmbed);
+        generated++;
+      } catch (err) {
+        console.warn('[Snip] Embedding failed for %s: %s', entry.filename, err.message);
+      }
+    }
+    console.log('[Snip] Refresh: generated %d embeddings', generated);
+    return { pruned, embeddings: generated };
+  });
+
   // Segmentation: check device support
   ipcMain.handle('check-segment-support', async () => {
     const { checkSupport } = require('./segmentation/segmentation');

@@ -194,13 +194,24 @@ The setup wizard is an **inline overlay** (`#setup-overlay`) inside the home win
 - **Action buttons**: accent-filled for Save GIF/APNG, input-filled for Copy GIF. Standard `--text-secondary` cancel link for Done.
 
 ### Animation Settings (home.css)
-The Settings page "Animation" section uses `fal-api-*` CSS classes:
-- **`.fal-api-key-row`**: Flex column layout, 8px gap. Contains the label, input group, status, and hint.
-- **`.fal-api-label`**: 12px font, 500 weight, `--text-secondary` color.
-- **`.fal-api-input-group`**: Flex row with 8px gap for the input field and save button.
-- **`.fal-api-input`**: Flex-grow text input, `--bg-input` background, `--border-input` border, 8px radius. Focus state: `--accent` border.
-- **`.fal-api-status`**: 12px status text. `.saved` variant uses `--success` color. `.error` variant uses `--error` color.
-- **`.fal-api-hint`**: 12px hint text in `--text-dim`, contains "Get API Key" link.
+The Settings page "Animation" section uses `animation-api-key-*` CSS classes:
+- **`.animation-api-key-row`**: Flex column layout, 8px gap. Contains the label, input group, status, and help text.
+- **`.animation-api-key-label`**: 12px font, 500 weight, `--text-secondary` color.
+- **`.animation-api-key-input-group`**: Flex row with 8px gap for the input field, toggle, and save button.
+- **`.animation-api-key-input`**: Flex-grow password input, `--bg-input` background, `--border-input` border, 8px radius. Focus state: `--accent` border.
+- **`.animation-api-key-toggle`**: Eye icon button to show/hide API key.
+- **`.animation-api-key-save`**: Save button with `--accent` background.
+- **`.animation-api-key-status`**: 12px status text. `.saved` variant uses `--success` color. `.error` variant uses `--error` color.
+- **`.animation-api-key-help`**: 12px help text in `--text-dim`, contains "Get API Key" link.
+
+### Search Result Cards (home.css)
+Search results use overlay-style cards with hardcoded colors (intentional — overlays sit on top of image content, not app background):
+- **`.search-result-card`**: `position: relative`, `border-radius: 10px`, `overflow: hidden`. Fixed 220px row height.
+- **`.search-result-thumbnail`**: Fills entire card (`width: 100%; height: 100%`), `object-fit: cover`.
+- **`.search-result-info`**: Absolute-positioned overlay at bottom with gradient (`transparent` → `rgba(0,0,0,0.75)`).
+- **`.search-result-name`**: White text, 12px, 500 weight.
+- **`.search-result-category`**: Purple pill badge (`rgba(139,92,246,0.3)` background, `#c4b5fd` text).
+- **`.search-result-score`**: Match percentage pill (`rgba(255,255,255,0.15)` background, `rgba(255,255,255,0.7)` text).
 
 ---
 

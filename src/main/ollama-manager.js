@@ -1,13 +1,16 @@
 /**
  * Ollama lifecycle manager.
  *
- * Detects system Ollama (running or installed), auto-starts if needed,
- * and prompts the user to install if missing. Never bundles a binary.
+ * Spawns a dedicated `ollama serve` process on a dynamic port at app start.
+ * The process is NOT detached — it dies with the parent even on crash.
+ * Detects system Ollama binary, auto-starts if found, and prompts the
+ * user to install if missing. Never bundles an Ollama binary.
  */
 
 const path = require('path');
 const fs = require('fs');
-const { spawn, execFile } = require('child_process');
+const net = require('net');
+const { spawn } = require('child_process');
 const { Notification } = require('electron');
 const { Ollama } = require('ollama');
 const https = require('https');
@@ -19,6 +22,10 @@ let serverRunning = false;
 let startupError = null;
 let ollamaInstalled = false;
 
+// Managed Ollama child process
+let ollamaProcess = null;
+let managedHost = null;
+
 // Model pull state
 let pullInProgress = false;
 let pullProgress = { status: 'idle', percent: 0, total: 0, completed: 0 };
@@ -29,14 +36,50 @@ let installInProgress = false;
 let installProgress = { status: 'idle', percent: 0 };
 let onInstallComplete = null;
 
-// Known install paths for macOS (packaged apps don't inherit shell PATH)
-var KNOWN_PATHS = [
+// Known CLI binary paths for macOS (packaged apps don't inherit shell PATH)
+var KNOWN_CLI_PATHS = [
   '/usr/local/bin/ollama',
   '/opt/homebrew/bin/ollama'
 ];
 
 var OLLAMA_APP_PATH = '/Applications/Ollama.app';
+var OLLAMA_APP_BINARY = '/Applications/Ollama.app/Contents/Resources/ollama';
 var DEFAULT_HOST = 'http://127.0.0.1:11434';
+
+/**
+ * Find an available TCP port by binding to port 0.
+ * Returns a Promise that resolves to the port number.
+ */
+function findFreePort() {
+  return new Promise(function (resolve, reject) {
+    var server = net.createServer();
+    server.listen(0, '127.0.0.1', function () {
+      var port = server.address().port;
+      server.close(function () {
+        resolve(port);
+      });
+    });
+    server.on('error', reject);
+  });
+}
+
+/**
+ * Find the Ollama CLI binary path on the system.
+ * Checks known CLI paths first, then falls back to the binary inside Ollama.app.
+ * Returns the path string or null if not found.
+ */
+function findOllamaBinary() {
+  for (var i = 0; i < KNOWN_CLI_PATHS.length; i++) {
+    if (fs.existsSync(KNOWN_CLI_PATHS[i])) {
+      return KNOWN_CLI_PATHS[i];
+    }
+  }
+  // Check the binary inside Ollama.app
+  if (fs.existsSync(OLLAMA_APP_BINARY)) {
+    return OLLAMA_APP_BINARY;
+  }
+  return null;
+}
 
 /**
  * Check if Ollama is reachable at the given URL.
@@ -84,23 +127,22 @@ function waitForServer(url, timeoutMs) {
 }
 
 /**
- * Send pull progress to all open BrowserWindows.
+ * Broadcast an IPC message to all open BrowserWindows.
  */
-function emitPullProgress(progress) {
+function broadcastToWindows(channel, data) {
   var { BrowserWindow } = require('electron');
   var wins = BrowserWindow.getAllWindows();
   for (var i = 0; i < wins.length; i++) {
     if (!wins[i].isDestroyed()) {
-      try {
-        wins[i].webContents.send('ollama-pull-progress', progress);
-      } catch (_) { /* ignore destroyed windows */ }
+      try { wins[i].webContents.send(channel, data); } catch (_) {}
     }
   }
 }
 
-/**
- * Show a notification that opens the setup overlay on click.
- */
+function emitPullProgress(progress) {
+  broadcastToWindows('ollama-pull-progress', progress);
+}
+
 function showInstallNotification(body) {
   var n = new Notification({ title: 'Snip', body: body });
   n.on('click', function() {
@@ -119,40 +161,19 @@ function showInstallNotification(body) {
   n.show();
 }
 
-/**
- * Send install progress to all open BrowserWindows.
- */
 function emitInstallProgress(progress) {
-  var { BrowserWindow } = require('electron');
-  var wins = BrowserWindow.getAllWindows();
-  for (var i = 0; i < wins.length; i++) {
-    if (!wins[i].isDestroyed()) {
-      try {
-        wins[i].webContents.send('ollama-install-progress', progress);
-      } catch (_) { /* ignore destroyed windows */ }
-    }
-  }
+  broadcastToWindows('ollama-install-progress', progress);
 }
 
-/**
- * Emit the full Ollama status to all windows (used after state changes).
- */
 async function emitStatus() {
   var status = await getStatus();
-  var { BrowserWindow } = require('electron');
-  var wins = BrowserWindow.getAllWindows();
-  for (var i = 0; i < wins.length; i++) {
-    if (!wins[i].isDestroyed()) {
-      try {
-        wins[i].webContents.send('ollama-status-changed', status);
-      } catch (_) {}
-    }
-  }
+  broadcastToWindows('ollama-status-changed', status);
 }
 
 /**
  * Check if Ollama is installed on the system.
  * Returns the path to the binary or app, or null if not found.
+ * Used for install detection (UI status) — spawning uses findOllamaBinary().
  */
 function findOllamaInstall() {
   // Check for Ollama.app first (most common macOS install)
@@ -161,9 +182,9 @@ function findOllamaInstall() {
   }
 
   // Check known CLI paths
-  for (var i = 0; i < KNOWN_PATHS.length; i++) {
-    if (fs.existsSync(KNOWN_PATHS[i])) {
-      return { type: 'cli', path: KNOWN_PATHS[i] };
+  for (var i = 0; i < KNOWN_CLI_PATHS.length; i++) {
+    if (fs.existsSync(KNOWN_CLI_PATHS[i])) {
+      return { type: 'cli', path: KNOWN_CLI_PATHS[i] };
     }
   }
 
@@ -171,84 +192,111 @@ function findOllamaInstall() {
 }
 
 /**
- * Auto-start Ollama if installed but not running.
- */
-function autoStartOllama(install) {
-  return new Promise(function (resolve, reject) {
-    if (install.type === 'app') {
-      // open -a Ollama launches the menu bar app
-      var child = spawn('open', ['-a', 'Ollama'], { stdio: 'ignore', detached: true });
-      child.unref();
-      child.on('error', function (err) {
-        reject(new Error('Failed to launch Ollama.app: ' + err.message));
-      });
-      child.on('close', function () {
-        resolve();
-      });
-    } else {
-      // CLI binary — spawn ollama serve in background
-      var child = spawn(install.path, ['serve'], {
-        stdio: 'ignore',
-        detached: true
-      });
-      child.unref();
-      child.on('error', function (err) {
-        reject(new Error('Failed to start ollama serve: ' + err.message));
-      });
-      // Give it a moment to start
-      setTimeout(resolve, 500);
-    }
-  });
-}
-
-/**
- * Start Ollama by detecting system install.
- * 1. Check if already running
- * 2. Check if installed → auto-start
- * 3. If not installed → set status, let UI prompt user
+ * Start Ollama by spawning a dedicated `ollama serve` on a dynamic port.
+ * The process is NOT detached — it dies with the parent even on crash.
+ *
+ * 1. Find the Ollama binary
+ * 2. If not found → set not_installed status, return
+ * 3. Find a free port
+ * 4. Spawn `ollama serve` with OLLAMA_HOST=127.0.0.1:<port>
+ * 5. Wait for server to respond
+ * 6. Push host URL to worker thread via message passing
  */
 async function startOllama() {
-  var host = getOllamaUrl() || DEFAULT_HOST;
+  // Kill any previously managed process first
+  if (ollamaProcess) {
+    try { ollamaProcess.kill('SIGTERM'); } catch (_) {}
+    ollamaProcess = null;
+  }
 
-  // Step 1: Check if Ollama is already running
-  var running = await checkServer(host);
-  if (running) {
-    console.log('[Ollama] Server already running at %s', host);
-    serverRunning = true;
-    ollamaInstalled = true;
-    startupError = null;
-    client = new Ollama({ host: host });
+  // Step 1: Find binary
+  var binaryPath = findOllamaBinary();
+  if (!binaryPath) {
+    ollamaInstalled = !!findOllamaInstall();
+    serverRunning = false;
+    startupError = 'not_installed';
+    console.log('[Ollama] %s', ollamaInstalled ? 'Installed but binary not found' : 'Not installed — waiting for user to install');
+    emitStatus();
+    return;
+  }
+  ollamaInstalled = true;
+
+  // Step 2: Find free port
+  var port;
+  try {
+    port = await findFreePort();
+  } catch (err) {
+    startupError = 'Failed to find free port: ' + err.message;
+    console.error('[Ollama]', startupError);
     emitStatus();
     return;
   }
 
-  // Step 2: Check if installed
-  var install = findOllamaInstall();
-  if (install) {
-    ollamaInstalled = true;
-    console.log('[Ollama] Found install: %s (%s)', install.path, install.type);
+  var host = 'http://127.0.0.1:' + port;
+  console.log('[Ollama] Spawning server on port %d using %s', port, binaryPath);
 
-    try {
-      await autoStartOllama(install);
-      await waitForServer(host, 30000);
-      serverRunning = true;
-      startupError = null;
-      client = new Ollama({ host: host });
-      console.log('[Ollama] Server started and connected at %s', host);
-      emitStatus();
-    } catch (err) {
+  // Step 3: Spawn ollama serve — NOT detached, NOT unref'd (dies with parent)
+  try {
+    var env = Object.assign({}, process.env, {
+      OLLAMA_HOST: '127.0.0.1:' + port
+    });
+
+    ollamaProcess = spawn(binaryPath, ['serve'], {
+      stdio: ['ignore', 'pipe', 'pipe'],
+      detached: false,
+      env: env
+    });
+
+    ollamaProcess.stdout.on('data', function (data) {
+      console.log('[Ollama server] %s', data.toString().trim());
+    });
+    ollamaProcess.stderr.on('data', function (data) {
+      console.log('[Ollama server] %s', data.toString().trim());
+    });
+
+    ollamaProcess.on('error', function (err) {
+      console.error('[Ollama] Process error:', err.message);
+      serverRunning = false;
       startupError = err.message;
-      console.error('[Ollama] Auto-start failed:', err.message);
+      ollamaProcess = null;
       emitStatus();
-    }
+    });
+
+    ollamaProcess.on('exit', function (code, signal) {
+      console.log('[Ollama] Process exited (code=%s signal=%s)', code, signal);
+      ollamaProcess = null;
+      serverRunning = false;
+    });
+  } catch (err) {
+    startupError = 'Failed to spawn ollama: ' + err.message;
+    console.error('[Ollama]', startupError);
+    emitStatus();
     return;
   }
 
-  // Step 3: Not installed
-  ollamaInstalled = false;
-  serverRunning = false;
-  startupError = 'not_installed';
-  console.log('[Ollama] Not installed — waiting for user to install');
+  // Step 4: Wait for the server to start responding
+  try {
+    await waitForServer(host, 30000);
+  } catch (err) {
+    startupError = 'Server failed to start: ' + err.message;
+    console.error('[Ollama]', startupError);
+    try { ollamaProcess.kill('SIGTERM'); } catch (_) {}
+    ollamaProcess = null;
+    emitStatus();
+    return;
+  }
+
+  // Step 5: Push the host URL to the worker thread via message passing
+  managedHost = host;
+  try {
+    var { setOllamaHost } = require('./organizer/watcher');
+    setOllamaHost(host);
+  } catch (_) { /* watcher not started yet — agent will fall back to getOllamaUrl() */ }
+
+  serverRunning = true;
+  startupError = null;
+  client = new Ollama({ host: host });
+  console.log('[Ollama] Spawned server on port %d — ready', port);
   emitStatus();
 }
 
@@ -327,20 +375,13 @@ async function installOllama() {
     try { fs.unlinkSync(zipPath); } catch (_) {}
     try { fs.rmSync(extractDir, { recursive: true, force: true }); } catch (_) {}
 
-    // Launch it
+    // Launch our own managed server (not the GUI app)
     ollamaInstalled = true;
     showInstallNotification('Ollama installed — launching...');
     installProgress = { status: 'launching', percent: 96 };
     emitInstallProgress(installProgress);
 
-    await autoStartOllama({ type: 'app', path: OLLAMA_APP_PATH });
-
-    var host = getOllamaUrl() || DEFAULT_HOST;
-    await waitForServer(host, 30000);
-
-    serverRunning = true;
-    startupError = null;
-    client = new Ollama({ host: host });
+    await startOllama();
 
     installInProgress = false;
     installProgress = { status: 'done', percent: 100 };
@@ -410,29 +451,18 @@ async function pullModel() {
     return { success: false, error: 'Pull already in progress' };
   }
 
-  // Verify server is still alive; try to reconnect if not
-  var host = getOllamaUrl() || DEFAULT_HOST;
+  // Verify server is still alive; restart our managed instance if not
+  var host = managedHost || getOllamaUrl() || DEFAULT_HOST;
   var alive = await checkServer(host);
   if (!alive) {
-    console.log('[Ollama] Server not responding — attempting reconnect...');
-    var install = findOllamaInstall();
-    if (install) {
-      try {
-        await autoStartOllama(install);
-        await waitForServer(host, 15000);
-        serverRunning = true;
-        client = new Ollama({ host: host });
-        emitStatus();
-      } catch (err) {
-        serverRunning = false;
-        emitStatus();
-        return { success: false, error: 'Ollama is not running. Please restart Ollama and try again.' };
-      }
-    } else {
-      serverRunning = false;
-      client = null;
-      emitStatus();
-      return { success: false, error: 'Ollama is not installed.' };
+    console.log('[Ollama] Server not responding — restarting managed instance...');
+    try {
+      await startOllama();
+    } catch (err) {
+      return { success: false, error: 'Failed to restart Ollama: ' + err.message };
+    }
+    if (!serverRunning) {
+      return { success: false, error: 'Ollama is not running. Please check that Ollama is installed.' };
     }
   }
 
@@ -452,7 +482,6 @@ async function pullModel() {
     // Track per-digest progress to accumulate across all layers
     var digestSizes = {};    // digest → total bytes
     var digestDone = {};     // digest → completed bytes
-    var lastDigest = null;
 
     for await (var event of stream) {
       var digest = event.digest || null;
@@ -461,7 +490,6 @@ async function pullModel() {
       if (digest && event.total && event.total > 0) {
         digestSizes[digest] = event.total;
         digestDone[digest] = event.completed || 0;
-        lastDigest = digest;
 
         // Sum all layers for overall progress
         var sumTotal = 0;
@@ -534,9 +562,42 @@ async function checkModel() {
 }
 
 /**
- * Stop tracking (we no longer spawn our own process, but reset state).
+ * Stop the managed Ollama process and reset all state.
+ * Sends SIGTERM first, then SIGKILL after a timeout.
  */
 async function stopOllama() {
+  if (ollamaProcess) {
+    console.log('[Ollama] Stopping managed process (pid=%d)...', ollamaProcess.pid);
+    try {
+      ollamaProcess.kill('SIGTERM');
+    } catch (_) {}
+
+    // Give it 3s to exit gracefully, then force kill
+    await new Promise(function (resolve) {
+      var timeout = setTimeout(function () {
+        if (ollamaProcess) {
+          try {
+            ollamaProcess.kill('SIGKILL');
+            console.log('[Ollama] Sent SIGKILL after timeout');
+          } catch (_) {}
+        }
+        resolve();
+      }, 3000);
+
+      if (ollamaProcess) {
+        ollamaProcess.on('exit', function () {
+          clearTimeout(timeout);
+          resolve();
+        });
+      } else {
+        clearTimeout(timeout);
+        resolve();
+      }
+    });
+    ollamaProcess = null;
+  }
+
+  managedHost = null;
   serverRunning = false;
   client = null;
   modelReady = false;
@@ -583,6 +644,7 @@ async function getStatus() {
   return {
     installed: ollamaInstalled,
     running: serverRunning,
+    host: managedHost || getOllamaUrl() || DEFAULT_HOST,
     error: startupError,
     models: models.map(function (m) {
       return {

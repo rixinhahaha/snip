@@ -55,6 +55,15 @@ function saveConfig() {
   fs.writeFileSync(getConfigPath(), JSON.stringify(configData, null, 2));
 }
 
+/**
+ * Force-reload config from disk. Use when another thread (worker) has written
+ * to the config file and the in-memory cache is stale.
+ */
+function reloadConfig() {
+  configData = null;
+  return loadConfig();
+}
+
 function initStore() {
   const cfg = loadConfig();
   // Ensure screenshots directory exists
@@ -275,6 +284,7 @@ function setFalApiKey(key) {
 
 module.exports = {
   initStore,
+  reloadConfig,
   setExternalPaths,
   getScreenshotsDir,
   getOllamaModel,

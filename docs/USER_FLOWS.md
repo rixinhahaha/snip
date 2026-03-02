@@ -21,10 +21,10 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 | 5 | -- | Home window opens with Gallery page showing "No screenshots yet" empty state |
 | 6 | -- | SAM segmentation model begins loading in background (logged: `[Segmentation Worker] Loading SlimSAM model...`) |
 | 7 | -- | File watcher starts monitoring screenshots directory (logged: `[Organizer] Watching: ...`) |
-| 8 | -- | Ollama detection runs: checks `127.0.0.1:11434` for running server, then checks known install paths |
-| 8a | -- | If Ollama running: connects immediately (logged: `[Ollama] Server already running`) |
-| 8b | -- | If Ollama installed but not running: auto-starts via `open -a Ollama` or `ollama serve` |
-| 8c | -- | If Ollama not installed: Settings shows "Setting Up Your AI Assistant" with Install button |
+| 8 | -- | Ollama managed process starts: `findOllamaBinary()` locates CLI binary, `findFreePort()` gets a dynamic port, spawns `ollama serve` |
+| 8a | -- | If binary found: server spawns on dynamic port (logged: `[Ollama] Spawned server on port XXXXX`) |
+| 8b | -- | If binary not found but Ollama.app installed: sets status, prompts to install CLI |
+| 8c | -- | If Ollama not installed: Setup overlay shows "Setting Up Your AI Assistant" with Install button. Pressing Enter on welcome screen dismisses the overlay. |
 | 9 | -- | If connected and minicpm-v model found: status shows "Running" immediately |
 | 9a | -- | If connected but model missing: Settings shows "Download Model" button (~5 GB) |
 
@@ -463,13 +463,15 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 | 2 | `code/api-response.jpg` already exists | -- |
 | 3 | -- | File saved as `code/api-response-1.jpg` (counter suffix) |
 
-### 5.3 New Category Suggestion
+### 5.3 New Category Auto-Registration
 
 | Step | Action | Expected Result |
 |------|--------|-----------------|
-| 1 | Ollama returns `newCategory: true` with an unknown category | -- |
-| 2 | -- | macOS notification: "New category suggested: <name>. Click to add." |
-| 3 | User clicks notification | Category added to config, screenshot moved to new category folder |
+| 1 | Ollama returns a category not in the configured list | -- |
+| 2 | -- | Category auto-registered in config with AI-generated description via `addCustomCategoryWithDescription()` |
+| 3 | -- | macOS notification: "Created '<name>' category" (informational only) |
+| 4 | -- | `tags-changed` IPC event broadcast to all windows |
+| 5 | -- | Settings tag list refreshes in real-time to include the new category |
 
 ### 5.4 External File Operations (No Agent)
 
@@ -560,8 +562,10 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 
 | Step | Action | Expected Result |
 |------|--------|-----------------|
-| 1 | Click refresh button (top-right) | Index re-synced with files on disk |
-| 2 | -- | New files added, deleted files removed from index |
+| 1 | Click refresh button (top-right of gallery or search view) | `refreshIndex()` IPC called |
+| 2 | -- | Stale entries pruned (files deleted outside the app) |
+| 3 | -- | Missing embeddings regenerated for entries with name/description but no embedding |
+| 4 | -- | Gallery/search view reloads with updated data |
 
 ### 7.3 Open in Finder
 
@@ -585,6 +589,16 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 | Step | Action | Expected Result |
 |------|--------|-----------------|
 | 1 | Click a screenshot thumbnail | File revealed in Finder |
+
+### 7.6 Delete Folder
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | In gallery root, hover a category folder | Circular X button appears (bottom-right, same pattern as screenshot delete) |
+| 2 | Click the X button | Confirm dialog: "Delete folder '<name>' and all its contents?" |
+| 3 | User confirms | Folder moved to macOS Trash via `shell.trashItem()` |
+| 4 | -- | All index entries for files in that folder removed |
+| 5 | -- | Gallery view refreshes |
 
 ---
 
@@ -632,7 +646,7 @@ The setup wizard appears as a **full-window inline overlay** inside the home win
 |------|--------|-----------------|
 | 1 | All steps complete | Welcome view: purple magic wand SVG with pop-in animation, "Welcome to Snip" title |
 | 2 | -- | Sparkle particles float upward in background (circles and 4-point stars) |
-| 3 | Click "Get Started" | Overlay dismissed, user lands on gallery |
+| 3 | Click "Get Started" or press Enter | Overlay dismissed, user lands on gallery |
 
 **Failed Screen**
 

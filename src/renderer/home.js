@@ -12,11 +12,11 @@
 
   var descriptionSaveTimers = {}; // debounce timers for description auto-save
 
-  let screenshotsDir = '';
-  let currentSubdir = ''; // relative path within screenshots dir
+  var screenshotsDir = '';
+  var currentSubdir = ''; // relative path within screenshots dir
 
   // ── Navigation ──
-  let searchInitialized = false;
+  var searchInitialized = false;
 
   function switchToPage(pageName) {
     document.querySelectorAll('.nav-item').forEach(function(b) { b.classList.remove('active'); });
@@ -52,6 +52,9 @@
     initOllamaSettings();
     initAnimationSettings();
     loadTags();
+    if (window.snip.onTagsChanged) {
+      window.snip.onTagsChanged(function() { loadTags(); });
+    }
     initThemeToggle();
     initSetupOverlay();
   }
@@ -121,8 +124,21 @@
             '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">' +
               '<path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/>' +
             '</svg>' +
+            '<button class="file-delete-btn" title="Delete Folder">' +
+              '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">' +
+                '<line x1="6" y1="6" x2="18" y2="18"/>' +
+                '<line x1="18" y1="6" x2="6" y2="18"/>' +
+              '</svg>' +
+            '</button>' +
           '</div>' +
           '<div class="file-name">' + escapeHtml(item.name) + '</div>';
+        el.querySelector('.file-delete-btn').addEventListener('click', function(e) {
+          e.stopPropagation();
+          if (!confirm('Delete folder "' + item.name + '" and all its contents? This moves it to Trash.')) return;
+          window.snip.deleteFolder(item.fullPath).then(function() {
+            loadFolder(currentSubdir);
+          });
+        });
         el.addEventListener('click', function() {
           var path = currentSubdir ? currentSubdir + '/' + item.name : item.name;
           loadFolder(path);
@@ -218,7 +234,18 @@
     });
   }
 
-  document.getElementById('btn-refresh').addEventListener('click', function() {
+  document.getElementById('btn-refresh').addEventListener('click', async function() {
+    var btn = this;
+    btn.disabled = true;
+    btn.style.opacity = '0.5';
+    try {
+      var result = await window.snip.refreshIndex();
+      console.log('[Home] Refresh: pruned %d, embeddings %d', result.pruned, result.embeddings);
+    } catch (err) {
+      console.warn('[Home] Refresh failed:', err);
+    }
+    btn.disabled = false;
+    btn.style.opacity = '';
     loadFolder(currentSubdir);
   });
 
@@ -358,7 +385,7 @@
     if (allReady) {
       setupBtn.style.display = 'none';
       readyInfo.classList.remove('hidden');
-      updateCurrentModelCard(status.currentModel || 'minicpm-v');
+      updateCurrentModelCard(status.currentModel || 'minicpm-v', status.host);
     } else {
       readyInfo.classList.add('hidden');
       setupBtn.style.display = '';
@@ -387,13 +414,15 @@
     }
   }
 
-  function updateCurrentModelCard(modelName) {
+  function updateCurrentModelCard(modelName, host) {
     var nameEl = document.getElementById('current-model-name');
     if (nameEl) nameEl.textContent = modelName;
 
     var specs = MODEL_SPECS[modelName] || { params: '\u2014', size: '\u2014', quant: '\u2014', description: 'Custom model' };
     var infoModel = document.getElementById('info-model');
     if (infoModel) infoModel.textContent = modelName;
+    var infoHost = document.getElementById('info-host');
+    if (infoHost) infoHost.textContent = host || '\u2014';
     var infoParams = document.getElementById('info-params');
     if (infoParams) infoParams.textContent = specs.params;
     var infoSize = document.getElementById('info-size');
@@ -618,6 +647,24 @@
         loadingEl.classList.add('hidden');
       }, 300);
     });
+
+    document.getElementById('search-btn-refresh').addEventListener('click', async function() {
+      var btn = this;
+      btn.disabled = true;
+      btn.style.opacity = '0.5';
+      try {
+        var result = await window.snip.refreshIndex();
+        console.log('[Search] Refresh: pruned %d, embeddings %d', result.pruned, result.embeddings);
+      } catch (err) {
+        console.warn('[Search] Refresh failed:', err);
+      }
+      btn.disabled = false;
+      btn.style.opacity = '';
+      // Reload the index and re-render
+      fullIndex = await window.snip.getScreenshotIndex();
+      renderTagBar(fullIndex);
+      displaySearchResults(fullIndex);
+    });
   }
 
   function renderTagBar(index) {
@@ -690,7 +737,7 @@
     });
   }
 
-  async function displaySearchResults(items) {
+  function displaySearchResults(items) {
     var grid = document.getElementById('search-results-grid');
     var emptyEl = document.getElementById('search-empty');
     var noResultsEl = document.getElementById('search-no-results');
@@ -709,54 +756,50 @@
     countEl.textContent = items.length + ' result' + (items.length === 1 ? '' : 's');
 
     for (var i = 0; i < items.length; i++) {
-      var item = items[i];
-      var card = document.createElement('div');
-      card.className = 'search-result-card';
-      (function(itemRef) {
+      (function(item) {
+        var card = document.createElement('div');
+        card.className = 'search-result-card';
         card.addEventListener('click', function() {
-          window.snip.revealInFinder(itemRef.path);
+          window.snip.revealInFinder(item.path);
         });
-      })(item);
 
-      var img = document.createElement('img');
-      img.className = 'search-result-thumbnail';
-      img.alt = item.name || item.filename;
-      var thumbURL = await window.snip.getThumbnail(item.path);
-      img.src = thumbURL || '';
+        var img = document.createElement('img');
+        img.className = 'search-result-thumbnail';
+        img.alt = item.name || item.filename;
+        // Load thumbnail async — don't block card rendering
+        window.snip.getThumbnail(item.path).then(function(url) {
+          img.src = url || '';
+        });
 
-      var info = document.createElement('div');
-      info.className = 'search-result-info';
+        var info = document.createElement('div');
+        info.className = 'search-result-info';
 
-      var name = document.createElement('div');
-      name.className = 'search-result-name';
-      name.textContent = item.name || item.filename;
+        var name = document.createElement('div');
+        name.className = 'search-result-name';
+        name.textContent = item.name || item.filename;
 
-      var filename = document.createElement('div');
-      filename.className = 'search-result-filename';
-      filename.textContent = item.filename || '';
+        var meta = document.createElement('div');
+        meta.className = 'search-result-meta';
 
-      var meta = document.createElement('div');
-      meta.className = 'search-result-meta';
+        var category = document.createElement('span');
+        category.className = 'search-result-category';
+        category.textContent = item.category || 'uncategorized';
+        meta.appendChild(category);
 
-      var category = document.createElement('span');
-      category.className = 'search-result-category';
-      category.textContent = item.category || 'uncategorized';
-      meta.appendChild(category);
+        if (item.score !== undefined && item.score > 0) {
+          var score = document.createElement('span');
+          score.className = 'search-result-score';
+          score.textContent = 'Match ' + (item.score * 100).toFixed(0) + '%';
+          meta.appendChild(score);
+        }
 
-      if (item.score !== undefined) {
-        var score = document.createElement('span');
-        score.className = 'search-result-score';
-        score.textContent = (item.score * 100).toFixed(0) + '%';
-        meta.appendChild(score);
-      }
+        info.appendChild(name);
+        info.appendChild(meta);
 
-      info.appendChild(name);
-      if (item.filename) info.appendChild(filename);
-      info.appendChild(meta);
-
-      card.appendChild(img);
-      card.appendChild(info);
-      grid.appendChild(card);
+        card.appendChild(img);
+        card.appendChild(info);
+        grid.appendChild(card);
+      })(items[i]);
     }
   }
 
@@ -845,6 +888,35 @@
     for (var i = 0; i < dismissBtns.length; i++) {
       dismissBtns[i].addEventListener('click', hideSetupOverlay);
     }
+
+    // Enter key triggers the primary action for the active setup screen
+    document.addEventListener('keydown', function(e) {
+      if (e.key !== 'Enter' || overlay.classList.contains('hidden')) return;
+
+      // Welcome screen → dismiss
+      var welcomeView = document.getElementById('setup-welcome-view');
+      if (welcomeView && !welcomeView.classList.contains('hidden')) {
+        hideSetupOverlay();
+        return;
+      }
+
+      // Failed screen → try again
+      var failedView = document.getElementById('setup-failed-view');
+      if (failedView && !failedView.classList.contains('hidden')) {
+        setupFailCount = 0;
+        showSetupOverlay();
+        return;
+      }
+
+      // Steps screen → click the visible, enabled action button
+      if (!installBtn.disabled && installBtn.style.display !== 'none' &&
+          !document.getElementById('setup-install-actions').classList.contains('hidden')) {
+        installAction();
+      } else if (!modelBtn.disabled && modelBtn.style.display !== 'none' &&
+          !document.getElementById('setup-model-actions').classList.contains('hidden')) {
+        modelAction();
+      }
+    });
 
     document.getElementById('setup-try-again').addEventListener('click', function() {
       setupFailCount = 0;

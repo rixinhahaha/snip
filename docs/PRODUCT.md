@@ -58,7 +58,7 @@ Power users on macOS who take 5-50 screenshots per day: developers, designers, P
 - Returns: category, descriptive name, tags, description
 - File renamed and moved to category subfolder
 - 384-dim embedding generated for semantic search (HuggingFace Transformers.js, also local)
-- New category suggestions via macOS notification
+- New categories auto-registered with AI-generated descriptions; notification is informational only
 - Default model: `minicpm-v` (8B, Metal-accelerated on Apple Silicon) — pulled on first launch via Ollama's API. Ollama is not bundled; users install it separately or via the in-app setup wizard.
 
 ### Animation (Animate)
@@ -77,17 +77,20 @@ Power users on macOS who take 5-50 screenshots per day: developers, designers, P
 - **Cmd+Shift+F**: Semantic search using local embeddings (no API calls)
 - Falls back to text matching without embeddings
 - Tag cloud for quick filtering
+- Overlay-style result cards with name, category badge, and match score percentage
+- Refresh button to prune stale entries and regenerate missing embeddings
 
 ### Gallery
 - Browse screenshots by category folders
-- Thumbnails with hover-to-delete
+- Thumbnails with hover-to-delete (screenshots and folders)
 - Click to reveal in Finder
+- Refresh button to sync index with files on disk and regenerate embeddings
 
 ### Settings
 - AI Assistant status and model info
 - Animation settings: fal.ai API key input, info panel (provider, resolution, max duration, output formats, save location, AI preset status)
 - Three themes: Dark, Light, Glass
-- Custom category management
+- Custom category management (live-updated when AI auto-registers new categories)
 - Full keyboard shortcuts reference table
 
 ### Tray Menu

@@ -2,29 +2,32 @@ const { Ollama } = require('ollama');
 const fs = require('fs');
 const path = require('path');
 const { isMainThread, parentPort } = require('worker_threads');
-const { getAllCategories, addCustomCategory, getScreenshotsDir, addToIndex, getAllTagsWithDescriptions } = require('../store');
-const { getOllamaModel, getOllamaUrl } = require('../store');
+const { getAllCategories, addCustomCategoryWithDescription, getScreenshotsDir, addToIndex, getAllTagsWithDescriptions, getOllamaModel, getOllamaUrl } = require('../store');
 
 // Notification helper — works in both main thread and worker
-function showNotification(title, body, onClickCategory) {
+function showNotification(title, body) {
   if (isMainThread) {
     var { Notification } = require('electron');
     var notification = new Notification({ title: title, body: body });
-    if (onClickCategory) {
-      notification.on('click', function () {
-        addCustomCategory(onClickCategory);
-        console.log('[Agent] Added new category:', onClickCategory);
-      });
-    }
     notification.show();
   } else if (parentPort) {
     parentPort.postMessage({
       type: 'notification',
       title: title,
-      body: body,
-      onClickCategory: onClickCategory
+      body: body
     });
   }
+}
+
+// Ollama host URL set via message passing from the main thread
+var ollamaHostOverride = null;
+
+/**
+ * Set the Ollama host URL. Called when the main thread spawns a managed server.
+ */
+function setOllamaHost(host) {
+  ollamaHostOverride = host;
+  console.log('[Agent] Ollama host set to: %s', host);
 }
 
 /**
@@ -32,7 +35,8 @@ function showNotification(title, body, onClickCategory) {
  * Each call creates a fresh client so we always pick up config changes.
  */
 function createClient() {
-  return new Ollama({ host: getOllamaUrl() });
+  var host = ollamaHostOverride || getOllamaUrl();
+  return new Ollama({ host: host });
 }
 
 async function processScreenshot(filepath) {
@@ -63,6 +67,7 @@ async function processScreenshot(filepath) {
     'Return ONLY a JSON object (no markdown, no code blocks):\n' +
     '{\n' +
     '  "category": "<best matching category from the list, or suggest a new descriptive one-word category>",\n' +
+    '  "categoryDescription": "<if suggesting a new category, write a short description of what snips belong in it, matching the style above. Leave empty string if using an existing category>",\n' +
     '  "name": "<short-descriptive-kebab-case-name, max 5 words>",\n' +
     '  "description": "<1-2 sentence description of the screenshot content>",\n' +
     '  "tags": ["<relevant>", "<searchable>", "<keywords>"],\n' +
@@ -103,13 +108,22 @@ async function processScreenshot(filepath) {
     }
     console.log('[Agent] Result: category=%s name=%s tags=[%s]', result.category, result.name, (result.tags || []).join(', '));
 
-    // Handle new category suggestion
-    if (result.newCategory && result.category) {
+    // Auto-register unknown categories so they appear in the UI and future prompts
+    var knownCategories = getAllCategories();
+    var categoryNormalized = (result.category || 'other').toLowerCase().trim();
+    result.category = categoryNormalized;
+    if (knownCategories.indexOf(categoryNormalized) === -1) {
+      var catDesc = result.categoryDescription || '';
+      addCustomCategoryWithDescription(categoryNormalized, catDesc);
+      console.log('[Agent] Auto-registered new category: %s (%s)', categoryNormalized, catDesc || 'no description');
       showNotification(
-        'Snip - New Category Suggested',
-        '"' + result.category + '" — Click to add it to your categories.',
-        result.category
+        'Snip - New Category',
+        'Created "' + categoryNormalized + '" category for your screenshot.'
       );
+      // Notify main thread so the settings UI can refresh
+      if (!isMainThread && parentPort) {
+        parentPort.postMessage({ type: 'tags-changed' });
+      }
     }
 
     // Ensure category folder exists
@@ -157,4 +171,4 @@ async function processScreenshot(filepath) {
   }
 }
 
-module.exports = { processScreenshot };
+module.exports = { processScreenshot, setOllamaHost };

@@ -635,8 +635,7 @@ async function generatePresets(cutoutBase64) {
     return null;
   }
 
-  var { Ollama } = require('ollama');
-  var ollama = new Ollama({ host: getOllamaUrl() });
+  var ollama = ollamaManager.getClient();
   var model = getOllamaModel();
 
   // Downscale image for faster vision inference (384px max — sufficient for subject ID)

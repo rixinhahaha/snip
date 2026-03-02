@@ -120,6 +120,12 @@
           </svg>
         </span>
         <span id="search-result-count"></span>
+        <button class="icon-btn" id="search-btn-refresh" title="Refresh index">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="23 4 23 10 17 10"/>
+            <path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/>
+          </svg>
+        </button>
       </div>
       <div id="search-tags" class="search-tags hidden"></div>
       <div id="search-results-grid"></div>
@@ -206,6 +212,7 @@
               <div id="model-info-tooltip" class="model-info-tooltip hidden">
                 <table class="model-info-table">
                   <tr><td class="model-info-label">Model</td><td id="info-model">—</td></tr>
+                  <tr><td class="model-info-label">Host</td><td id="info-host">—</td></tr>
                   <tr><td class="model-info-label">Parameters</td><td id="info-params">—</td></tr>
                   <tr><td class="model-info-label">Size</td><td id="info-size">—</td></tr>
                   <tr><td class="model-info-label">Quantization</td><td id="info-quant">—</td></tr>

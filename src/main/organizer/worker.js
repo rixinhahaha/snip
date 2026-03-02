@@ -10,7 +10,7 @@ const path = require('path');
 const { setExternalPaths, rebuildIndex, addToIndex } = require('../store');
 setExternalPaths(workerData.screenshotsDir, workerData.configPath);
 
-const { processScreenshot } = require('./agent');
+const { processScreenshot, setOllamaHost } = require('./agent');
 
 const queue = [];
 let processing = false;
@@ -19,6 +19,8 @@ parentPort.on('message', function (msg) {
   if (msg.type === 'process') {
     queue.push(msg.filepath);
     processQueue();
+  } else if (msg.type === 'set-ollama-host') {
+    setOllamaHost(msg.host);
   }
 });
 

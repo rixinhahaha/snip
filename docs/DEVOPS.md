@@ -40,7 +40,7 @@ npm start
 
 The app runs as a **tray-only** process (no Dock icon). Look for the scissors icon in the menu bar.
 
-**Note:** Ollama is NOT bundled. Install it separately from [ollama.com](https://ollama.com/download) or let the in-app setup wizard install it for you on first launch. The minicpm-v model (~5 GB) is pulled on first launch via Ollama's API.
+**Note:** Ollama is NOT bundled. Install it separately from [ollama.com](https://ollama.com/download) or let the in-app setup wizard install it for you on first launch. The minicpm-v model (~5 GB) is pulled on first launch via Ollama's API. Snip spawns its own dedicated `ollama serve` process on a dynamic port — it does NOT use or interfere with any existing Ollama server the user may be running.
 
 ---
 
@@ -196,8 +196,8 @@ The cask is hosted at [`rixinhahaha/homebrew-snip`](https://github.com/rixinhaha
 | Category subfolders | `~/Documents/snip/screenshots/<category>/` | AI agent when organizing |
 | Index | `~/Documents/snip/screenshots/.index.json` | Store module |
 | Config | `~/Library/Application Support/snip/snip-config.json` | Electron defaults |
-| Ollama (system) | `/Applications/Ollama.app` or `/usr/local/bin/ollama` | User-installed (or installed via in-app setup wizard) |
-| Ollama models | `~/.ollama/models/` | Managed by system Ollama; minicpm-v pulled on first launch |
+| Ollama binary | `/usr/local/bin/ollama`, `/opt/homebrew/bin/ollama`, or `/Applications/Ollama.app/Contents/Resources/ollama` | User-installed (or installed via in-app setup wizard) |
+| Ollama models | `~/.ollama/models/` | Shared with system Ollama; minicpm-v pulled on first launch |
 | HF models (MiniLM + SlimSAM) | `vendor/models/` (dev) / `Resources/models/` (packaged) | Bundled — `npm run download-models --hf` (~75 MB) |
 | Animation presets | Inlined in `src/main/animation/animation.js` | 6 static text-prompt presets (fallback when Ollama AI presets unavailable) |
 

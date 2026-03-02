@@ -2,12 +2,29 @@ const chokidar = require('chokidar');
 const path = require('path');
 const { Worker } = require('worker_threads');
 const { Notification } = require('electron');
-const { getScreenshotsDir, addCustomCategory, addToIndex } = require('../store');
+const { getScreenshotsDir, addToIndex, reloadConfig } = require('../store');
 const { isReady } = require('../ollama-manager');
 
 let watcher = null;
 let worker = null;
 const pendingFiles = new Set(); // files saved by the app, awaiting agent processing
+
+/**
+ * Create a basic index entry for a file without agent processing.
+ */
+function addBasicIndexEntry(filepath) {
+  var ext = path.extname(filepath).toLowerCase();
+  addToIndex({
+    filename: path.basename(filepath),
+    path: filepath,
+    category: 'other',
+    name: path.basename(filepath, ext),
+    description: '',
+    tags: [],
+    embedding: null,
+    createdAt: new Date().toISOString()
+  });
+}
 
 function startWatcher() {
   var watchDir = getScreenshotsDir();
@@ -35,16 +52,7 @@ function startWatcher() {
     // Only run the agent on files saved by the app (not manual renames/copies)
     if (!pendingFiles.has(filepath)) {
       console.log('[Organizer] External file detected, indexing without agent:', path.basename(filepath));
-      addToIndex({
-        filename: path.basename(filepath),
-        path: filepath,
-        category: 'other',
-        name: path.basename(filepath, ext),
-        description: '',
-        tags: [],
-        embedding: null,
-        createdAt: new Date().toISOString()
-      });
+      addBasicIndexEntry(filepath);
       return;
     }
     pendingFiles.delete(filepath);
@@ -53,16 +61,7 @@ function startWatcher() {
     var ollamaReady = await isReady();
     if (!ollamaReady) {
       console.log('[Organizer] Ollama not ready — adding basic index entry:', path.basename(filepath));
-      addToIndex({
-        filename: path.basename(filepath),
-        path: filepath,
-        category: 'other',
-        name: path.basename(filepath, ext),
-        description: '',
-        tags: [],
-        embedding: null,
-        createdAt: new Date().toISOString()
-      });
+      addBasicIndexEntry(filepath);
       return;
     }
 
@@ -104,6 +103,19 @@ function spawnWorker() {
       case 'error':
         console.error('[Organizer] Error processing:', msg.filepath, msg.error);
         break;
+      case 'tags-changed':
+        // Agent auto-registered a new category — reload config from disk
+        // (worker thread wrote it, main thread cache is stale)
+        reloadConfig();
+        try {
+          var { BrowserWindow } = require('electron');
+          BrowserWindow.getAllWindows().forEach(function (w) {
+            if (!w.isDestroyed()) {
+              try { w.webContents.send('tags-changed'); } catch (_) {}
+            }
+          });
+        } catch (_) {}
+        break;
       case 'notification':
         // Show Notification on main thread (not available in workers)
         try {
@@ -111,12 +123,6 @@ function spawnWorker() {
             title: msg.title,
             body: msg.body
           });
-          if (msg.onClickCategory) {
-            notification.on('click', function () {
-              addCustomCategory(msg.onClickCategory);
-              console.log('[Organizer] Added new category:', msg.onClickCategory);
-            });
-          }
           notification.show();
         } catch (e) {
           console.warn('[Organizer] Notification failed:', e.message);
@@ -178,4 +184,14 @@ function queueNewFile(filepath) {
   pendingFiles.add(filepath);
 }
 
-module.exports = { startWatcher, queueNewFile };
+/**
+ * Tell the worker thread which Ollama host URL to use.
+ * Called by ollama-manager after spawning the managed server.
+ */
+function setOllamaHost(host) {
+  if (worker) {
+    worker.postMessage({ type: 'set-ollama-host', host: host });
+  }
+}
+
+module.exports = { startWatcher, queueNewFile, setOllamaHost, generateEmbeddingForEntry };

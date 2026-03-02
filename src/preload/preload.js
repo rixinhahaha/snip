@@ -52,6 +52,7 @@ contextBridge.exposeInMainWorld('snip', {
   searchScreenshots: (query) => ipcRenderer.invoke('search-screenshots', query),
 
   // Home
+  refreshIndex: () => ipcRenderer.invoke('refresh-index'),
   getScreenshotsDir: () => ipcRenderer.invoke('get-screenshots-dir'),
   listFolder: (subdir) => ipcRenderer.invoke('list-folder', subdir),
   openScreenshotsFolder: () => ipcRenderer.invoke('open-screenshots-folder'),
@@ -105,5 +106,8 @@ contextBridge.exposeInMainWorld('snip', {
   setTheme: (theme) => ipcRenderer.invoke('set-theme', theme),
   onThemeChanged: (callback) => {
     ipcRenderer.on('theme-changed', (event, theme) => callback(theme));
+  },
+  onTagsChanged: (callback) => {
+    ipcRenderer.on('tags-changed', () => callback());
   }
 });
