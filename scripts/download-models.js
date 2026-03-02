@@ -7,9 +7,8 @@
  * 3. Xenova/slimsam-77-uniform         — HuggingFace SAM model (~50 MB)
  *
  * Usage:
- *   node scripts/download-models.js               # download all models
- *   node scripts/download-models.js --hf           # HuggingFace models only (MiniLM + SlimSAM)
- *   node scripts/download-models.js --ollama       # Ollama model only (minicpm-v)
+ *   node scripts/download-models.js               # HuggingFace models only (MiniLM + SlimSAM)
+ *   node scripts/download-models.js --ollama       # also pull Ollama model (minicpm-v, ~5 GB)
  *   node scripts/download-models.js --force        # force re-pull (clean partial downloads)
  *
  * Note: Animation (2GIF) no longer uses local models — it calls the fal.ai cloud API.
@@ -240,18 +239,17 @@ async function downloadHuggingFaceModels() {
 async function main() {
   var args = process.argv.slice(2);
   var force = args.includes('--force');
-  var ollamaOnly = args.includes('--ollama');
-  var hfOnly = args.includes('--hf');
-  var downloadAll = !ollamaOnly && !hfOnly;
+  var includeOllama = args.includes('--ollama');
+  var hfOnly = !includeOllama;
 
   console.log('Snip Model Downloader');
   console.log('=====================');
 
-  if (downloadAll || ollamaOnly) {
+  if (includeOllama) {
     await downloadOllamaModel(force);
   }
 
-  if (downloadAll || hfOnly) {
+  if (hfOnly || includeOllama) {
     await downloadHuggingFaceModels();
   }
 
@@ -260,11 +258,11 @@ async function main() {
   console.log('  All done!');
   console.log('='.repeat(60));
 
-  if ((downloadAll || ollamaOnly) && fs.existsSync(OLLAMA_BINARY)) {
+  if (includeOllama && fs.existsSync(OLLAMA_BINARY)) {
     console.log('  Ollama binary:   ' + formatBytes(fs.statSync(OLLAMA_BINARY).size));
     console.log('  Ollama models:   ' + formatBytes(getDirSize(OLLAMA_MODELS_DIR)));
   }
-  if ((downloadAll || hfOnly) && fs.existsSync(VENDOR_MODELS)) {
+  if (fs.existsSync(VENDOR_MODELS)) {
     console.log('  HF models:       ' + formatBytes(getDirSize(VENDOR_MODELS)));
   }
   console.log('');
