@@ -17,6 +17,7 @@ const SegmentTool = (() => {
     var getTagColor = callbacks.getTagColor || function() { return '#64748B'; };
     var getFont = callbacks.getFont || function() { return 'Plus Jakarta Sans'; };
     var getFontSize = callbacks.getFontSize || function() { return 16; };
+    var getOutlineWidth = callbacks.getOutlineWidth || function() { return 8; };
 
     let maskOverlay = null;
     let pendingCutoutURL = null;
@@ -152,11 +153,12 @@ const SegmentTool = (() => {
       var tagColor = getTagColor();
       var font = getFont();
       var fontSize = getFontSize();
+      var outlineWidth = getOutlineWidth();
       var savedMaskURL = pendingMaskURL; // capture before async clears it
 
       // Both utilities now return { dataURL, x, y, w, h } cropped to bounding box
       var processFn = mode === 'outline'
-        ? function(cb) { ToolUtils.maskToOutline(savedMaskURL, tagColor, 3, cb); }
+        ? function(cb) { ToolUtils.maskToOutline(savedMaskURL, tagColor, outlineWidth, cb); }
         : function(cb) { ToolUtils.recolorMaskToHighlight(savedMaskURL, tagColor, cb); };
 
       processFn(function(result) {
@@ -324,6 +326,9 @@ const SegmentTool = (() => {
               labelGroup._snipSegmentTag = true;
               labelGroup._snipTagColor = tagColor;
               labelGroup._snipTagId = tagId;
+              labelGroup._snipMaskURL = savedMaskURL;
+              labelGroup._snipTagMode = mode;
+              labelGroup._snipOutlineWidth = outlineWidth;
 
               // Mark linked parts
               fabricOverlay._snipTagId = tagId;

@@ -11,6 +11,7 @@ const Toolbar = (() => {
   let activeBrushSize = 20;
   let rectMode = 'outline';
   let activeTagColor = '#64748B';
+  let activeOutlineWidth = 8;
   let toolChangeCallback = null;
 
   function initToolbar(callbacks) {
@@ -52,6 +53,11 @@ const Toolbar = (() => {
 
     document.getElementById('brush-size').addEventListener('change', (e) => {
       activeBrushSize = parseInt(e.target.value);
+    });
+
+    document.getElementById('outline-width').addEventListener('change', (e) => {
+      activeOutlineWidth = parseInt(e.target.value);
+      if (callbacks.onOutlineWidthChange) callbacks.onOutlineWidthChange(activeOutlineWidth);
     });
 
     document.querySelectorAll('.tag-color-swatch').forEach((swatch) => {
@@ -107,6 +113,7 @@ const Toolbar = (() => {
     document.getElementById('font-group').classList.toggle('hidden', tool !== TOOLS.TEXT && !isTag);
     document.getElementById('tag-color-group').classList.toggle('hidden', !isTag);
     document.getElementById('brush-group').classList.toggle('hidden', tool !== TOOLS.BLUR_BRUSH);
+    document.getElementById('outline-width-group').classList.add('hidden');
     document.getElementById('color-picker').classList.toggle('hidden', isTag);
 
     if (toolChangeCallback) toolChangeCallback(tool);
@@ -138,6 +145,12 @@ const Toolbar = (() => {
         s.classList.toggle('active', s.dataset.color === color);
       });
     },
-    getRectMode: () => rectMode
+    getRectMode: () => rectMode,
+    getActiveOutlineWidth: () => activeOutlineWidth,
+    setActiveOutlineWidth: (w) => {
+      activeOutlineWidth = w;
+      var sel = document.getElementById('outline-width');
+      if (sel) sel.value = String(w);
+    }
   };
 })();

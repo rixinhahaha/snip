@@ -255,12 +255,21 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 
 **Tag Segment modes:**
 - **Highlight (T):** Translucent color fill over the mask area (55% opacity, uses active tag color)
-- **Outline (Shift+T):** Colored border ring tracing the mask contour (3px width)
+- **Outline (Shift+T):** Colored border ring tracing the mask contour (default 8px / Medium)
 - Both modes attach a tag bubble (tip + leader line + label) at the center-top of the mask
 - Label group (bubble + text) is movable; tip and line are anchored with dynamic leader line
 - Double-click the label group to re-edit the label text
 - Tag color comes from the active tag color swatch in the toolbar
 - After completing cutout or tagging, editor switches to Select (cursor) mode
+
+**Editing segment tags after creation:**
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Click a segment tag label | Label selected; tag color swatches shown in toolbar |
+| 2 | -- (outline mode) | Outline thickness dropdown also shown: Thin (4) / Medium (8) / Thick (14) |
+| 3 | Change tag color swatch | Overlay, tip, line, and bubble all update to new color in real-time |
+| 4 | Change outline thickness | Overlay re-renders with new thickness (outline mode only) |
 
 **Edge cases:**
 - Segment tool hidden if `checkSegmentSupport()` returns false (< 4GB RAM or no system Node)

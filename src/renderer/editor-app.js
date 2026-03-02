@@ -85,6 +85,76 @@
     }
   }
 
+  /**
+   * Re-render the overlay image for a segment tag when color or thickness changes.
+   * Loads the stored mask, reprocesses it, and swaps the old overlay on canvas.
+   */
+  function reprocessSegmentOverlay(labelGroup) {
+    var tagId = labelGroup._snipTagId;
+    var maskURL = labelGroup._snipMaskURL;
+    var mode = labelGroup._snipTagMode;
+    var color = labelGroup._snipTagColor;
+    var thickness = labelGroup._snipOutlineWidth || 8;
+    if (!tagId || !maskURL) return;
+
+    var processFn = mode === 'outline'
+      ? function(cb) { ToolUtils.maskToOutline(maskURL, color, thickness, cb); }
+      : function(cb) { ToolUtils.recolorMaskToHighlight(maskURL, color, cb); };
+
+    processFn(function(result) {
+      if (!result.dataURL) return;
+
+      var overlayImg = new Image();
+      overlayImg.onload = function() {
+        // Load original mask to get dimensions for scaling
+        var maskImg = new Image();
+        maskImg.onload = function() {
+          var imgToCanvasX = canvas.width / maskImg.width;
+          var imgToCanvasY = canvas.height / maskImg.height;
+
+          var overlayLeft = result.x * imgToCanvasX;
+          var overlayTop = result.y * imgToCanvasY;
+          var overlayW = result.w * imgToCanvasX;
+          var overlayH = result.h * imgToCanvasY;
+          var highlightOpacity = mode === 'outline' ? 1.0 : 0.55;
+
+          // Find and remove old overlay
+          var oldOverlay = null;
+          canvas.getObjects().forEach(function(obj) {
+            if (obj._snipTagId === tagId && obj._snipTagRole === 'overlay') oldOverlay = obj;
+          });
+
+          var newOverlay = new fabric.FabricImage(overlayImg, {
+            left: overlayLeft,
+            top: overlayTop,
+            originX: 'left',
+            originY: 'top',
+            scaleX: overlayW / overlayImg.width,
+            scaleY: overlayH / overlayImg.height,
+            selectable: false,
+            evented: false,
+            opacity: highlightOpacity
+          });
+          newOverlay._snipTagId = tagId;
+          newOverlay._snipTagRole = 'overlay';
+
+          if (oldOverlay) {
+            // Insert new overlay at old overlay's z-index
+            var idx = canvas.getObjects().indexOf(oldOverlay);
+            canvas.remove(oldOverlay);
+            canvas.insertAt(newOverlay, idx);
+          } else {
+            canvas.add(newOverlay);
+            canvas.sendObjectToBack(newOverlay);
+          }
+          canvas.renderAll();
+        };
+        maskImg.src = maskURL;
+      };
+      overlayImg.src = result.dataURL;
+    });
+  }
+
   function setupTools() {
     tools[TOOLS.RECT] = RectangleTool.attach(canvas, Toolbar.getActiveColor, Toolbar.getActiveStrokeWidth, Toolbar.getRectMode);
     tools[TOOLS.TEXT] = TextTool.attach(canvas, Toolbar.getActiveColor, Toolbar.getActiveFont, Toolbar.getActiveFontSize);
@@ -102,7 +172,8 @@
       },
       getTagColor: Toolbar.getActiveTagColor,
       getFont: Toolbar.getActiveFont,
-      getFontSize: Toolbar.getActiveFontSize
+      getFontSize: Toolbar.getActiveFontSize,
+      getOutlineWidth: Toolbar.getActiveOutlineWidth
     });
 
     // Initialize animate tool (2GIF)
@@ -138,6 +209,10 @@
               }
             });
           }
+          // Re-render overlay for segment tags
+          if (active._snipSegmentTag && active._snipMaskURL) {
+            reprocessSegmentOverlay(active);
+          }
           canvas.renderAll();
         }
       },
@@ -170,6 +245,13 @@
         } else if (active && active.type === 'textbox') {
           active.set('fontSize', size);
           canvas.renderAll();
+        }
+      },
+      onOutlineWidthChange: function(width) {
+        var active = canvas.getActiveObject();
+        if (active && active._snipSegmentTag && active._snipMaskURL) {
+          active._snipOutlineWidth = width;
+          reprocessSegmentOverlay(active);
         }
       },
       onRectModeChange: function(mode) {
@@ -269,20 +351,31 @@
       TagTool.enterTagEditing(canvas, target);
     });
 
-    // Show tag color swatches when a tag group is selected (even in select mode)
+    // Show tag color swatches (and outline controls for segment tags) when selected
     function onSelectionChange() {
       var active = canvas.getActiveObject();
       var tagColorGroup = document.getElementById('tag-color-group');
       var colorPicker = document.getElementById('color-picker');
+      var outlineWidthGroup = document.getElementById('outline-width-group');
       if (active && active._snipTagType) {
         tagColorGroup.classList.remove('hidden');
         colorPicker.classList.add('hidden');
         if (active._snipTagColor) {
           Toolbar.setActiveTagColor(active._snipTagColor);
         }
+        // Show outline thickness control for segment tags with outline mode
+        if (active._snipSegmentTag && active._snipTagMode === 'outline') {
+          outlineWidthGroup.classList.remove('hidden');
+          if (active._snipOutlineWidth) {
+            Toolbar.setActiveOutlineWidth(active._snipOutlineWidth);
+          }
+        } else {
+          outlineWidthGroup.classList.add('hidden');
+        }
       } else if (Toolbar.getActiveTool() !== TOOLS.TAG) {
         tagColorGroup.classList.add('hidden');
         colorPicker.classList.remove('hidden');
+        outlineWidthGroup.classList.add('hidden');
       }
     }
     canvas.on('selection:created', onSelectionChange);
@@ -290,10 +383,12 @@
     canvas.on('selection:cleared', function() {
       var tagColorGroup = document.getElementById('tag-color-group');
       var colorPicker = document.getElementById('color-picker');
+      var outlineWidthGroup = document.getElementById('outline-width-group');
       if (Toolbar.getActiveTool() !== TOOLS.TAG) {
         tagColorGroup.classList.add('hidden');
         colorPicker.classList.remove('hidden');
       }
+      outlineWidthGroup.classList.add('hidden');
     });
 
     // Update leader line when a tag label group is dragged
