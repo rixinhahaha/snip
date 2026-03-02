@@ -117,6 +117,7 @@
 
   // --- Smooth scroll for anchor links ---
   document.querySelectorAll('a[href^="#"]').forEach(function (anchor) {
+    if (anchor.classList.contains('download-link')) return;
     anchor.addEventListener('click', function (e) {
       var href = this.getAttribute('href');
       if (href === '#') return;
