@@ -36,6 +36,15 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: npx electron-builder --mac dmg --${{ matrix.arch }} --publish never
 
+      - name: Rename DMG with arch suffix
+        run: |
+          for f in dist/*.dmg; do
+            base=$(basename "$f" .dmg)
+            if [[ "$base" != *"-${{ matrix.arch }}"* ]]; then
+              mv "$f" "dist/${base}-${{ matrix.arch }}.dmg"
+            fi
+          done
+
       - uses: actions/upload-artifact@v4
         with:
           name: dmg-${{ matrix.arch }}
@@ -70,7 +79,7 @@ jobs:
           BASE_URL="https://github.com/rixinhahaha/snip/releases/download/v${VERSION}"
 
           ARM64_URL="${BASE_URL}/Snip-${VERSION}-arm64.dmg"
-          X64_URL="${BASE_URL}/Snip-${VERSION}.dmg"
+          X64_URL="${BASE_URL}/Snip-${VERSION}-x64.dmg"
 
           ARM64_SHA=$(curl -sL "$ARM64_URL" | shasum -a 256 | cut -d' ' -f1)
           X64_SHA=$(curl -sL "$X64_URL" | shasum -a 256 | cut -d' ' -f1)
