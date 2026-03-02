@@ -387,4 +387,18 @@
       }
     }
   });
+
+  // Capture-phase: Enter finishes textbox editing, Shift+Enter inserts newline
+  document.addEventListener('keydown', function(e) {
+    if (!canvas) return;
+    var active = canvas.getActiveObject();
+    if (!active || active.type !== 'textbox' || !active.isEditing) return;
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      e.stopPropagation();
+      active.exitEditing();
+      canvas.renderAll();
+    }
+    // Shift+Enter falls through to Fabric.js default (inserts newline)
+  }, true);
 })();

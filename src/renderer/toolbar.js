@@ -7,7 +7,7 @@ const Toolbar = (() => {
   let activeColor = '#ff3b30';
   let activeStrokeWidth = 4;
   let activeFont = 'Plus Jakarta Sans';
-  let activeFontSize = 24;
+  let activeFontSize = 16;
   let activeBrushSize = 20;
   let rectMode = 'outline';
   let activeTagColor = '#64748B';

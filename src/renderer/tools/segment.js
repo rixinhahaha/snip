@@ -15,7 +15,7 @@ const SegmentTool = (() => {
     var onCutoutAccepted = callbacks.onCutoutAccepted || null;
     var getTagColor = callbacks.getTagColor || function() { return '#64748B'; };
     var getFont = callbacks.getFont || function() { return 'Plus Jakarta Sans'; };
-    var getFontSize = callbacks.getFontSize || function() { return 24; };
+    var getFontSize = callbacks.getFontSize || function() { return 16; };
 
     let maskOverlay = null;
     let pendingCutoutURL = null;
