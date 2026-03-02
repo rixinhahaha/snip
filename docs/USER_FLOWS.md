@@ -166,11 +166,13 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 |------|--------|-----------------|
 | 1 | Press T | Text tool active |
 | 2 | Click on canvas | Editable text box created at click position |
-| 3 | Type text | Text appears in active color, selected font and size |
+| 3 | Type text | Text appears in active color, selected font and size (default 16px) |
 | 4 | -- | Font dropdown visible with system fonts |
-| 5 | -- | Font size dropdown: 16, 20, 24, 32, 48px |
-| 6 | Click outside textbox (while selected) | Textbox deselected — no new textbox created |
-| 7 | Click on canvas (no textbox selected) | New textbox created at click position |
+| 5 | -- | Font size dropdown: 16 (default), 20, 24, 32, 48px |
+| 6 | Press Enter | Exits text editing (finishes writing) |
+| 7 | Press Shift+Enter | Inserts a newline within the textbox |
+| 8 | Click outside textbox (while selected) | Textbox deselected — no new textbox created |
+| 9 | Click on canvas (no textbox selected) | New textbox created at click position |
 
 ### 3.3 Arrow Tool
 
@@ -194,7 +196,9 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 | 7 | Click on canvas (second click) | Final tag created: tip dot + leader line + text bubble |
 | 8 | -- | Text editing mode entered immediately with "Label" selected |
 | 9 | Type label text | Text appears in bubble, bubble auto-sizes on editing exit |
-| 10 | Click outside or press Escape | Text editing exits, all parts grouped as one object |
+| 10 | Press Enter | Text editing exits, all parts grouped as one object |
+| 11 | Press Shift+Enter | Inserts a newline in the tag label |
+| 12 | Click outside or press Escape | Also exits editing and re-groups tag |
 
 **Double-click editing:**
 
@@ -234,7 +238,8 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 | 6 | Press Enter / Apply Cutout | Background replaced with cutout (existing behavior) |
 | 7 | Press T / Tag Segment | Highlight overlay + tag bubble placed; textbox enters editing |
 | 7a | Shift+T | Outline mode: colored border ring instead of highlight fill |
-| 7b | Type label, click elsewhere | Overlay + tag parts grouped into selectable annotation |
+| 7b | Type label, press Enter | Exits editing; overlay + tag parts grouped into selectable annotation |
+| 7c | Shift+Enter while editing | Inserts newline in tag label |
 | 8 | Press Escape / Cancel | Mask discarded |
 
 **Tag Segment modes:**
