@@ -18,7 +18,9 @@ npm run rebuild   # compile native modules
 npm start         # launch (tray icon appears in menu bar)
 ```
 
-Requires **macOS 10.13+**, **Node.js 18+**, and **Xcode CLT** (`xcode-select --install`). macOS 26+ recommended for native Liquid Glass effects.
+Requires **macOS 14+**, **Node.js 18+**, and **Xcode CLT** (`xcode-select --install`). macOS 26+ recommended for native Liquid Glass effects.
+
+For AI-powered organization, install [Ollama](https://ollama.com/download) separately. Snip detects your system Ollama and guides you through setup in Settings.
 
 ## How It Works
 
