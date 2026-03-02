@@ -1,36 +1,34 @@
 #!/bin/bash
 #
-# Downloads the Ollama binary for macOS and pulls the default vision model.
-# Run once during development:  ./scripts/download-ollama.sh
+# Downloads the Ollama binary for macOS.
+# Models are pulled at runtime by the app (not bundled).
 #
 # Usage:
-#   ./scripts/download-ollama.sh                  # defaults: v0.17.4 binary, minicpm-v model
+#   ./scripts/download-ollama.sh                  # download binary only (default)
 #   ./scripts/download-ollama.sh v0.18.0          # specific binary version
-#   ./scripts/download-ollama.sh v0.17.4 llava    # specific version + model
-#   ./scripts/download-ollama.sh --force           # force re-pull model
+#   ./scripts/download-ollama.sh --with-model      # also pull minicpm-v locally (~5 GB)
+#   ./scripts/download-ollama.sh --force           # force re-pull model (requires --with-model)
 #
 set -euo pipefail
 
-VERSION="${1:-v0.17.4}"
-MODEL="${2:-minicpm-v}"
+VERSION="v0.17.4"
+MODEL="minicpm-v"
 FORCE=0
+WITH_MODEL=0
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 VENDOR_ABS="$PROJECT_DIR/vendor/ollama"
 
-# Parse --force flag
+# Parse flags
 for arg in "$@"; do
-  if [ "$arg" = "--force" ]; then
-    FORCE=1
-    if [ "$1" = "--force" ]; then
-      VERSION="v0.17.4"
-      MODEL="minicpm-v"
-    fi
-  fi
+  case "$arg" in
+    --with-model) WITH_MODEL=1 ;;
+    --force) FORCE=1 ;;
+    v*) VERSION="$arg" ;;
+  esac
 done
 
 echo "==> Ollama binary version: $VERSION"
-echo "==> Default model: $MODEL"
 echo "==> Destination: $VENDOR_ABS"
 
 # ---------------------------------------------------------------
@@ -54,48 +52,55 @@ else
 fi
 
 # ---------------------------------------------------------------
-# 2. Pull default vision model (minicpm-v)
+# 2. (Optional) Pull default vision model for local dev
+#    Models are NOT bundled — they are pulled at runtime by the app.
+#    Use --with-model to pre-pull locally for faster first launch.
 # ---------------------------------------------------------------
-MODELS_DIR="$VENDOR_ABS/models"
-mkdir -p "$MODELS_DIR"
+if [ "$WITH_MODEL" -eq 1 ]; then
+  MODELS_DIR="$VENDOR_ABS/models"
+  mkdir -p "$MODELS_DIR"
 
-# Clean partial downloads
-PARTIALS=$(find "$MODELS_DIR" -name "*-partial*" 2>/dev/null | wc -l | tr -d ' ')
-if [ "$PARTIALS" -gt 0 ] || [ "$FORCE" -eq 1 ]; then
-  echo "==> Cleaning $PARTIALS partial blob(s)..."
-  find "$MODELS_DIR" -name "*-partial*" -delete 2>/dev/null || true
-  find "$MODELS_DIR/manifests" -type d -empty -delete 2>/dev/null || true
-fi
+  # Clean partial downloads
+  PARTIALS=$(find "$MODELS_DIR" -name "*-partial*" 2>/dev/null | wc -l | tr -d ' ')
+  if [ "$PARTIALS" -gt 0 ] || [ "$FORCE" -eq 1 ]; then
+    echo "==> Cleaning $PARTIALS partial blob(s)..."
+    find "$MODELS_DIR" -name "*-partial*" -delete 2>/dev/null || true
+    find "$MODELS_DIR/manifests" -type d -empty -delete 2>/dev/null || true
+  fi
 
-MANIFEST_DIR="$MODELS_DIR/manifests/registry.ollama.ai/library/$MODEL"
-if [ -d "$MANIFEST_DIR" ] && [ "$(ls -A "$MANIFEST_DIR" 2>/dev/null)" ] && [ "$FORCE" -eq 0 ]; then
-  echo "==> Model '$MODEL' already exists — skipping (use --force to re-pull)"
+  MANIFEST_DIR="$MODELS_DIR/manifests/registry.ollama.ai/library/$MODEL"
+  if [ -d "$MANIFEST_DIR" ] && [ "$(ls -A "$MANIFEST_DIR" 2>/dev/null)" ] && [ "$FORCE" -eq 0 ]; then
+    echo "==> Model '$MODEL' already exists — skipping (use --force to re-pull)"
+  else
+    echo "==> Starting temporary Ollama server to pull model..."
+    export OLLAMA_MODELS="$MODELS_DIR"
+    export OLLAMA_HOST="127.0.0.1:11435"
+
+    "$VENDOR_ABS/ollama" serve &
+    OLLAMA_PID=$!
+    trap "kill $OLLAMA_PID 2>/dev/null; wait $OLLAMA_PID 2>/dev/null || true" EXIT
+
+    echo "==> Waiting for server..."
+    for i in $(seq 1 30); do
+      if curl -s "http://127.0.0.1:11435/api/version" > /dev/null 2>&1; then
+        echo "==> Server ready"
+        break
+      fi
+      sleep 1
+    done
+
+    echo "==> Pulling model '$MODEL' (this may take a while for large models)..."
+    "$VENDOR_ABS/ollama" pull "$MODEL"
+
+    echo "==> Stopping temporary server..."
+    kill $OLLAMA_PID 2>/dev/null || true
+    wait $OLLAMA_PID 2>/dev/null || true
+    trap - EXIT
+    echo "==> Model pulled successfully"
+  fi
 else
-  echo "==> Starting temporary Ollama server to pull model..."
-  export OLLAMA_MODELS="$MODELS_DIR"
-  export OLLAMA_HOST="127.0.0.1:11435"
-
-  "$VENDOR_ABS/ollama" serve &
-  OLLAMA_PID=$!
-  trap "kill $OLLAMA_PID 2>/dev/null; wait $OLLAMA_PID 2>/dev/null || true" EXIT
-
-  echo "==> Waiting for server..."
-  for i in $(seq 1 30); do
-    if curl -s "http://127.0.0.1:11435/api/version" > /dev/null 2>&1; then
-      echo "==> Server ready"
-      break
-    fi
-    sleep 1
-  done
-
-  echo "==> Pulling model '$MODEL' (this may take a while for large models)..."
-  "$VENDOR_ABS/ollama" pull "$MODEL"
-
-  echo "==> Stopping temporary server..."
-  kill $OLLAMA_PID 2>/dev/null || true
-  wait $OLLAMA_PID 2>/dev/null || true
-  trap - EXIT
-  echo "==> Model pulled successfully"
+  echo "==> Skipping model pull (models are pulled at runtime by the app)"
+  echo "    Use --with-model to pre-pull minicpm-v locally (~5 GB)"
 fi
 
 # ---------------------------------------------------------------
@@ -104,6 +109,6 @@ fi
 echo ""
 echo "==> Done!"
 du -sh "$VENDOR_ABS/ollama"
-du -sh "$VENDOR_ABS/models" 2>/dev/null || echo "  (no models)"
+du -sh "$VENDOR_ABS/models" 2>/dev/null || echo "  (no models directory)"
 echo ""
-echo "The app will bundle these files via extraResources."
+echo "The binary is bundled via extraResources. Models are pulled at runtime."
