@@ -150,5 +150,147 @@ const ToolUtils = (() => {
     return maxW;
   }
 
-  return { clampedScenePoint, createMosaicImage, showToast, hideToast, getAccentColor, hexToRgba, measureTextWidth };
+  // ── Shared segment tag constants ──
+
+  /** Fixed outline width (px) for the highlight overlay border ring. */
+  var SEGMENT_OUTLINE_WIDTH = 10;
+
+  /** Opacity used for the segment highlight overlay on canvas. */
+  var SEGMENT_OVERLAY_OPACITY = 0.35;
+
+  /**
+   * Find the bounding box of non-transparent pixels on a canvas context.
+   * @returns {{ minX, minY, w, h }} or null if no visible pixels.
+   */
+  function _findMaskBounds(ctx, w, h) {
+    var data = ctx.getImageData(0, 0, w, h).data;
+    var minX = w, minY = h, maxX = 0, maxY = 0;
+    for (var py = 0; py < h; py++) {
+      for (var px = 0; px < w; px++) {
+        if (data[(py * w + px) * 4 + 3] > 10) {
+          if (px < minX) minX = px;
+          if (px > maxX) maxX = px;
+          if (py < minY) minY = py;
+          if (py > maxY) maxY = py;
+        }
+      }
+    }
+    if (maxX < minX) return null;
+    return { minX: minX, minY: minY, w: maxX - minX + 1, h: maxY - minY + 1 };
+  }
+
+  /**
+   * Crop a canvas to a bounding box and return a data URL.
+   */
+  function _cropCanvas(srcCanvas, bounds) {
+    var c = document.createElement('canvas');
+    c.width = bounds.w;
+    c.height = bounds.h;
+    c.getContext('2d').drawImage(srcCanvas, bounds.minX, bounds.minY, bounds.w, bounds.h, 0, 0, bounds.w, bounds.h);
+    return c.toDataURL('image/png');
+  }
+
+  /**
+   * Recolor a mask to a highlight fill with an outline ring on top, cropped to bounding box.
+   * Produces a translucent fill + dilation-based outline ring on a single canvas so that
+   * both highlight and outline thickness are always visible and adjustable.
+   * @param {string} maskDataURL
+   * @param {string} hexColor - e.g. '#8B5CF6'
+   * @param {number} outlineWidth - border thickness in px (default 16)
+   * @param {function} callback - receives { dataURL, x, y, w, h } cropped to combined bounds
+   */
+  function recolorMaskWithOutline(maskDataURL, hexColor, outlineWidth, callback) {
+    outlineWidth = outlineWidth || 16;
+    var img = new Image();
+    img.onload = function() {
+      var w = img.width, h = img.height;
+
+      // Final compositing canvas
+      var c = document.createElement('canvas');
+      c.width = w; c.height = h;
+      var ctx = c.getContext('2d');
+
+      // Step 1: Draw highlight fill (mask recolored to hexColor)
+      ctx.drawImage(img, 0, 0);
+      ctx.globalCompositeOperation = 'source-in';
+      ctx.fillStyle = hexColor;
+      ctx.fillRect(0, 0, w, h);
+      ctx.globalCompositeOperation = 'source-over';
+
+      // Step 2: Create outline ring via dilation on a separate canvas
+      var oc = document.createElement('canvas');
+      oc.width = w; oc.height = h;
+      var octx = oc.getContext('2d');
+
+      var steps = 24;
+      for (var i = 0; i < steps; i++) {
+        var angle = (2 * Math.PI * i) / steps;
+        var dx = Math.cos(angle) * outlineWidth;
+        var dy = Math.sin(angle) * outlineWidth;
+        octx.drawImage(img, dx, dy);
+      }
+      octx.globalCompositeOperation = 'destination-out';
+      octx.drawImage(img, 0, 0);
+      octx.globalCompositeOperation = 'source-in';
+      octx.fillStyle = hexColor;
+      octx.fillRect(0, 0, w, h);
+
+      // Step 3: Composite outline on top of highlight
+      ctx.drawImage(oc, 0, 0);
+
+      // Find bounding box and crop
+      var bounds = _findMaskBounds(ctx, w, h);
+      if (!bounds) {
+        callback({ dataURL: '', x: 0, y: 0, w: 0, h: 0 });
+        return;
+      }
+
+      callback({ dataURL: _cropCanvas(c, bounds), x: bounds.minX, y: bounds.minY, w: bounds.w, h: bounds.h });
+    };
+    img.src = maskDataURL;
+  }
+
+  // ── Tag linkage helpers ──
+
+  var _tagIdCounter = 0;
+
+  /** Generate a unique ID for linking tag parts (tip, line, label group). */
+  function nextTagId() {
+    return 'snip-tag-' + (++_tagIdCounter);
+  }
+
+  /**
+   * Compute the point on the edge of a bounding rect closest to a tip point.
+   * Used to connect the leader line from the tip to the nearest edge of the label group.
+   * @param {number} tipX
+   * @param {number} tipY
+   * @param {{left:number, top:number, width:number, height:number}} bounds
+   * @returns {{x:number, y:number}}
+   */
+  function lineEndpointForTag(tipX, tipY, bounds) {
+    var cx = bounds.left + bounds.width / 2;
+    var cy = bounds.top + bounds.height / 2;
+    var dx = tipX - cx;
+    var dy = tipY - cy;
+    if (dx === 0 && dy === 0) {
+      return { x: bounds.left, y: cy };
+    }
+    var halfW = bounds.width / 2;
+    var halfH = bounds.height / 2;
+    var tX = halfW > 0 ? halfW / Math.abs(dx) : 9999;
+    var tY = halfH > 0 ? halfH / Math.abs(dy) : 9999;
+    var t = Math.min(tX, tY);
+    return {
+      x: cx + dx * t,
+      y: cy + dy * t
+    };
+  }
+
+  return {
+    SEGMENT_OUTLINE_WIDTH, SEGMENT_OVERLAY_OPACITY,
+    clampedScenePoint, createMosaicImage, showToast, hideToast,
+    getAccentColor, hexToRgba, measureTextWidth,
+    recolorMaskWithOutline,
+    nextTagId, lineEndpointForTag
+  };
 })();

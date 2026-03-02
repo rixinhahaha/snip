@@ -88,9 +88,9 @@
         <span class="toolbar-label">Font</span>
         <select id="font-select" title="Font"></select>
         <select id="font-size" title="Font Size">
-          <option value="16">16px</option>
+          <option value="16" selected>16px</option>
           <option value="20">20px</option>
-          <option value="24" selected>24px</option>
+          <option value="24">24px</option>
           <option value="32">32px</option>
           <option value="48">48px</option>
         </select>
@@ -104,6 +104,15 @@
           <button class="tag-color-swatch" data-color="#D97706" style="background:#D97706" title="Amber"></button>
           <button class="tag-color-swatch" data-color="#E11D48" style="background:#E11D48" title="Rose"></button>
           <button class="tag-color-swatch" data-color="#7C3AED" style="background:#7C3AED" title="Violet"></button>
+        </div>
+      </div>
+      <div id="segment-color-group" class="toolbar-group hidden">
+        <span class="toolbar-label">Color</span>
+        <div class="tag-color-swatches">
+          <button class="segment-color-swatch tag-color-swatch active" data-color="#EF4444" style="background:#EF4444" title="Red"></button>
+          <button class="segment-color-swatch tag-color-swatch" data-color="#EAB308" style="background:#EAB308" title="Yellow"></button>
+          <button class="segment-color-swatch tag-color-swatch" data-color="#22C55E" style="background:#22C55E" title="Green"></button>
+          <button class="segment-color-swatch tag-color-swatch" data-color="#3B82F6" style="background:#3B82F6" title="Blue"></button>
         </div>
       </div>
       <div id="brush-group" class="toolbar-group hidden">
@@ -154,9 +163,10 @@
       </button>
     </div>
 
-    <!-- Segment accept/reject action bar -->
+    <!-- Segment accept/reject/tag action bar -->
     <div id="segment-actions" class="segment-actions hidden">
       <button id="segment-reject" class="segment-action-btn reject">Cancel <kbd>Esc</kbd></button>
+      <button id="segment-tag" class="segment-action-btn tag-segment">Tag Segment <kbd>T</kbd></button>
       <button id="segment-accept" class="segment-action-btn accept">Apply Cutout <kbd>Enter</kbd></button>
     </div>
 
@@ -166,7 +176,9 @@
         <div class="tutorial-title">Segment Tool</div>
         <div class="tutorial-text">
           <strong>Click</strong> on any object to automatically select it.<br>
-          <strong>Shift + Click</strong> to add more points and refine the selection.
+          <strong>Shift + Click</strong> to add more points and refine the selection.<br>
+          Then choose: <strong>Tag Segment (T)</strong> to highlight and label,<br>
+          or <strong>Apply Cutout (Enter)</strong> to isolate.
         </div>
         <button id="segment-tutorial-dismiss" class="tutorial-dismiss-btn">Got it</button>
       </div>

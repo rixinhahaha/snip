@@ -166,11 +166,14 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 |------|--------|-----------------|
 | 1 | Press T | Text tool active |
 | 2 | Click on canvas | Editable text box created at click position |
-| 3 | Type text | Text appears in active color, selected font and size |
+| 3 | Type text | Text appears in active color, selected font and size (default 16px) |
 | 4 | -- | Font dropdown visible with system fonts |
-| 5 | -- | Font size dropdown: 16, 20, 24, 32, 48px |
-| 6 | Click outside textbox (while selected) | Textbox deselected — no new textbox created |
-| 7 | Click on canvas (no textbox selected) | New textbox created at click position |
+| 5 | -- | Font size dropdown: 16 (default), 20, 24, 32, 48px |
+| 6 | Press Enter | Exits text editing and switches to Select (cursor) mode |
+| 7 | Press Shift+Enter | Inserts a newline within the textbox |
+| 8 | Click outside textbox (while selected) | Textbox deselected — no new textbox created |
+| 9 | Click on canvas (no textbox selected) | New textbox created at click position |
+| 10 | In Select mode, click on a textbox | First click selects; second click enters editing; toolbar shows font controls |
 
 ### 3.3 Arrow Tool
 
@@ -194,23 +197,41 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 | 7 | Click on canvas (second click) | Final tag created: tip dot + leader line + text bubble |
 | 8 | -- | Text editing mode entered immediately with "Label" selected |
 | 9 | Type label text | Text appears in bubble, bubble auto-sizes on editing exit |
-| 10 | Click outside or press Escape | Text editing exits, all parts grouped as one object |
+| 10 | Press Enter | Text editing exits; switches to Select (cursor) mode with label selected |
+| 11 | Press Shift+Enter | Inserts a newline in the tag label |
+| 12 | Click outside or press Escape | Also exits editing and creates the tag |
 
-**Double-click editing:**
+**Draggable tag labels:**
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Select a tag's label group | Label (bubble + text) selected, tip dot stays fixed |
+| 2 | Drag the label | Bubble moves freely; leader line stretches from tip to label edge |
+| 3 | Click the tip anchor | Tip circle selected with color-matched border outline |
+| 4 | Drag the tip anchor | Tip moves freely; leader line stretches from tip to label edge |
+| 5 | Release | Line connects tip to nearest edge of label bubble |
+
+**Click-to-edit (in Select mode):**
 
 | Step | Action | Expected Result |
 |------|--------|-----------------|
 | 1 | Switch to Select tool (V) | -- |
-| 2 | Double-click an existing tag | Tag ungroups, text enters editing mode |
-| 3 | Edit the text | -- |
-| 4 | Click outside or press Escape | Tag re-groups with updated text, bubble auto-sized |
+| 2 | Click an existing tag | First click: selects the label; toolbar shows tag color swatches + font controls |
+| 3 | Click the selected tag again | Label ungroups, text enters editing mode; tag color swatches remain visible |
+| 4 | Edit the text | Bubble auto-resizes as user types |
+| 5 | Change tag color (via swatch) while editing | Bubble, tip, line, and overlay (if segment tag) update in real-time |
+| 6 | Press Enter | Label re-groups with updated text; switches to Select (cursor) mode |
+| 7 | Press Shift+Enter | Inserts newline in label text |
+| 8 | Double-click an existing tag | Also enters editing mode (shortcut for steps 2-3) |
 
 **Edge cases:**
 - Second click too close to first (< 20px): placement cancelled, returns to idle
 - Press Escape during placement (after first click): preview objects removed, returns to idle
 - Switching tools mid-placement: preview objects cleaned up automatically
-- Undo (Cmd+Z) removes the entire tag group in one step
-- Color/font/size changes apply to selected tag group
+- Undo (Cmd+Z) removes the entire tag (label group + linked tip + line) in one step
+- Redo (Cmd+Shift+Z) restores the tag with all linked parts
+- Color/font/size changes apply to selected label group and linked parts (tip, line); bubble auto-resizes on font/size change
+- Delete/Backspace removes the label group and all linked parts
 
 ### 3.5 Blur Brush Tool
 
@@ -227,12 +248,35 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 | Step | Action | Expected Result |
 |------|--------|-----------------|
 | 1 | Press S | Segment tool active (only visible if supported) |
-| 2 | -- | First use: tutorial modal appears explaining usage |
+| 2 | -- | First use: tutorial modal explains click, shift+click, tag, and cutout |
 | 3 | Click on an object in the image | Loading indicator while SAM processes |
 | 4 | -- | Segmentation mask overlay appears on the object |
 | 5 | Shift+click to refine | Additional points added, mask recalculated |
-| 6 | Press Enter / Accept | Mask applied to canvas as annotation |
-| 7 | Press Escape / Reject | Mask discarded |
+| 6 | Press Enter / Apply Cutout | Background replaced with cutout; switches to Select mode |
+| 7 | Press T / Tag Segment | Highlight overlay + tag bubble placed; textbox enters editing |
+| 7a | Type label, press Enter | Exits editing; switches to Select mode with label selected |
+| 7b | Shift+Enter while editing | Inserts newline in tag label |
+| 7c | Drag the label or tip | Label and tip are both draggable; leader line stretches between them |
+| 8 | Press Escape / Cancel | Mask discarded |
+
+**Tag Segment overlay:**
+- **Highlight (T):** Translucent color fill + outline ring over the mask area (35% opacity, 10px outline via dilation)
+- **Segment color palette** is limited to 4 colors: Red (#EF4444), Yellow (#EAB308), Green (#22C55E), Blue (#3B82F6) — separate from the regular tag palette
+- Attaches a tag bubble (tip + leader line + label) at the center of the mask
+- Label group (bubble + text) and tip anchor are both independently draggable with dynamic leader line
+- Double-click the label group to re-edit the label text
+- After completing cutout or tagging, editor switches to Select (cursor) mode
+
+**Editing segment tags after creation:**
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Click a segment tag label | Label selected; segment color swatches (Red / Green / Blue) + font controls shown in toolbar |
+| 2 | Change segment color swatch | Overlay, tip, line, and bubble all update to new color in real-time |
+| 3 | Change font size | Tag bubble auto-resizes to match new font size |
+| 4 | Click the selected tag again | Text enters editing mode; segment color swatches remain visible |
+| 5 | Edit the label text | Bubble auto-resizes; color changes still work during editing |
+| 6 | Press Enter | Exits editing; switches to Select mode with updated tag |
 
 **Edge cases:**
 - Segment tool hidden if `checkSegmentSupport()` returns false (< 4GB RAM or no system Node)
@@ -319,6 +363,11 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 | 3 | Drag selected object | Object moves |
 | 4 | Drag handles | Object resizes |
 | 5 | Press Delete/Backspace | Selected object removed |
+| 6 | Click already-selected textbox | Enters text editing mode; toolbar shows font controls |
+| 7 | Click already-selected tag | Enters tag editing mode; toolbar shows tag color + font controls |
+| 8 | Click already-selected segment tag | Enters editing; toolbar shows segment colors (Red/Green/Blue) + font |
+| 9 | Press Enter while editing | Exits editing and stays in Select mode |
+| 10 | Press Shift+Enter while editing | Inserts newline |
 
 ### 3.9 Color Picker
 

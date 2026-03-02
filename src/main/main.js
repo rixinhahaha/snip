@@ -125,7 +125,7 @@ function createEditorWindow(cssWidth, cssHeight) {
 
   const TOOLBAR_HEIGHT = 48;
   const MARGIN = 48; // breathing room around image
-  const TOOLBAR_MIN_WIDTH = 900; // wide enough for all toolbar controls + slack
+  const TOOLBAR_MIN_WIDTH = 1100; // wide enough for all toolbar controls + tag swatches + outline controls
 
   const primaryDisplay = screen.getPrimaryDisplay();
   const { width: screenW, height: screenH } = primaryDisplay.workAreaSize;
