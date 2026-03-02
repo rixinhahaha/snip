@@ -146,11 +146,13 @@ fabric.FabricObject.ownDefaults.cornerColor = accent;
 
 This affects all canvas objects (rectangles, arrows, textboxes, blur images).
 
-### AI Assistant Settings (Model Card)
+### Setting Up Your AI Assistant
 
-The settings page "AI Assistant" section uses:
+The settings page "Setting Up Your AI Assistant" section has three visual states:
 
-- **Current model card**: `--bg-elevated` with `--border-card`, 10px radius. Shows "Active Model" uppercase label, large bold model name, and circular info button.
+- **Setup card** (not installed / model needed): `--bg-elevated` with `--border-card`, 12px radius, 20px padding. Contains an icon (48px on `--accent-bg` rounded square), title in `--text-primary` (15px, 600 weight), description in `--text-secondary` (13px), and a purple action button (`--accent` fill, white text, 8px radius).
+- **Scissors progress bar**: 8px track in `--bg-tertiary` with `--accent` fill. A scissors emoji (✂️) rides the leading edge of the fill via absolute positioning, transitioning with the fill width.
+- **Current model card** (ready state): `--bg-elevated` with `--border-card`, 10px radius. Shows "Active Model" uppercase label, large bold model name, and circular info button.
 - **Info tooltip**: Per-theme backgrounds (dark: `rgba(30,30,30,0.95)`, light: `rgba(255,255,255,0.95)`, glass: `rgba(15,8,30,0.85)` with backdrop blur). Positioned below card, `z-index: 20`. Contains a specs table with label column in `--text-secondary` and value column in `--text-primary`.
 
 ### Buttons

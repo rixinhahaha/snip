@@ -575,6 +575,65 @@ input:focus { border-color: var(--accent); }
 .status.success { color: var(--success); }
 .status.error { color: var(--error); }
 
+/* Ollama checklist */
+.ollama-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.checklist-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.check-icon {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.check-icon.pending {
+  color: var(--text-muted);
+}
+
+.check-icon.done {
+  color: var(--success);
+  font-size: 16px;
+}
+
+.checklist-label {
+  color: var(--text-primary);
+}
+
+.ollama-action-btn {
+  padding: 8px 20px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--accent);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.ollama-action-btn:hover {
+  background: var(--accent-hover);
+}
+
+.ollama-action-btn:active {
+  transform: scale(0.97);
+}
+
 /* Ollama settings */
 .ollama-status-row {
   display: flex;
@@ -727,45 +786,7 @@ input:focus { border-color: var(--accent); }
   word-break: break-all;
 }
 
-/* Model download progress */
-.model-download-section {
-  margin-bottom: 12px;
-  padding: 12px;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-card);
-  border-radius: 10px;
-}
-
-.model-download-section.hidden { display: none; }
-
-.model-download-label {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 8px;
-}
-
-.model-download-bar-track {
-  width: 100%;
-  height: 6px;
-  background: var(--bg-tertiary);
-  border-radius: 3px;
-  overflow: hidden;
-  margin-bottom: 6px;
-}
-
-.model-download-bar-fill {
-  height: 100%;
-  width: 0%;
-  background: var(--accent);
-  border-radius: 3px;
-  transition: width 0.3s ease;
-}
-
-.model-download-detail {
-  font-size: 11px;
-  color: var(--text-muted);
-}
+/* (model download progress moved to ollama-setup.css popup) */
 
 /* Current model card */
 .current-model-card {

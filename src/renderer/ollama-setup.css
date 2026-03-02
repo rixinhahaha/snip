@@ -1,0 +1,282 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  -webkit-app-region: drag;
+  height: 100vh;
+  overflow: hidden;
+}
+
+button, input {
+  -webkit-app-region: no-drag;
+}
+
+.setup-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 36px 24px;
+  height: 100%;
+}
+
+.setup-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.setup-icon {
+  font-size: 40px;
+  margin-bottom: 12px;
+}
+
+.setup-header h1 {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-bright);
+  margin-bottom: 6px;
+}
+
+.setup-subtitle {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  max-width: 340px;
+  margin: 0 auto;
+}
+
+/* Steps */
+.setup-steps {
+  width: 100%;
+  max-width: 360px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.setup-step {
+  display: flex;
+  gap: 14px;
+  padding: 14px 0;
+}
+
+.step-indicator {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid var(--border-card);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.3s ease;
+}
+
+.step-indicator.active {
+  border-color: var(--accent);
+  background: var(--accent-bg);
+}
+
+.step-indicator.done {
+  border-color: var(--success);
+  background: var(--success);
+}
+
+.step-indicator.done .step-number {
+  display: none;
+}
+
+.step-indicator.done::after {
+  content: '✓';
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.step-number {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.step-indicator.active .step-number {
+  color: var(--accent);
+}
+
+.step-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.step-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+
+.step-desc {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 10px;
+}
+
+/* Buttons */
+.setup-btn {
+  padding: 7px 18px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--accent);
+  border: none;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.setup-btn:hover {
+  background: var(--accent-hover);
+}
+
+.setup-btn:active {
+  transform: scale(0.97);
+}
+
+.setup-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Scissors progress bar */
+.progress-section {
+  margin-top: 10px;
+}
+
+.progress-section.hidden {
+  display: none;
+}
+
+.scissors-progress-track {
+  width: 100%;
+  height: 6px;
+  background: var(--bg-tertiary);
+  border-radius: 3px;
+  overflow: visible;
+  position: relative;
+}
+
+.scissors-progress-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--accent);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.scissors-icon {
+  position: absolute;
+  top: 50%;
+  left: 0%;
+  transform: translate(-50%, -50%);
+  font-size: 14px;
+  transition: left 0.3s ease;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+}
+
+.progress-detail {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 6px;
+}
+
+/* Error state */
+.step-error {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: var(--error-bg);
+  border-radius: 6px;
+}
+
+.step-error.hidden {
+  display: none;
+}
+
+.error-text {
+  font-size: 12px;
+  color: var(--error);
+  flex: 1;
+}
+
+.retry-btn {
+  padding: 4px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--error);
+  background: none;
+  border: 1px solid var(--error);
+  border-radius: 5px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease;
+}
+
+.retry-btn:hover {
+  background: var(--error-bg);
+}
+
+/* Done state */
+.setup-done {
+  text-align: center;
+  margin-top: 16px;
+}
+
+.setup-done.hidden {
+  display: none;
+}
+
+.done-icon {
+  font-size: 32px;
+  margin-bottom: 8px;
+}
+
+.done-text {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-bright);
+  margin-bottom: 16px;
+}
+
+.done-btn {
+  background: var(--success);
+  padding: 9px 28px;
+  font-size: 13px;
+}
+
+.done-btn:hover {
+  filter: brightness(1.1);
+  background: var(--success);
+}
+
+/* Skip button */
+.skip-btn {
+  margin-top: auto;
+  padding: 6px 16px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.skip-btn:hover {
+  color: var(--text-primary);
+}

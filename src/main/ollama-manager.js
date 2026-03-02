@@ -1,81 +1,58 @@
 /**
  * Ollama lifecycle manager.
  *
- * Spawns the bundled Ollama binary on a dedicated port (default 11435)
- * so it never conflicts with the user's own Ollama on 11434.
- * Binary lives in vendor/ollama/ (dev) or Resources/ollama/ (packaged).
- * Models are pulled on first launch via `client.pull()` with progress tracking.
+ * Detects system Ollama (running or installed), auto-starts if needed,
+ * and prompts the user to install if missing. Never bundles a binary.
  */
 
 const path = require('path');
 const fs = require('fs');
-const net = require('net');
-const { spawn } = require('child_process');
+const { spawn, execFile } = require('child_process');
 const { Ollama } = require('ollama');
+const https = require('https');
 
 const { getOllamaModel, getOllamaUrl } = require('./store');
 
-let ollamaProcess = null;  // child process
-let client = null;          // Ollama JS client
+let client = null;
 let serverRunning = false;
 let startupError = null;
+let ollamaInstalled = false;
 
 // Model pull state
 let pullInProgress = false;
 let pullProgress = { status: 'idle', percent: 0, total: 0, completed: 0 };
 let modelReady = false;
 
-/**
- * Resolve path to the bundled Ollama binary.
- * - Production: process.resourcesPath/ollama/ollama
- * - Development: <project>/vendor/ollama/ollama
- */
-function getBinaryPath() {
-  var isPackaged = require('electron').app.isPackaged;
-  if (isPackaged) {
-    return path.join(process.resourcesPath, 'ollama', 'ollama');
-  }
-  return path.join(__dirname, '..', '..', 'vendor', 'ollama', 'ollama');
-}
+// Install state
+let installInProgress = false;
+let installProgress = { status: 'idle', percent: 0 };
+
+// Known install paths for macOS (packaged apps don't inherit shell PATH)
+var KNOWN_PATHS = [
+  '/usr/local/bin/ollama',
+  '/opt/homebrew/bin/ollama'
+];
+
+var OLLAMA_APP_PATH = '/Applications/Ollama.app';
+var DEFAULT_HOST = 'http://127.0.0.1:11434';
 
 /**
- * Writable models directory in user data.
- * ~/Library/Application Support/snip/ollama/models/
+ * Check if Ollama is reachable at the given URL.
  */
-function getUserModelsPath() {
-  var { app } = require('electron');
-  return path.join(app.getPath('userData'), 'ollama', 'models');
-}
-
-/**
- * Find an available port starting from preferredPort.
- * Tries up to maxAttempts sequential ports.
- */
-function findAvailablePort(preferredPort, maxAttempts) {
-  maxAttempts = maxAttempts || 10;
-  var attempt = 0;
-
-  function tryPort(port) {
-    return new Promise(function (resolve, reject) {
-      var server = net.createServer();
-      server.unref();
-      server.on('error', function () {
-        if (attempt < maxAttempts - 1) {
-          attempt++;
-          resolve(tryPort(port + 1));
-        } else {
-          reject(new Error('No available port found in range ' + preferredPort + '-' + (preferredPort + maxAttempts - 1)));
-        }
-      });
-      server.listen(port, '127.0.0.1', function () {
-        server.close(function () {
-          resolve(port);
-        });
-      });
+function checkServer(url) {
+  return new Promise(function (resolve) {
+    var http = require('http');
+    var req = http.get(url, function (res) {
+      resolve(true);
     });
-  }
-
-  return tryPort(preferredPort);
+    req.on('error', function () {
+      resolve(false);
+    });
+    req.setTimeout(3000, function () {
+      req.destroy();
+      resolve(false);
+    });
+  });
 }
 
 /**
@@ -120,138 +97,306 @@ function emitPullProgress(progress) {
 }
 
 /**
- * Try to symlink a model from the user's system Ollama (~/.ollama/models/)
- * into Snip's model directory to avoid re-downloading.
- * Returns true if symlink was successful, false otherwise.
+ * Send install progress to all open BrowserWindows.
  */
-function trySymlinkSystemModel(modelName) {
-  var os = require('os');
-  var systemModelsDir = path.join(os.homedir(), '.ollama', 'models');
-  var snipModelsDir = getUserModelsPath();
-
-  // Check if system Ollama has the model manifest
-  var systemManifestDir = path.join(systemModelsDir, 'manifests', 'registry.ollama.ai', 'library', modelName);
-  var systemManifestFile = path.join(systemManifestDir, 'latest');
-  if (!fs.existsSync(systemManifestFile)) {
-    return false;
-  }
-
-  try {
-    // Read the manifest to find which blobs are needed
-    var manifest = JSON.parse(fs.readFileSync(systemManifestFile, 'utf8'));
-    var blobDigests = [];
-
-    // Collect all blob digests from the manifest (config + layers)
-    if (manifest.config && manifest.config.digest) {
-      blobDigests.push(manifest.config.digest);
+function emitInstallProgress(progress) {
+  var { BrowserWindow } = require('electron');
+  var wins = BrowserWindow.getAllWindows();
+  for (var i = 0; i < wins.length; i++) {
+    if (!wins[i].isDestroyed()) {
+      try {
+        wins[i].webContents.send('ollama-install-progress', progress);
+      } catch (_) { /* ignore destroyed windows */ }
     }
-    if (manifest.layers) {
-      for (var i = 0; i < manifest.layers.length; i++) {
-        if (manifest.layers[i].digest) {
-          blobDigests.push(manifest.layers[i].digest);
-        }
-      }
-    }
-
-    // Verify all blobs exist in system Ollama
-    var systemBlobsDir = path.join(systemModelsDir, 'blobs');
-    for (var b = 0; b < blobDigests.length; b++) {
-      var blobFile = path.join(systemBlobsDir, blobDigests[b].replace(':', '-'));
-      if (!fs.existsSync(blobFile)) {
-        console.log('[Ollama] System blob missing: %s — cannot symlink', blobDigests[b]);
-        return false;
-      }
-    }
-
-    // All blobs exist — create symlinks
-    var snipBlobsDir = path.join(snipModelsDir, 'blobs');
-    fs.mkdirSync(snipBlobsDir, { recursive: true });
-
-    var linkedCount = 0;
-    for (var s = 0; s < blobDigests.length; s++) {
-      var digest = blobDigests[s];
-      var srcBlob = path.join(systemBlobsDir, digest.replace(':', '-'));
-      var destBlob = path.join(snipBlobsDir, digest.replace(':', '-'));
-
-      if (!fs.existsSync(destBlob)) {
-        fs.symlinkSync(srcBlob, destBlob);
-        linkedCount++;
-      }
-    }
-
-    // Copy the manifest (small file, not worth symlinking)
-    var snipManifestDir = path.join(snipModelsDir, 'manifests', 'registry.ollama.ai', 'library', modelName);
-    fs.mkdirSync(snipManifestDir, { recursive: true });
-    var snipManifestFile = path.join(snipManifestDir, 'latest');
-    if (!fs.existsSync(snipManifestFile)) {
-      fs.copyFileSync(systemManifestFile, snipManifestFile);
-    }
-
-    console.log('[Ollama] Symlinked %d blobs from system Ollama for model "%s"', linkedCount, modelName);
-    return true;
-  } catch (err) {
-    console.warn('[Ollama] Failed to symlink system model:', err.message);
-    return false;
   }
 }
 
 /**
- * Ensure the required model is available, pulling it if needed.
- * Checks: 1) Snip's own store, 2) system Ollama (symlink), 3) pull from registry.
- * Called after the Ollama server is running. Non-blocking to callers.
+ * Emit the full Ollama status to all windows (used after state changes).
  */
-async function ensureModel() {
-  var defaultModel = getOllamaModel();
-
-  // Check if model already exists in Snip's store
-  try {
-    var models = await client.list();
-    var found = (models.models || []).some(function (m) {
-      return m.name === defaultModel || m.name === defaultModel + ':latest';
-    });
-    if (found) {
-      console.log('[Ollama] Model "%s" already available', defaultModel);
-      modelReady = true;
-      pullProgress = { status: 'ready', percent: 100, total: 0, completed: 0 };
-      emitPullProgress(pullProgress);
-      return;
+async function emitStatus() {
+  var status = await getStatus();
+  var { BrowserWindow } = require('electron');
+  var wins = BrowserWindow.getAllWindows();
+  for (var i = 0; i < wins.length; i++) {
+    if (!wins[i].isDestroyed()) {
+      try {
+        wins[i].webContents.send('ollama-status-changed', status);
+      } catch (_) {}
     }
-  } catch (err) {
-    console.warn('[Ollama] Failed to list models:', err.message);
+  }
+}
+
+/**
+ * Check if Ollama is installed on the system.
+ * Returns the path to the binary or app, or null if not found.
+ */
+function findOllamaInstall() {
+  // Check for Ollama.app first (most common macOS install)
+  if (fs.existsSync(OLLAMA_APP_PATH)) {
+    return { type: 'app', path: OLLAMA_APP_PATH };
   }
 
-  // Try to symlink from user's system Ollama (~/.ollama/models/)
-  if (trySymlinkSystemModel(defaultModel)) {
-    // Verify the symlinked model is now visible to our server
-    try {
-      var modelsAfterLink = await client.list();
-      var linkedFound = (modelsAfterLink.models || []).some(function (m) {
-        return m.name === defaultModel || m.name === defaultModel + ':latest';
+  // Check known CLI paths
+  for (var i = 0; i < KNOWN_PATHS.length; i++) {
+    if (fs.existsSync(KNOWN_PATHS[i])) {
+      return { type: 'cli', path: KNOWN_PATHS[i] };
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Auto-start Ollama if installed but not running.
+ */
+function autoStartOllama(install) {
+  return new Promise(function (resolve, reject) {
+    if (install.type === 'app') {
+      // open -a Ollama launches the menu bar app
+      var child = spawn('open', ['-a', 'Ollama'], { stdio: 'ignore', detached: true });
+      child.unref();
+      child.on('error', function (err) {
+        reject(new Error('Failed to launch Ollama.app: ' + err.message));
       });
-      if (linkedFound) {
-        console.log('[Ollama] Model "%s" available via system Ollama symlink', defaultModel);
-        modelReady = true;
-        pullProgress = { status: 'ready', percent: 100, total: 0, completed: 0 };
-        emitPullProgress(pullProgress);
-        return;
-      }
-    } catch (err) {
-      console.warn('[Ollama] Symlink verification failed:', err.message);
+      child.on('close', function () {
+        resolve();
+      });
+    } else {
+      // CLI binary — spawn ollama serve in background
+      var child = spawn(install.path, ['serve'], {
+        stdio: 'ignore',
+        detached: true
+      });
+      child.unref();
+      child.on('error', function (err) {
+        reject(new Error('Failed to start ollama serve: ' + err.message));
+      });
+      // Give it a moment to start
+      setTimeout(resolve, 500);
     }
+  });
+}
+
+/**
+ * Start Ollama by detecting system install.
+ * 1. Check if already running
+ * 2. Check if installed → auto-start
+ * 3. If not installed → set status, let UI prompt user
+ */
+async function startOllama() {
+  var host = getOllamaUrl() || DEFAULT_HOST;
+
+  // Step 1: Check if Ollama is already running
+  var running = await checkServer(host);
+  if (running) {
+    console.log('[Ollama] Server already running at %s', host);
+    serverRunning = true;
+    ollamaInstalled = true;
+    startupError = null;
+    client = new Ollama({ host: host });
+    emitStatus();
+    return;
   }
 
-  // Model not found anywhere — pull from registry
-  console.log('[Ollama] Model "%s" not found locally — pulling...', defaultModel);
+  // Step 2: Check if installed
+  var install = findOllamaInstall();
+  if (install) {
+    ollamaInstalled = true;
+    console.log('[Ollama] Found install: %s (%s)', install.path, install.type);
+
+    try {
+      await autoStartOllama(install);
+      await waitForServer(host, 30000);
+      serverRunning = true;
+      startupError = null;
+      client = new Ollama({ host: host });
+      console.log('[Ollama] Server started and connected at %s', host);
+      emitStatus();
+    } catch (err) {
+      startupError = err.message;
+      console.error('[Ollama] Auto-start failed:', err.message);
+      emitStatus();
+    }
+    return;
+  }
+
+  // Step 3: Not installed
+  ollamaInstalled = false;
+  serverRunning = false;
+  startupError = 'not_installed';
+  console.log('[Ollama] Not installed — waiting for user to install');
+  emitStatus();
+}
+
+/**
+ * Download and install Ollama.
+ * Downloads Ollama-darwin.zip, extracts Ollama.app, opens the DMG-like experience.
+ */
+async function installOllama() {
+  if (installInProgress) {
+    return { success: false, error: 'Install already in progress' };
+  }
+
+  installInProgress = true;
+  installProgress = { status: 'downloading', percent: 0 };
+  emitInstallProgress(installProgress);
+
+  var { app } = require('electron');
+  var tmpDir = app.getPath('temp');
+  var zipPath = path.join(tmpDir, 'Ollama-darwin.zip');
+  var extractDir = path.join(tmpDir, 'Ollama-extract');
+
+  try {
+    // Download the zip
+    await downloadFile('https://ollama.com/download/Ollama-darwin.zip', zipPath, function (percent) {
+      installProgress = { status: 'downloading', percent: percent };
+      emitInstallProgress(installProgress);
+    });
+
+    installProgress = { status: 'extracting', percent: 100 };
+    emitInstallProgress(installProgress);
+
+    // Clean extract dir if it exists
+    if (fs.existsSync(extractDir)) {
+      fs.rmSync(extractDir, { recursive: true, force: true });
+    }
+    fs.mkdirSync(extractDir, { recursive: true });
+
+    // Extract the zip
+    await new Promise(function (resolve, reject) {
+      var child = spawn('unzip', ['-o', '-q', zipPath, '-d', extractDir], { stdio: 'ignore' });
+      child.on('error', reject);
+      child.on('close', function (code) {
+        if (code === 0) resolve();
+        else reject(new Error('unzip exited with code ' + code));
+      });
+    });
+
+    // Move Ollama.app to /Applications/
+    var extractedApp = path.join(extractDir, 'Ollama.app');
+    if (!fs.existsSync(extractedApp)) {
+      throw new Error('Ollama.app not found in downloaded archive');
+    }
+
+    installProgress = { status: 'installing', percent: 100 };
+    emitInstallProgress(installProgress);
+
+    // Remove existing Ollama.app if present, then move
+    if (fs.existsSync(OLLAMA_APP_PATH)) {
+      fs.rmSync(OLLAMA_APP_PATH, { recursive: true, force: true });
+    }
+
+    await new Promise(function (resolve, reject) {
+      var child = spawn('mv', [extractedApp, '/Applications/'], { stdio: 'ignore' });
+      child.on('error', reject);
+      child.on('close', function (code) {
+        if (code === 0) resolve();
+        else reject(new Error('Failed to move Ollama.app to /Applications/ (code ' + code + ')'));
+      });
+    });
+
+    // Clean up temp files
+    try { fs.unlinkSync(zipPath); } catch (_) {}
+    try { fs.rmSync(extractDir, { recursive: true, force: true }); } catch (_) {}
+
+    // Launch it
+    ollamaInstalled = true;
+    installProgress = { status: 'launching', percent: 100 };
+    emitInstallProgress(installProgress);
+
+    await autoStartOllama({ type: 'app', path: OLLAMA_APP_PATH });
+
+    var host = getOllamaUrl() || DEFAULT_HOST;
+    await waitForServer(host, 30000);
+
+    serverRunning = true;
+    startupError = null;
+    client = new Ollama({ host: host });
+
+    installInProgress = false;
+    installProgress = { status: 'done', percent: 100 };
+    emitInstallProgress(installProgress);
+    emitStatus();
+
+    console.log('[Ollama] Installed and running');
+    return { success: true };
+  } catch (err) {
+    installInProgress = false;
+    installProgress = { status: 'error', percent: 0, error: err.message };
+    emitInstallProgress(installProgress);
+    console.error('[Ollama] Install failed:', err.message);
+    return { success: false, error: err.message };
+  }
+}
+
+/**
+ * Download a file with progress tracking.
+ */
+function downloadFile(url, destPath, onProgress) {
+  return new Promise(function (resolve, reject) {
+    function doRequest(requestUrl) {
+      https.get(requestUrl, function (res) {
+        // Follow redirects
+        if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+          return doRequest(res.headers.location);
+        }
+        if (res.statusCode !== 200) {
+          return reject(new Error('Download failed with status ' + res.statusCode));
+        }
+
+        var totalBytes = parseInt(res.headers['content-length'], 10) || 0;
+        var downloadedBytes = 0;
+        var file = fs.createWriteStream(destPath);
+
+        res.on('data', function (chunk) {
+          downloadedBytes += chunk.length;
+          if (totalBytes > 0 && onProgress) {
+            onProgress(Math.round((downloadedBytes / totalBytes) * 100));
+          }
+        });
+
+        res.pipe(file);
+
+        file.on('finish', function () {
+          file.close(resolve);
+        });
+
+        file.on('error', function (err) {
+          fs.unlink(destPath, function () {});
+          reject(err);
+        });
+      }).on('error', reject);
+    }
+    doRequest(url);
+  });
+}
+
+/**
+ * Pull the configured model. Called explicitly by user action.
+ */
+async function pullModel() {
+  if (!client) {
+    return { success: false, error: 'Ollama is not running' };
+  }
+  if (pullInProgress) {
+    return { success: false, error: 'Pull already in progress' };
+  }
+
+  var modelName = getOllamaModel();
+  console.log('[Ollama] Pulling model "%s"...', modelName);
+
   pullInProgress = true;
-  pullProgress = { status: 'downloading', percent: 0, total: 0, completed: 0 };
+  pullProgress = { status: 'downloading', model: modelName, percent: 0, total: 0, completed: 0 };
   emitPullProgress(pullProgress);
 
   try {
-    var stream = await client.pull({ model: defaultModel, stream: true });
+    var stream = await client.pull({ model: modelName, stream: true });
     for await (var event of stream) {
       if (event.total && event.total > 0) {
         pullProgress = {
           status: event.status || 'downloading',
+          model: modelName,
           percent: Math.round((event.completed / event.total) * 100),
           total: event.total,
           completed: event.completed
@@ -259,6 +404,7 @@ async function ensureModel() {
       } else {
         pullProgress = {
           status: event.status || 'downloading',
+          model: modelName,
           percent: pullProgress.percent,
           total: pullProgress.total,
           completed: pullProgress.completed
@@ -266,108 +412,53 @@ async function ensureModel() {
       }
       emitPullProgress(pullProgress);
     }
-    console.log('[Ollama] Model "%s" pulled successfully', defaultModel);
+
+    console.log('[Ollama] Model "%s" pulled successfully', modelName);
     modelReady = true;
     pullInProgress = false;
-    pullProgress = { status: 'ready', percent: 100, total: 0, completed: 0 };
+    pullProgress = { status: 'ready', model: modelName, percent: 100, total: 0, completed: 0 };
     emitPullProgress(pullProgress);
+    emitStatus();
+    return { success: true };
   } catch (err) {
     console.error('[Ollama] Pull failed:', err.message);
     pullInProgress = false;
-    pullProgress = { status: 'error', percent: 0, total: 0, completed: 0, error: err.message };
+    pullProgress = { status: 'error', model: modelName, percent: 0, total: 0, completed: 0, error: err.message };
     emitPullProgress(pullProgress);
+    return { success: false, error: err.message };
   }
 }
 
 /**
- * Start the embedded Ollama server on a dedicated port.
- * Pulls the model on first launch instead of bundling it.
+ * Check if the required model is available on the running server.
+ * Does NOT auto-pull — returns the result so the UI can prompt.
  */
-async function startOllama() {
-  var binaryPath = getBinaryPath();
+async function checkModel() {
+  if (!client) return false;
 
-  if (!fs.existsSync(binaryPath)) {
-    startupError = 'Ollama binary not found at ' + binaryPath;
-    console.error('[Ollama] ' + startupError);
-    return;
-  }
-
+  var modelName = getOllamaModel();
   try {
-    var modelsPath = getUserModelsPath();
-    fs.mkdirSync(modelsPath, { recursive: true });
-
-    // Parse preferred host/port from config
-    var configUrl = getOllamaUrl() || 'http://127.0.0.1:11435';
-    var urlObj = new URL(configUrl);
-    var preferredPort = parseInt(urlObj.port, 10) || 11435;
-
-    // Find an available port starting from the preferred one
-    var port = await findAvailablePort(preferredPort);
-    var host = 'http://127.0.0.1:' + port;
-
-    console.log('[Ollama] Starting server from %s on port %d', binaryPath, port);
-
-    // Spawn ollama serve on the dedicated port
-    ollamaProcess = spawn(binaryPath, ['serve'], {
-      env: Object.assign({}, process.env, {
-        OLLAMA_HOST: '127.0.0.1:' + port,
-        OLLAMA_MODELS: modelsPath
-      }),
-      stdio: ['ignore', 'pipe', 'pipe'],
-      detached: false
+    var models = await client.list();
+    var found = (models.models || []).some(function (m) {
+      return m.name === modelName || m.name === modelName + ':latest';
     });
-
-    ollamaProcess.stdout.on('data', function (data) {
-      try { console.log('[Ollama] %s', data.toString().trim()); } catch (_) {}
-    });
-    ollamaProcess.stdout.on('error', function () {}); // suppress EPIPE
-
-    ollamaProcess.stderr.on('data', function (data) {
-      try { console.log('[Ollama] %s', data.toString().trim()); } catch (_) {}
-    });
-    ollamaProcess.stderr.on('error', function () {}); // suppress EPIPE
-
-    ollamaProcess.on('exit', function (code) {
-      try { console.log('[Ollama] Process exited with code %s', code); } catch (_) {}
-      serverRunning = false;
-      ollamaProcess = null;
-    });
-
-    // Wait for server to be ready
-    await waitForServer(host, 15000);
-
-    serverRunning = true;
-    startupError = null;
-    console.log('[Ollama] Server started on %s', host);
-
-    // Create JS client pointing to our dedicated server
-    client = new Ollama({ host: host });
-
-    // Ensure the model is available (non-blocking — runs in background)
-    ensureModel().catch(function (err) {
-      console.error('[Ollama] ensureModel failed:', err.message);
-    });
+    if (found) {
+      modelReady = true;
+      pullProgress = { status: 'ready', percent: 100, total: 0, completed: 0 };
+    }
+    return found;
   } catch (err) {
-    startupError = err.message;
-    console.error('[Ollama] Failed to start:', err.message);
+    console.warn('[Ollama] Failed to check model:', err.message);
+    return false;
   }
 }
 
 /**
- * Stop the embedded Ollama server (called on app quit).
+ * Stop tracking (we no longer spawn our own process, but reset state).
  */
 async function stopOllama() {
-  if (ollamaProcess) {
-    try {
-      ollamaProcess.kill('SIGTERM');
-      console.log('[Ollama] Server stopped');
-    } catch (err) {
-      console.warn('[Ollama] Stop error:', err.message);
-    }
-  }
   serverRunning = false;
   client = null;
-  ollamaProcess = null;
   modelReady = false;
 }
 
@@ -385,8 +476,7 @@ async function isReady() {
 }
 
 /**
- * List models available on the local Ollama server.
- * Returns array of { name, size, ... } objects.
+ * List models available on the Ollama server.
  */
 async function listModels() {
   if (!client) return [];
@@ -409,10 +499,10 @@ function getPullProgress() {
  * Get current Ollama status for the settings UI.
  */
 async function getStatus() {
-  var running = serverRunning;
   var models = await listModels();
   return {
-    running: running,
+    installed: ollamaInstalled,
+    running: serverRunning,
     error: startupError,
     models: models.map(function (m) {
       return {
@@ -424,14 +514,27 @@ async function getStatus() {
     currentModel: getOllamaModel(),
     modelReady: modelReady,
     pulling: pullInProgress,
-    pullProgress: pullProgress
+    pullProgress: pullProgress,
+    installing: installInProgress,
+    installProgress: installProgress
   };
+}
+
+/**
+ * Get the Ollama JS client (for use by other modules like animation).
+ */
+function getClient() {
+  return client;
 }
 
 module.exports = {
   startOllama,
   stopOllama,
+  installOllama,
+  pullModel,
+  checkModel,
   isReady,
   getStatus,
-  getPullProgress
+  getPullProgress,
+  getClient
 };

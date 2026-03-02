@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Setting Up Your Local AI Assistant</title>
+  <link rel="stylesheet" href="theme.css">
+  <link rel="stylesheet" href="ollama-setup.css">
+</head>
+<body>
+  <div class="setup-container">
+    <div class="setup-header">
+      <div class="setup-icon">✂️</div>
+      <h1>Setting Up Your Local AI Assistant</h1>
+      <p class="setup-subtitle">Snip uses Ollama to organize your snips with AI — entirely on your machine.</p>
+    </div>
+
+    <div class="setup-steps">
+      <!-- Step 1: Install Ollama -->
+      <div class="setup-step" id="step-install">
+        <div class="step-indicator" id="step-install-indicator">
+          <span class="step-number">1</span>
+        </div>
+        <div class="step-content">
+          <div class="step-title">Install Ollama</div>
+          <div class="step-desc">Free, open-source local AI runtime.</div>
+          <button id="install-btn" class="setup-btn">Install Ollama</button>
+          <div id="install-progress-section" class="progress-section hidden">
+            <div class="scissors-progress-track">
+              <div id="install-progress-bar" class="scissors-progress-fill"></div>
+              <div id="install-scissors" class="scissors-icon">✂️</div>
+            </div>
+            <div id="install-progress-detail" class="progress-detail">Downloading...</div>
+          </div>
+          <div id="install-error" class="step-error hidden">
+            <span id="install-error-text" class="error-text"></span>
+            <button id="install-retry-btn" class="retry-btn">Try again</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 2: Ollama Running -->
+      <div class="setup-step" id="step-running">
+        <div class="step-indicator" id="step-running-indicator">
+          <span class="step-number">2</span>
+        </div>
+        <div class="step-content">
+          <div class="step-title">Ollama Running</div>
+          <div class="step-desc">The Ollama server needs to be active.</div>
+        </div>
+      </div>
+
+      <!-- Step 3: Download Model -->
+      <div class="setup-step" id="step-model">
+        <div class="step-indicator" id="step-model-indicator">
+          <span class="step-number">3</span>
+        </div>
+        <div class="step-content">
+          <div class="step-title">Download MiniCPM-V</div>
+          <div class="step-desc">Vision model that names, tags, and organizes your snips locally (~5 GB).</div>
+          <button id="model-btn" class="setup-btn" disabled>Download MiniCPM-V</button>
+          <div id="model-progress-section" class="progress-section hidden">
+            <div class="scissors-progress-track">
+              <div id="model-progress-bar" class="scissors-progress-fill"></div>
+              <div id="model-scissors" class="scissors-icon">✂️</div>
+            </div>
+            <div id="model-progress-detail" class="progress-detail">Preparing...</div>
+          </div>
+          <div id="model-error" class="step-error hidden">
+            <span id="model-error-text" class="error-text"></span>
+            <button id="model-retry-btn" class="retry-btn">Try again</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- All done -->
+    <div id="setup-done" class="setup-done hidden">
+      <div class="done-icon">✅</div>
+      <div class="done-text">All set! Your AI assistant is ready.</div>
+      <button id="done-btn" class="setup-btn done-btn">Get Started</button>
+    </div>
+
+    <button id="skip-btn" class="skip-btn">Skip for now</button>
+  </div>
+
+  <script src="ollama-setup.js"></script>
+</body>
+</html>
