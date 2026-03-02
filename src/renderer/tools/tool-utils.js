@@ -273,9 +273,46 @@ const ToolUtils = (() => {
     img.src = maskDataURL;
   }
 
+  // ── Tag linkage helpers ──
+
+  var _tagIdCounter = 0;
+
+  /** Generate a unique ID for linking tag parts (tip, line, label group). */
+  function nextTagId() {
+    return 'snip-tag-' + (++_tagIdCounter);
+  }
+
+  /**
+   * Compute the point on the edge of a bounding rect closest to a tip point.
+   * Used to connect the leader line from the tip to the nearest edge of the label group.
+   * @param {number} tipX
+   * @param {number} tipY
+   * @param {{left:number, top:number, width:number, height:number}} bounds
+   * @returns {{x:number, y:number}}
+   */
+  function lineEndpointForTag(tipX, tipY, bounds) {
+    var cx = bounds.left + bounds.width / 2;
+    var cy = bounds.top + bounds.height / 2;
+    var dx = tipX - cx;
+    var dy = tipY - cy;
+    if (dx === 0 && dy === 0) {
+      return { x: bounds.left, y: cy };
+    }
+    var halfW = bounds.width / 2;
+    var halfH = bounds.height / 2;
+    var tX = halfW > 0 ? halfW / Math.abs(dx) : 9999;
+    var tY = halfH > 0 ? halfH / Math.abs(dy) : 9999;
+    var t = Math.min(tX, tY);
+    return {
+      x: cx + dx * t,
+      y: cy + dy * t
+    };
+  }
+
   return {
     clampedScenePoint, createMosaicImage, showToast, hideToast,
     getAccentColor, hexToRgba, measureTextWidth,
-    recolorMaskToHighlight, maskToOutline
+    recolorMaskToHighlight, maskToOutline,
+    nextTagId, lineEndpointForTag
   };
 })();

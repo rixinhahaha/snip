@@ -196,25 +196,35 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 | 7 | Click on canvas (second click) | Final tag created: tip dot + leader line + text bubble |
 | 8 | -- | Text editing mode entered immediately with "Label" selected |
 | 9 | Type label text | Text appears in bubble, bubble auto-sizes on editing exit |
-| 10 | Press Enter | Text editing exits, all parts grouped as one object |
+| 10 | Press Enter | Text editing exits; label (bubble+textbox) becomes movable group |
 | 11 | Press Shift+Enter | Inserts a newline in the tag label |
-| 12 | Click outside or press Escape | Also exits editing and re-groups tag |
+| 12 | Click outside or press Escape | Also exits editing and creates the tag |
+
+**Draggable tag labels:**
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Select a tag's label group | Label (bubble + text) selected, tip dot stays fixed |
+| 2 | Drag the label | Bubble moves freely; tip stays anchored; leader line stretches |
+| 3 | Release | Line connects tip to nearest edge of label bubble |
 
 **Double-click editing:**
 
 | Step | Action | Expected Result |
 |------|--------|-----------------|
 | 1 | Switch to Select tool (V) | -- |
-| 2 | Double-click an existing tag | Tag ungroups, text enters editing mode |
+| 2 | Double-click an existing tag | Label ungroups, text enters editing mode |
 | 3 | Edit the text | -- |
-| 4 | Click outside or press Escape | Tag re-groups with updated text, bubble auto-sized |
+| 4 | Click outside or press Escape | Label re-groups with updated text, bubble auto-sized |
 
 **Edge cases:**
 - Second click too close to first (< 20px): placement cancelled, returns to idle
 - Press Escape during placement (after first click): preview objects removed, returns to idle
 - Switching tools mid-placement: preview objects cleaned up automatically
-- Undo (Cmd+Z) removes the entire tag group in one step
-- Color/font/size changes apply to selected tag group
+- Undo (Cmd+Z) removes the entire tag (label group + linked tip + line) in one step
+- Redo (Cmd+Shift+Z) restores the tag with all linked parts
+- Color/font/size changes apply to selected label group and linked parts (tip, line)
+- Delete/Backspace removes the label group and all linked parts
 
 ### 3.5 Blur Brush Tool
 
@@ -235,19 +245,22 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 | 3 | Click on an object in the image | Loading indicator while SAM processes |
 | 4 | -- | Segmentation mask overlay appears on the object |
 | 5 | Shift+click to refine | Additional points added, mask recalculated |
-| 6 | Press Enter / Apply Cutout | Background replaced with cutout (existing behavior) |
+| 6 | Press Enter / Apply Cutout | Background replaced with cutout; switches to Select mode |
 | 7 | Press T / Tag Segment | Highlight overlay + tag bubble placed; textbox enters editing |
 | 7a | Shift+T | Outline mode: colored border ring instead of highlight fill |
-| 7b | Type label, press Enter | Exits editing; overlay + tag parts grouped into selectable annotation |
+| 7b | Type label, press Enter | Exits editing; switches to Select mode with label selected |
 | 7c | Shift+Enter while editing | Inserts newline in tag label |
+| 7d | Drag the label | Bubble moves freely; tip stays anchored; leader line stretches |
 | 8 | Press Escape / Cancel | Mask discarded |
 
 **Tag Segment modes:**
-- **Highlight (T):** Translucent color fill over the mask area (30% opacity, uses active tag color)
+- **Highlight (T):** Translucent color fill over the mask area (55% opacity, uses active tag color)
 - **Outline (Shift+T):** Colored border ring tracing the mask contour (3px width)
 - Both modes attach a tag bubble (tip + leader line + label) at the center-top of the mask
-- Double-click the tag group to re-edit the label text
+- Label group (bubble + text) is movable; tip and line are anchored with dynamic leader line
+- Double-click the label group to re-edit the label text
 - Tag color comes from the active tag color swatch in the toolbar
+- After completing cutout or tagging, editor switches to Select (cursor) mode
 
 **Edge cases:**
 - Segment tool hidden if `checkSegmentSupport()` returns false (< 4GB RAM or no system Node)

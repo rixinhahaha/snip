@@ -13,6 +13,7 @@ const SegmentTool = (() => {
     var replaceBackground = callbacks.replaceBackground;
     var getBackground = callbacks.getBackground;
     var onCutoutAccepted = callbacks.onCutoutAccepted || null;
+    var onComplete = callbacks.onComplete || null;
     var getTagColor = callbacks.getTagColor || function() { return '#64748B'; };
     var getFont = callbacks.getFont || function() { return 'Plus Jakarta Sans'; };
     var getFontSize = callbacks.getFontSize || function() { return 16; };
@@ -125,6 +126,9 @@ const SegmentTool = (() => {
       pendingCutoutURL = null;
       pendingMaskURL = null;
       ToolUtils.showToast('Cutout applied', 'success', 2000);
+
+      // Switch to select mode
+      if (onComplete) onComplete();
     }
 
     function rejectCutout() {
@@ -180,7 +184,7 @@ const SegmentTool = (() => {
             var overlayW = result.w * imgToCanvasX;
             var overlayH = result.h * imgToCanvasY;
 
-            var highlightOpacity = mode === 'outline' ? 1.0 : 0.35;
+            var highlightOpacity = mode === 'outline' ? 1.0 : 0.55;
             var fabricOverlay = new fabric.FabricImage(overlayImg, {
               left: overlayLeft,
               top: overlayTop,
@@ -256,9 +260,9 @@ const SegmentTool = (() => {
             });
 
             // Add all parts to canvas for initial editing
-            var items = [fabricOverlay, tip, line, bubble, textbox];
-            for (var i = 0; i < items.length; i++) {
-              canvas.add(items[i]);
+            var allItems = [fabricOverlay, tip, line, bubble, textbox];
+            for (var i = 0; i < allItems.length; i++) {
+              canvas.add(allItems[i]);
             }
 
             // Live-resize bubble as user types
@@ -292,7 +296,7 @@ const SegmentTool = (() => {
             textbox.selectAll();
             canvas.renderAll();
 
-            // On editing exit, group everything
+            // On editing exit, create linked objects
             var onExitEditing = function() {
               textbox.off('editing:exited', onExitEditing);
               textbox.off('changed', onChanged);
@@ -300,24 +304,54 @@ const SegmentTool = (() => {
               // Final auto-size
               onChanged();
 
-              // Remove all from canvas, regroup
-              for (var j = 0; j < items.length; j++) {
-                canvas.remove(items[j]);
+              // Remove all from canvas
+              for (var j = 0; j < allItems.length; j++) {
+                canvas.remove(allItems[j]);
               }
 
-              var group = new fabric.Group(items, {
+              // Generate unique tag ID for linkage
+              var tagId = ToolUtils.nextTagId();
+
+              // Create label group (bubble + textbox only) — movable
+              var labelGroup = new fabric.Group([bubble, textbox], {
                 selectable: true,
                 evented: true,
-                subTargetCheck: true
+                subTargetCheck: true,
+                lockRotation: true,
+                hasControls: false
               });
-              group._snipTagType = true;
-              group._snipSegmentTag = true;
-              group._snipTagColor = tagColor;
-              canvas.add(group);
-              canvas.setActiveObject(group);
+              labelGroup._snipTagType = true;
+              labelGroup._snipSegmentTag = true;
+              labelGroup._snipTagColor = tagColor;
+              labelGroup._snipTagId = tagId;
+
+              // Mark linked parts
+              fabricOverlay._snipTagId = tagId;
+              fabricOverlay._snipTagRole = 'overlay';
+              tip._snipTagId = tagId;
+              tip._snipTagRole = 'tip';
+              line._snipTagId = tagId;
+              line._snipTagRole = 'line';
+
+              // Add in z-order: overlay (bottom), tip, line, label group (top)
+              canvas.add(fabricOverlay);
+              canvas.add(tip);
+              canvas.add(line);
+              canvas.add(labelGroup);
+
+              // Update line endpoint to connect to label group edge
+              var bounds = labelGroup.getBoundingRect();
+              var endpoint = ToolUtils.lineEndpointForTag(tip.left, tip.top, bounds);
+              line.set({ x2: endpoint.x, y2: endpoint.y });
+              line.setCoords();
+
+              canvas.setActiveObject(labelGroup);
               canvas.renderAll();
 
               ToolUtils.showToast('Segment tagged', 'success', 2000);
+
+              // Switch to select mode
+              if (onComplete) onComplete();
             };
 
             textbox.on('editing:exited', onExitEditing);

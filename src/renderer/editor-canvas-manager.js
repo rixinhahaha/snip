@@ -113,6 +113,19 @@ const EditorCanvasManager = (() => {
     var objects = canvas.getObjects();
     if (objects.length > 0) {
       var removed = objects[objects.length - 1];
+
+      // If it's a linked tag, also remove its linked parts (tip, line, overlay)
+      if (removed._snipTagId) {
+        var linkedParts = [];
+        canvas.getObjects().slice().forEach(function(obj) {
+          if (obj._snipTagId === removed._snipTagId && obj !== removed) {
+            linkedParts.push(obj);
+            canvas.remove(obj);
+          }
+        });
+        removed._snipLinkedParts = linkedParts;
+      }
+
       canvas.remove(removed);
       redoStack.push(removed);
       canvas.renderAll();
@@ -123,6 +136,15 @@ const EditorCanvasManager = (() => {
     if (!canvas || redoStack.length === 0) return;
     isRedoing = true;
     var obj = redoStack.pop();
+
+    // Restore linked tag parts first (tip, line, overlay)
+    if (obj._snipLinkedParts) {
+      obj._snipLinkedParts.forEach(function(part) {
+        canvas.add(part);
+      });
+      delete obj._snipLinkedParts;
+    }
+
     canvas.add(obj);
     canvas.renderAll();
     isRedoing = false;

@@ -97,6 +97,9 @@
       onCutoutAccepted: function(data) {
         AnimateTool.setCutoutData(data);
       },
+      onComplete: function() {
+        Toolbar.setTool(TOOLS.SELECT);
+      },
       getTagColor: Toolbar.getActiveTagColor,
       getFont: Toolbar.getActiveFont,
       getFontSize: Toolbar.getActiveFontSize
@@ -120,13 +123,21 @@
       onTagColorChange: function(color) {
         var active = canvas.getActiveObject();
         if (active && active._snipTagType) {
+          // Update label group sub-objects (bubble + textbox)
           active.getObjects().forEach(function(obj) {
             if (obj.type === 'textbox') obj.set({ fill: '#FFFFFF', cursorColor: '#FFFFFF' });
-            else if (obj.type === 'circle') obj.set({ fill: color, stroke: color });
-            else if (obj.type === 'line') obj.set({ stroke: color });
             else if (obj.type === 'rect') obj.set({ stroke: color, fill: color });
           });
           active._snipTagColor = color;
+          // Update linked parts (tip, line) on canvas
+          if (active._snipTagId) {
+            canvas.getObjects().forEach(function(obj) {
+              if (obj._snipTagId === active._snipTagId && obj !== active) {
+                if (obj._snipTagRole === 'tip') obj.set({ fill: color, stroke: color });
+                else if (obj._snipTagRole === 'line') obj.set({ stroke: color });
+              }
+            });
+          }
           canvas.renderAll();
         }
       },
@@ -284,6 +295,28 @@
         colorPicker.classList.remove('hidden');
       }
     });
+
+    // Update leader line when a tag label group is dragged
+    canvas.on('object:moving', function(opt) {
+      var target = opt.target;
+      if (!target || !target._snipTagId) return;
+
+      var tagId = target._snipTagId;
+      var tipObj = null;
+      var tagLine = null;
+
+      canvas.getObjects().forEach(function(obj) {
+        if (obj._snipTagId === tagId && obj._snipTagRole === 'tip') tipObj = obj;
+        if (obj._snipTagId === tagId && obj._snipTagRole === 'line') tagLine = obj;
+      });
+
+      if (tipObj && tagLine) {
+        var bounds = target.getBoundingRect();
+        var endpoint = ToolUtils.lineEndpointForTag(tipObj.left, tipObj.top, bounds);
+        tagLine.set({ x1: tipObj.left, y1: tipObj.top, x2: endpoint.x, y2: endpoint.y });
+        tagLine.setCoords();
+      }
+    });
   }
 
   function switchTool(tool) {
@@ -381,7 +414,16 @@
       if (canvas) {
         var activeObj = canvas.getActiveObject();
         if (activeObj && !(activeObj.type === 'textbox' && activeObj.isEditing)) {
-          canvas.remove(activeObj);
+          // Remove linked tag parts (tip, line, overlay) alongside the label group
+          if (activeObj._snipTagId) {
+            canvas.getObjects().slice().forEach(function(obj) {
+              if (obj._snipTagId === activeObj._snipTagId) {
+                canvas.remove(obj);
+              }
+            });
+          } else {
+            canvas.remove(activeObj);
+          }
           canvas.renderAll();
         }
       }

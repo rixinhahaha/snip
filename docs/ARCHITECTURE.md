@@ -60,11 +60,11 @@ src/
     toolbar.js               # Editor toolbar state machine
     theme.css                # ALL theme tokens (Dark, Light, Glass + solid fallback)
     tools/
-      tool-utils.js          # Shared: getAccentColor(), hexToRgba(), createMosaicImage(), recolorMaskToHighlight(), maskToOutline()
+      tool-utils.js          # Shared: getAccentColor(), hexToRgba(), createMosaicImage(), recolorMaskToHighlight(), maskToOutline(), nextTagId(), lineEndpointForTag()
       rectangle.js           # Rectangle tool (outline/highlight/blur modes)
       textbox.js             # Text annotation tool
       arrow.js               # Arrow annotation tool
-      tag.js                 # Tag callout tool (two-click placement)
+      tag.js                 # Tag callout tool (two-click, linked label group + tip/line)
       blur-brush.js          # Free-draw blur brush
       segment.js             # SAM segmentation tool (click-to-select, tag segment, cutout)
       animate.js             # 2GIF animation tool (preset picker, save/copy panel)
