@@ -48,6 +48,7 @@ asarUnpack:
   - "node_modules/@huggingface/transformers/**"
   - "node_modules/sharp/**"
   - "node_modules/@img/**"
+  - "node_modules/detect-libc/**"
   - "node_modules/onnxruntime-node/**"
   - "node_modules/onnxruntime-common/**"
   - "node_modules/onnxruntime-web/**"

@@ -117,6 +117,29 @@ module.exports = async function afterPack(context) {
   }
 
   // ---------------------------------------------------------------
+  // 2c. Remove wrong-platform/arch @img/sharp-* packages
+  //     npm only installs the matching platform, but strip any
+  //     that don't match darwin-{targetArch} as a safety net.
+  // ---------------------------------------------------------------
+  var imgDir = path.join(nmDir, '@img');
+  if (fs.existsSync(imgDir)) {
+    var keepSuffix = 'darwin-' + targetArch;
+    var imgPackages = fs.readdirSync(imgDir);
+    for (var si = 0; si < imgPackages.length; si++) {
+      var pkg = imgPackages[si];
+      // Only strip platform-specific packages (sharp-<platform>-<arch>, sharp-libvips-<platform>-<arch>)
+      // Keep non-platform packages like "colour"
+      if ((pkg.startsWith('sharp-darwin-') || pkg.startsWith('sharp-libvips-darwin-') ||
+           pkg.startsWith('sharp-linux') || pkg.startsWith('sharp-libvips-linux') ||
+           pkg.startsWith('sharp-win32') || pkg.startsWith('sharp-wasm') ||
+           pkg.startsWith('sharp-linuxmusl') || pkg.startsWith('sharp-libvips-linuxmusl')) &&
+          pkg.indexOf(keepSuffix) === -1) {
+        removeDir(path.join(imgDir, pkg), '@img/' + pkg + ' (not needed for ' + keepSuffix + ')');
+      }
+    }
+  }
+
+  // ---------------------------------------------------------------
   // 4. Pre-sign remaining native binaries
   //    electron-builder will sign the whole app bundle after this
   //    hook, but third-party .dylib/.node files sometimes need to
