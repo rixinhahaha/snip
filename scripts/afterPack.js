@@ -3,7 +3,7 @@
  *
  * Runs after the app directory is assembled but BEFORE electron-builder signs
  * the app bundle. This hook:
- *   1. Removes canvas/sharp/@img native modules (unused transitive deps)
+ *   1. Removes canvas native module (unused transitive dep)
  *   2. Removes non-macOS onnxruntime binaries (used by @huggingface/transformers)
  *   3. Removes wrong-arch darwin binaries (keep only the target arch)
  *   4. Pre-signs remaining .node and .dylib files with Developer ID cert
@@ -59,15 +59,13 @@ module.exports = async function afterPack(context) {
   console.log('[afterPack] Target architecture: ' + targetArch);
 
   // ---------------------------------------------------------------
-  // 1. Remove unused native modules (canvas, sharp, @img)
-  //    Safety net in case files exclusion in electron-builder.yml
-  //    didn't catch everything (e.g. auto-unpacked native modules).
+  // 1. Remove unused native modules (canvas)
+  //    Note: sharp and @img are kept — @huggingface/transformers
+  //    has a hard static import of sharp that crashes if missing.
   // ---------------------------------------------------------------
   var nmDir = path.join(unpackedDir, 'node_modules');
 
   removeDir(path.join(nmDir, 'canvas'), 'canvas (unused transitive dep)');
-  removeDir(path.join(nmDir, 'sharp'), 'sharp (unused transitive dep)');
-  removeDir(path.join(nmDir, '@img'), '@img (sharp platform binaries)');
 
   // ---------------------------------------------------------------
   // 2. Remove non-macOS onnxruntime binaries

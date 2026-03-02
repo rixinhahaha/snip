@@ -41,13 +41,13 @@ files:
   - assets/**/*
   - "!**/*.map"
   - "!**/node_modules/canvas{,/**}"
-  - "!**/node_modules/sharp{,/**}"
-  - "!**/node_modules/@img{,/**}"
 
 asarUnpack:
   - "src/main/segmentation/segmentation-worker.js"
   - "src/main/animation/gif-encoder-worker.js"
   - "node_modules/@huggingface/transformers/**"
+  - "node_modules/sharp/**"
+  - "node_modules/@img/**"
   - "node_modules/onnxruntime-node/**"
   - "node_modules/onnxruntime-common/**"
   - "node_modules/onnxruntime-web/**"
