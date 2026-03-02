@@ -6,7 +6,7 @@ const { registerIpcHandlers } = require('./ipc-handlers');
 const { captureScreen } = require('./capturer');
 const { initStore } = require('./store');
 const { startWatcher } = require('./organizer/watcher');
-const { startOllama, stopOllama } = require('./ollama-manager');
+const { startOllama, stopOllama, setOnInstallComplete } = require('./ollama-manager');
 const { BASE_WEB_PREFERENCES } = require('./constants');
 
 // Native Liquid Glass (macOS 26+) — safe no-op on older systems
@@ -305,6 +305,11 @@ app.whenReady().then(() => {
 
   // Start background organizer
   startWatcher();
+
+  // Reopen setup window when Ollama install completes so user can accept model download
+  setOnInstallComplete(function () {
+    createSetupWindow();
+  });
 
   // Detect system Ollama and connect (no bundled binary)
   startOllama().then(async function () {
