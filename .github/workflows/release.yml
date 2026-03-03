@@ -10,9 +10,6 @@ permissions:
 
 jobs:
   build:
-    strategy:
-      matrix:
-        arch: [arm64, x64]
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -28,10 +25,13 @@ jobs:
       - run: npm ci
 
       - name: Rebuild native modules for target arch
-        run: npx node-gyp rebuild --arch=${{ matrix.arch }}
+        run: npx node-gyp rebuild --arch=arm64
 
       - name: Download HuggingFace models
         run: node scripts/download-models.js
+
+      - name: Download bundled Node.js binary
+        run: node scripts/download-node.js --arch arm64
 
       - name: Build, sign & notarize
         env:
@@ -40,11 +40,11 @@ jobs:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-        run: npx electron-builder --mac dmg --${{ matrix.arch }} --publish never
+        run: npx electron-builder --mac dmg --arm64 --publish never
 
       - uses: actions/upload-artifact@v4
         with:
-          name: dmg-${{ matrix.arch }}
+          name: dmg-arm64
           path: dist/*.dmg
 
   release:
@@ -57,7 +57,6 @@ jobs:
         with:
           files: |
             dmg-arm64/*.dmg
-            dmg-x64/*.dmg
           draft: false
           generate_release_notes: true
 
@@ -74,29 +73,20 @@ jobs:
         run: |
           VERSION=${GITHUB_REF#refs/tags/v}
           DMG_ARM64="https://github.com/rixinhahaha/snip/releases/download/v${VERSION}/Snip-${VERSION}-arm64.dmg"
-          DMG_X64="https://github.com/rixinhahaha/snip/releases/download/v${VERSION}/Snip-${VERSION}-x64.dmg"
           SHA_ARM64=$(curl -sL "$DMG_ARM64" | shasum -a 256 | cut -d' ' -f1)
-          SHA_X64=$(curl -sL "$DMG_X64" | shasum -a 256 | cut -d' ' -f1)
 
           cat > Casks/snip.rb << EOF
           cask "snip" do
             version "${VERSION}"
+            sha256 "${SHA_ARM64}"
 
-            on_arm do
-              sha256 "${SHA_ARM64}"
-              url "https://github.com/rixinhahaha/snip/releases/download/v#{version}/Snip-#{version}-arm64.dmg"
-            end
-
-            on_intel do
-              sha256 "${SHA_X64}"
-              url "https://github.com/rixinhahaha/snip/releases/download/v#{version}/Snip-#{version}-x64.dmg"
-            end
-
+            url "https://github.com/rixinhahaha/snip/releases/download/v#{version}/Snip-#{version}-arm64.dmg"
             name "Snip"
             desc "Screenshot app with annotation, AI-powered organization, and semantic search"
             homepage "https://github.com/rixinhahaha/snip"
 
             depends_on macos: ">= :ventura"
+            depends_on arch: :arm64
 
             livecheck do
               url :url

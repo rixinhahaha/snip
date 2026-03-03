@@ -87,11 +87,14 @@ site/                        # Marketing site (GitHub Pages, snipit.dev)
   assets/                      # Hero video, screenshots, OG image
 scripts/                     # Build and generation scripts
   download-models.js           # Download MiniLM + SlimSAM to vendor/models/
+  download-node.js             # Download standalone Node.js binary to vendor/node/
   afterPack.js                 # electron-builder afterPack hook (strip unused native modules, pre-sign)
   build-signed.sh              # Production build: sign + notarize
   generate-app-icon.js         # Regenerate app icons from SVG template
 vendor/                      # Downloaded at dev time, bundled at build time
   models/                      # HuggingFace models: MiniLM + SlimSAM (~75 MB)
+  node/                        # Standalone Node.js binary for SAM subprocess (~100 MB)
+    arm64/node                   # Apple Silicon
   (static animation presets inlined in src/main/animation/animation.js)
 ```
 
@@ -147,7 +150,7 @@ Both Transformers.js models are **pre-downloaded and bundled** — no runtime do
 ONNX Runtime (via Transformers.js) **crashes in worker_threads**. Embeddings must run on the main Electron thread. The worker thread handles Ollama API calls, then delegates embedding generation back to main via message passing.
 
 ### SAM in Child Process
-The segmentation model (SlimSAM) runs in a **child process** (`child_process.fork`), not a worker thread, because ONNX Runtime also crashes in Electron's V8 worker context. The child process uses the system-installed Node.js binary (not Electron's). The parent passes `SNIP_MODELS_PATH` and `SNIP_PACKAGED` env vars so the worker uses bundled models.
+The segmentation model (SlimSAM) runs in a **child process** (`child_process.fork`), not a worker thread, because ONNX Runtime also crashes in Electron's V8 worker context. The child process uses a standalone Node.js binary (not Electron's). A bundled Node.js binary is included in the packaged app (`Resources/node/node`) so the segment tool works without requiring users to install developer tools. In development, `vendor/node/{arch}/node` is checked first, then system Node.js installs (NVM, homebrew, PATH, FNM). The parent passes `SNIP_MODELS_PATH` and `SNIP_PACKAGED` env vars so the worker uses bundled models.
 
 ### fal.ai Cloud Animation
 The Animate feature uses the **fal.ai Wan 2.2 A14B image-to-video API** instead of a local model. This requires an internet connection and a fal.ai API key (set in Settings). When the user clicks Animate, Ollama's minicpm-v vision model analyzes the cutout and generates 3 AI-tailored animation presets (e.g., "wag tail" for a dog). If Ollama is unavailable, it falls back to 6 static presets inlined in `animation.js`. Users can also enter a custom animation prompt. All animations are capped at **4 seconds maximum** (enforced via `MAX_DURATION_SECONDS` in `animation.js` and `maxDuration` in `gif-encoder-worker.js`). The pipeline:

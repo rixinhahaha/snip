@@ -35,6 +35,9 @@ Thumbs.db
 # Bundled vendor models (downloaded via node scripts/download-models.js)
 vendor/models/
 
+# Bundled Node.js binary (downloaded via node scripts/download-node.js)
+vendor/node/
+
 # Claude Code (user-specific session data)
 .claude/
 

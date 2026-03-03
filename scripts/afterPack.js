@@ -3,10 +3,11 @@
  *
  * Runs after the app directory is assembled but BEFORE electron-builder signs
  * the app bundle. This hook:
- *   1. Removes canvas native module (unused transitive dep)
- *   2. Removes non-macOS onnxruntime binaries (used by @huggingface/transformers)
- *   3. Removes wrong-arch darwin binaries (keep only the target arch)
- *   4. Pre-signs remaining .node and .dylib files with Developer ID cert
+ *   1. Copies the arch-specific bundled Node.js binary into Resources/node/
+ *   2. Removes canvas native module (unused transitive dep)
+ *   3. Removes non-macOS onnxruntime binaries (used by @huggingface/transformers)
+ *   4. Removes wrong-arch darwin binaries (keep only the target arch)
+ *   5. Pre-signs remaining .node and .dylib files with Developer ID cert
  *
  * Note: Ollama is NOT bundled — users install it separately via ollama.com.
  */
@@ -55,22 +56,36 @@ module.exports = async function afterPack(context) {
     return;
   }
 
-  // electron-builder Arch enum: 0=x64, 1=ia32, 2=armv7l, 3=arm64, 4=universal
-  var archMap = { 0: 'x64', 1: 'ia32', 2: 'armv7l', 3: 'arm64', 4: 'universal' };
-  var targetArch = archMap[context.arch] || 'arm64';
+  // electron-builder Arch enum: 3=arm64 (only arch we support)
+  var targetArch = 'arm64';
   console.log('[afterPack] Target architecture: ' + targetArch);
 
   // ---------------------------------------------------------------
-  // 1. Remove unused native modules (canvas)
-  //    Note: sharp and @img are kept — @huggingface/transformers
-  //    has a hard static import of sharp that crashes if missing.
+  // 1. Copy arch-specific bundled Node.js binary
+  //    electron-builder's extraResources doesn't interpolate ${arch}
+  //    in from paths, so we copy the correct binary here.
+  // ---------------------------------------------------------------
+  var vendorNodeSrc = path.join(__dirname, '..', 'vendor', 'node', targetArch, 'node');
+  var nodeDestDir = path.join(resourcesDir, 'node');
+  var nodeDestFile = path.join(nodeDestDir, 'node');
+  if (fs.existsSync(vendorNodeSrc)) {
+    fs.mkdirSync(nodeDestDir, { recursive: true });
+    fs.copyFileSync(vendorNodeSrc, nodeDestFile);
+    fs.chmodSync(nodeDestFile, 0o755);
+    console.log('[afterPack] Copied bundled Node.js binary for ' + targetArch);
+  } else {
+    console.warn('[afterPack] No bundled Node.js binary found at ' + vendorNodeSrc + ' — segment tool may not work');
+  }
+
+  // ---------------------------------------------------------------
+  // 2. Remove unused native modules (canvas)
   // ---------------------------------------------------------------
   var nmDir = path.join(unpackedDir, 'node_modules');
 
   removeDir(path.join(nmDir, 'canvas'), 'canvas (unused transitive dep)');
 
   // ---------------------------------------------------------------
-  // 2. Remove non-macOS onnxruntime binaries
+  // 3. Remove non-macOS onnxruntime binaries
   // ---------------------------------------------------------------
   var onnxBinDir = path.join(nmDir, 'onnxruntime-node', 'bin', 'napi-v3');
   if (fs.existsSync(onnxBinDir)) {
@@ -83,7 +98,7 @@ module.exports = async function afterPack(context) {
     }
 
     // ---------------------------------------------------------------
-    // 3. Remove wrong-arch darwin binaries
+    // 3b. Remove wrong-arch darwin binaries
     // ---------------------------------------------------------------
     if (targetArch !== 'universal') {
       var darwinDir = path.join(onnxBinDir, 'darwin');
@@ -102,7 +117,7 @@ module.exports = async function afterPack(context) {
   }
 
   // ---------------------------------------------------------------
-  // 2b. Remove wrong-arch electron-liquid-glass prebuilds
+  // 3c. Remove wrong-arch electron-liquid-glass prebuilds
   // ---------------------------------------------------------------
   var elgPrebuildsDir = path.join(nmDir, 'electron-liquid-glass', 'prebuilds');
   if (fs.existsSync(elgPrebuildsDir)) {
@@ -119,7 +134,7 @@ module.exports = async function afterPack(context) {
   }
 
   // ---------------------------------------------------------------
-  // 2c. Remove wrong-platform/arch @img/sharp-* packages
+  // 3d. Remove wrong-platform/arch @img/sharp-* packages
   //     npm only installs the matching platform, but strip any
   //     that don't match darwin-{targetArch} as a safety net.
   // ---------------------------------------------------------------
@@ -142,7 +157,7 @@ module.exports = async function afterPack(context) {
   }
 
   // ---------------------------------------------------------------
-  // 4. Pre-sign remaining native binaries
+  // 5. Pre-sign remaining native binaries
   //    electron-builder will sign the whole app bundle after this
   //    hook, but third-party .dylib/.node files sometimes need to
   //    be individually signed first for notarization to pass.
@@ -167,6 +182,12 @@ module.exports = async function afterPack(context) {
 
   var nativeDir = path.join(resourcesDir, 'native');
   findFiles(nativeDir, nativeBinaryPattern, binaries);
+
+  // Also sign the bundled Node.js binary
+  var bundledNode = path.join(resourcesDir, 'node', 'node');
+  if (fs.existsSync(bundledNode)) {
+    binaries.push(bundledNode);
+  }
 
   if (binaries.length === 0) {
     console.log('[afterPack] No native binaries found to pre-sign');

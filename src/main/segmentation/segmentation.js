@@ -15,13 +15,22 @@ const pendingRequests = new Map();
 let resolvedNodePath = null;
 
 /**
- * Find the system Node.js binary. Searches NVM, common paths, PATH, and FNM.
+ * Find a Node.js binary. Checks bundled binary first, then system installs
+ * (NVM, common paths, PATH, FNM).
  */
 function findNodeBinary() {
   if (resolvedNodePath) return resolvedNodePath;
 
   const candidates = [];
 
+  // 1. Bundled Node.js (packaged app)
+  if (process.resourcesPath) {
+    candidates.push(path.join(process.resourcesPath, 'node', 'node'));
+  }
+  // 2. Bundled Node.js (development)
+  candidates.push(path.join(__dirname, '..', '..', '..', 'vendor', 'node', process.arch, 'node'));
+
+  // 3. System Node.js installs
   const nvmDir = path.join(os.homedir(), '.nvm', 'versions', 'node');
   try {
     const versions = fs.readdirSync(nvmDir).sort();

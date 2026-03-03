@@ -9,7 +9,7 @@
 | Requirement | Why |
 |-------------|-----|
 | **macOS** 10.13+ | Electron target platform (macOS 26+ for Liquid Glass) |
-| **Node.js** 18+ | System Node.js required for SAM segmentation subprocess |
+| **Node.js** 18+ | Used during development; a standalone Node.js binary is bundled for the packaged app |
 | **Xcode CLT** | `xcode-select --install` — compiles native `window_utils.node` addon |
 | **Screen Recording permission** | Required for `desktopCapturer` — grant in System Settings > Privacy |
 
@@ -30,6 +30,9 @@ npm run rebuild
 #   - MiniLM (~23 MB) — embedding model for semantic search
 #   - SlimSAM (~50 MB) — segmentation model for object selection
 npm run download-models
+
+# Download Node.js binary for SAM subprocess (run once, ~100 MB)
+npm run download-node
 
 # Launch in dev mode (verbose logging)
 npm run dev
@@ -53,12 +56,11 @@ The app runs as a **tray-only** process (no Dock icon). Look for the scissors ic
 | `npm run rebuild` | `electron-rebuild` — recompile all native modules for Electron's Node ABI |
 | `npm run prebuild` | `node-gyp rebuild` — compile just the `window_utils.node` addon |
 | `npm run build` | Full build for arm64: `node-gyp rebuild` + `electron-builder --mac --arm64` + ad-hoc sign |
-| `npm run build:x64` | Full build for x64 (Intel): `node-gyp rebuild --arch=x64` + `electron-builder --mac --x64` + ad-hoc sign |
 | `npm run sign:adhoc` | Ad-hoc `codesign` for local use (no Developer ID needed) |
-| `./scripts/build-signed.sh` | Production build (host arch): loads `.env` creds, validates cert, builds + signs + notarizes |
-| `./scripts/build-signed.sh --arch x64` | Production build for Intel |
+| `./scripts/build-signed.sh` | Production build (arm64): loads `.env` creds, validates cert, builds + signs + notarizes |
 | `node scripts/generate-app-icon.js` | Regenerate `assets/icon.png` and `assets/icon.icns` from SVG template |
 | `npm run download-models` | Download HuggingFace models: MiniLM (~23 MB), SlimSAM (~50 MB). Note: Ollama and minicpm-v are NOT bundled — installed at runtime. |
+| `npm run download-node` | Download standalone Node.js 22 LTS binary (~100 MB) for SAM segmentation subprocess (arm64 only). |
 
 ---
 
@@ -109,10 +111,11 @@ npm run build
 1. `node-gyp rebuild` compiles `window_utils.node`
 2. `electron-builder --mac` packages the app
 3. `afterPack` hook in `electron-builder.yml`:
+   - Copies arch-specific bundled Node.js binary to `Resources/node/node`
    - Removes unused native modules (`canvas`)
    - Strips non-macOS ONNX Runtime binaries
    - Removes wrong-arch `electron-liquid-glass` prebuilds
-   - Pre-signs remaining `.node` and `.dylib` files
+   - Pre-signs remaining `.node`, `.dylib` files and the bundled Node.js binary
 4. No `CSC_LINK` detected -> `sign:adhoc` runs `codesign --force --deep --sign -`
 5. Output: `dist/mac-{arch}/Snip.app` + `Snip-{version}-{arch}.dmg`
 
@@ -123,7 +126,6 @@ DMGs use the format `Snip-{version}-{arch}.dmg` (configured via `artifactName` i
 | Architecture | Example |
 |-------------|---------|
 | Apple Silicon | `Snip-1.0.9-arm64.dmg` |
-| Intel | `Snip-1.0.9-x64.dmg` |
 
 ### Production Build (Signed + Notarized)
 
@@ -152,7 +154,7 @@ base64 -i certificate.p12 | tr -d '\n' | pbcopy
 1. Loads `.env` credentials, validates cert type
 2. `npm run prebuild` compiles native addon
 3. `electron-builder --mac` assembles + signs with Developer ID cert
-4. `afterPack` hook cleans unused modules, removes wrong-arch prebuilds, pre-signs native binaries
+4. `afterPack` hook copies bundled Node.js binary, cleans unused modules, removes wrong-arch prebuilds, pre-signs native binaries
 5. App submitted to Apple notary service
 6. Notarization ticket stapled to DMG on success
 7. Output: signed + notarized `dist/Snip-{version}-{arch}.dmg`
@@ -175,7 +177,7 @@ git tag v1.0.9
 git push origin v1.0.9
 ```
 
-The workflow downloads HuggingFace models, builds both arm64 and x64 DMGs (with models bundled), creates a GitHub release, and auto-updates the Homebrew cask with architecture-specific URLs.
+The workflow downloads HuggingFace models and the Node.js binary, builds an arm64 DMG (with models and Node.js bundled), creates a GitHub release, and auto-updates the Homebrew cask.
 
 ### Homebrew
 
@@ -200,6 +202,7 @@ The cask is hosted at [`rixinhahaha/homebrew-snip`](https://github.com/rixinhaha
 | Ollama binary | `/usr/local/bin/ollama`, `/opt/homebrew/bin/ollama`, or `/Applications/Ollama.app/Contents/Resources/ollama` | User-installed (or installed via in-app setup wizard) |
 | Ollama models | `~/.ollama/models/` | Shared with system Ollama; minicpm-v pulled on first launch |
 | HF models (MiniLM + SlimSAM) | `vendor/models/` (dev) / `Resources/models/` (packaged) | Bundled — `npm run download-models --hf` (~75 MB) |
+| Node.js binary (SAM subprocess) | `vendor/node/{arch}/node` (dev) / `Resources/node/node` (packaged) | Bundled — `npm run download-node` (~100 MB) |
 | Animation presets | Inlined in `src/main/animation/animation.js` | 6 static text-prompt presets (fallback when Ollama AI presets unavailable) |
 
 ---
@@ -224,7 +227,7 @@ The cask is hosted at [`rixinhahaha/homebrew-snip`](https://github.com/rixinhaha
 | `npm run rebuild` fails | Install Xcode CLT: `xcode-select --install` |
 | No tray icon visible | Check `assets/tray-iconTemplate.png` exists (Template suffix = auto dark/light) |
 | Screen capture blank | Grant Screen Recording permission, restart app |
-| SAM segment tool hidden | Needs 4GB+ RAM and system Node.js (not Electron's bundled one) |
+| SAM segment tool hidden | Needs 4GB+ RAM. Run `npm run download-node` to bundle the Node.js binary (auto-detected in packaged app). Falls back to system Node.js if bundled binary not found. |
 | Animation (Animate) fails | Check fal.ai API key is set in Settings → Animation, and internet connection is available |
 | `electron-liquid-glass` fails | Only works on macOS 26+; older macOS falls back to vibrancy |
 | App switches Spaces on capture | Ensure `app.dock.hide()` is running and native module built |
