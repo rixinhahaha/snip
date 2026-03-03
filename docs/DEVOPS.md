@@ -52,9 +52,11 @@ The app runs as a **tray-only** process (no Dock icon). Look for the scissors ic
 | `npm run dev` | Launch with `ELECTRON_ENABLE_LOGGING=1` for verbose console output |
 | `npm run rebuild` | `electron-rebuild` — recompile all native modules for Electron's Node ABI |
 | `npm run prebuild` | `node-gyp rebuild` — compile just the `window_utils.node` addon |
-| `npm run build` | Full build: `node-gyp rebuild` + `electron-builder --mac` + ad-hoc sign |
+| `npm run build` | Full build for arm64: `node-gyp rebuild` + `electron-builder --mac --arm64` + ad-hoc sign |
+| `npm run build:x64` | Full build for x64 (Intel): `node-gyp rebuild --arch=x64` + `electron-builder --mac --x64` + ad-hoc sign |
 | `npm run sign:adhoc` | Ad-hoc `codesign` for local use (no Developer ID needed) |
-| `./scripts/build-signed.sh` | Production build: loads `.env` creds, validates cert, builds + signs + notarizes |
+| `./scripts/build-signed.sh` | Production build (host arch): loads `.env` creds, validates cert, builds + signs + notarizes |
+| `./scripts/build-signed.sh --arch x64` | Production build for Intel |
 | `node scripts/generate-app-icon.js` | Regenerate `assets/icon.png` and `assets/icon.icns` from SVG template |
 | `npm run download-models` | Download HuggingFace models: MiniLM (~23 MB), SlimSAM (~50 MB). Note: Ollama and minicpm-v are NOT bundled — installed at runtime. |
 
@@ -112,17 +114,16 @@ npm run build
    - Removes wrong-arch `electron-liquid-glass` prebuilds
    - Pre-signs remaining `.node` and `.dylib` files
 4. No `CSC_LINK` detected -> `sign:adhoc` runs `codesign --force --deep --sign -`
-5. Output: `dist/mac-arm64/Snip.app` + `Snip-{version}-arm64.dmg`
+5. Output: `dist/mac-{arch}/Snip.app` + `Snip-{version}-{arch}.dmg`
 
 ### DMG Naming Convention
 
-DMGs use the format `Snip-{version}-arm64.dmg` (configured via `artifactName` in `electron-builder.yml`):
+DMGs use the format `Snip-{version}-{arch}.dmg` (configured via `artifactName` in `electron-builder.yml`):
 
 | Architecture | Example |
 |-------------|---------|
 | Apple Silicon | `Snip-1.0.9-arm64.dmg` |
-
-Only Apple Silicon (arm64) is supported. Intel (x64) builds are not produced.
+| Intel | `Snip-1.0.9-x64.dmg` |
 
 ### Production Build (Signed + Notarized)
 
@@ -174,7 +175,7 @@ git tag v1.0.9
 git push origin v1.0.9
 ```
 
-The workflow downloads HuggingFace models, builds an arm64 DMG (with models bundled), creates a GitHub release, and auto-updates the Homebrew cask.
+The workflow downloads HuggingFace models, builds both arm64 and x64 DMGs (with models bundled), creates a GitHub release, and auto-updates the Homebrew cask with architecture-specific URLs.
 
 ### Homebrew
 

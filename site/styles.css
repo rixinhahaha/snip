@@ -287,7 +287,74 @@ kbd {
   flex-wrap: wrap;
 }
 
-/* --- Download Button --- */
+/* --- Download Split Button --- */
+.download-split {
+  position: relative;
+  display: inline-flex;
+}
+
+.download-split .download-link {
+  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+}
+
+.download-toggle {
+  padding: 12px 10px;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  border-left: 1px solid rgba(255, 255, 255, 0.2);
+  display: inline-flex;
+  align-items: center;
+}
+
+.download-toggle svg {
+  transition: transform 0.2s ease;
+}
+
+.download-split.open .download-toggle svg {
+  transform: rotate(180deg);
+}
+
+.download-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  background: rgba(25, 25, 25, 0.95);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-4px);
+  transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s;
+  z-index: 10;
+}
+
+.download-split.open .download-dropdown {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.download-option {
+  display: block;
+  padding: 10px 16px;
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  transition: background 0.15s ease;
+  text-decoration: none;
+}
+
+.download-option:hover {
+  background: rgba(139, 92, 246, 0.15);
+  color: #fff;
+}
+
+.download-option + .download-option {
+  border-top: 1px solid var(--border);
+}
+
 .download-link {
   display: inline-flex;
   align-items: center;

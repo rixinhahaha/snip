@@ -10,7 +10,16 @@ permissions:
 
 jobs:
   build:
-    runs-on: macos-latest
+    strategy:
+      matrix:
+        include:
+          - runner: macos-latest
+            arch: arm64
+            electron_arch: --arm64
+          - runner: macos-13
+            arch: x64
+            electron_arch: --x64
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
 
@@ -34,20 +43,11 @@ jobs:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-        run: npx electron-builder --mac dmg --arm64 --publish never
-
-      - name: Rename DMG with arch suffix
-        run: |
-          for f in dist/*.dmg; do
-            base=$(basename "$f" .dmg)
-            if [[ "$base" != *"-arm64"* ]]; then
-              mv "$f" "dist/${base}-arm64.dmg"
-            fi
-          done
+        run: npx electron-builder --mac dmg ${{ matrix.electron_arch }} --publish never
 
       - uses: actions/upload-artifact@v4
         with:
-          name: dmg-arm64
+          name: dmg-${{ matrix.arch }}
           path: dist/*.dmg
 
   release:
@@ -58,7 +58,9 @@ jobs:
 
       - uses: softprops/action-gh-release@v2
         with:
-          files: dmg-arm64/*.dmg
+          files: |
+            dmg-arm64/*.dmg
+            dmg-x64/*.dmg
           draft: false
           generate_release_notes: true
 
@@ -71,24 +73,33 @@ jobs:
           repository: rixinhahaha/homebrew-snip
           token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
 
-      - name: Update cask version and checksum
+      - name: Update cask version and checksums
         run: |
           VERSION=${GITHUB_REF#refs/tags/v}
-          DMG_URL="https://github.com/rixinhahaha/snip/releases/download/v${VERSION}/Snip-${VERSION}-arm64.dmg"
-          SHA256=$(curl -sL "$DMG_URL" | shasum -a 256 | cut -d' ' -f1)
+          DMG_ARM64="https://github.com/rixinhahaha/snip/releases/download/v${VERSION}/Snip-${VERSION}-arm64.dmg"
+          DMG_X64="https://github.com/rixinhahaha/snip/releases/download/v${VERSION}/Snip-${VERSION}-x64.dmg"
+          SHA_ARM64=$(curl -sL "$DMG_ARM64" | shasum -a 256 | cut -d' ' -f1)
+          SHA_X64=$(curl -sL "$DMG_X64" | shasum -a 256 | cut -d' ' -f1)
 
           cat > Casks/snip.rb << EOF
           cask "snip" do
             version "${VERSION}"
-            sha256 "${SHA256}"
 
-            url "https://github.com/rixinhahaha/snip/releases/download/v#{version}/Snip-#{version}-arm64.dmg"
+            on_arm do
+              sha256 "${SHA_ARM64}"
+              url "https://github.com/rixinhahaha/snip/releases/download/v#{version}/Snip-#{version}-arm64.dmg"
+            end
+
+            on_intel do
+              sha256 "${SHA_X64}"
+              url "https://github.com/rixinhahaha/snip/releases/download/v#{version}/Snip-#{version}-x64.dmg"
+            end
+
             name "Snip"
             desc "Screenshot app with annotation, AI-powered organization, and semantic search"
             homepage "https://github.com/rixinhahaha/snip"
 
             depends_on macos: ">= :ventura"
-            depends_on arch: :arm64
 
             livecheck do
               url :url

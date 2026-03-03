@@ -16,7 +16,7 @@ Capture a region of your screen, annotate with shapes, text, blur, or AI segment
 brew install --cask rixinhahaha/snip/snip
 ```
 
-Or download the DMG directly from [Releases](https://github.com/rixinhahaha/snip/releases) (Apple Silicon only).
+Or download the DMG directly from [Releases](https://github.com/rixinhahaha/snip/releases) (Apple Silicon and Intel).
 
 ## Quick Start (Development)
 
