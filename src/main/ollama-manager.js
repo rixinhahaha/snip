@@ -641,6 +641,20 @@ function getPullProgress() {
  */
 async function getStatus() {
   var models = await listModels();
+  var currentModel = getOllamaModel();
+
+  // Update modelReady from the fresh model list so we detect
+  // models downloaded externally (e.g. via `ollama pull` in terminal)
+  if (!modelReady && models.length > 0) {
+    var found = models.some(function (m) {
+      return m.name === currentModel || m.name === currentModel + ':latest';
+    });
+    if (found) {
+      modelReady = true;
+      pullProgress = { status: 'ready', percent: 100, total: 0, completed: 0 };
+    }
+  }
+
   return {
     installed: ollamaInstalled,
     running: serverRunning,
@@ -653,7 +667,7 @@ async function getStatus() {
         modified: m.modified_at
       };
     }),
-    currentModel: getOllamaModel(),
+    currentModel: currentModel,
     modelReady: modelReady,
     pulling: pullInProgress,
     pullProgress: pullProgress,

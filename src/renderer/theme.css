@@ -177,77 +177,77 @@
  * CSS backdrop-filter disabled — the native layer handles blur.
  */
 [data-theme="glass"] {
-  --bg-body: rgba(25, 12, 50, 0.12);
-  --bg-primary: rgba(25, 12, 50, 0.20);
-  --bg-secondary: rgba(25, 12, 50, 0.30);
-  --bg-elevated: rgba(30, 15, 60, 0.32);
-  --bg-tertiary: rgba(139, 92, 246, 0.15);
-  --bg-toolbar: rgba(25, 12, 50, 0.28);
-  --bg-hover: rgba(139, 92, 246, 0.20);
-  --bg-hover-strong: rgba(139, 92, 246, 0.30);
-  --bg-input: rgba(139, 92, 246, 0.16);
-  --bg-input-hover: rgba(139, 92, 246, 0.24);
-  --bg-toast: rgba(20, 10, 40, 0.82);
-  --bg-overlay: rgba(0, 0, 0, 0.4);
+  --bg-body: rgba(22, 10, 42, 0.24);
+  --bg-primary: rgba(22, 10, 42, 0.34);
+  --bg-secondary: rgba(22, 10, 42, 0.44);
+  --bg-elevated: rgba(28, 14, 55, 0.42);
+  --bg-tertiary: rgba(139, 92, 246, 0.22);
+  --bg-toolbar: rgba(22, 10, 42, 0.40);
+  --bg-hover: rgba(139, 92, 246, 0.25);
+  --bg-hover-strong: rgba(139, 92, 246, 0.35);
+  --bg-input: rgba(139, 92, 246, 0.22);
+  --bg-input-hover: rgba(139, 92, 246, 0.30);
+  --bg-toast: rgba(14, 8, 30, 0.92);
+  --bg-overlay: rgba(0, 0, 0, 0.45);
 
   --text-primary: #f0eafa;
   --text-secondary: #d0c8e0;
-  --text-muted: #7e7694;
+  --text-muted: #9a90b0;
   --text-bright: #fff;
   --text-dim: #ddd4ee;
   --text-link-hover: #f0e8ff;
 
-  --border: rgba(255, 255, 255, 0.10);
-  --border-card: rgba(255, 255, 255, 0.15);
-  --border-subtle: rgba(255, 255, 255, 0.12);
-  --border-input: rgba(255, 255, 255, 0.18);
+  --border: rgba(255, 255, 255, 0.14);
+  --border-card: rgba(255, 255, 255, 0.20);
+  --border-subtle: rgba(255, 255, 255, 0.16);
+  --border-input: rgba(255, 255, 255, 0.24);
 
   --accent: #A78BFA;
   --accent-hover: #8B5CF6;
-  --accent-bg: rgba(167, 139, 250, 0.28);
-  --accent-active: rgba(167, 139, 250, 0.65);
-  --accent-glow: 0 2px 10px rgba(167, 139, 250, 0.40);
+  --accent-bg: rgba(167, 139, 250, 0.30);
+  --accent-active: rgba(167, 139, 250, 0.68);
+  --accent-glow: 0 2px 12px rgba(167, 139, 250, 0.45);
 
   --success: #34d399;
   --error: #fb7185;
   --error-hover: #ff4444;
-  --error-bg: rgba(251, 113, 133, 0.18);
+  --error-bg: rgba(251, 113, 133, 0.20);
 
   /* Native layer handles blur — disable CSS backdrop-filter */
   --glass-blur: 0px;
-  --glass-specular: rgba(255, 255, 255, 0.18);
-  --glass-specular-strong: rgba(255, 255, 255, 0.28);
-  --glass-inner-glow: inset 0 1px 0 0 rgba(255, 255, 255, 0.15);
+  --glass-specular: rgba(255, 255, 255, 0.20);
+  --glass-specular-strong: rgba(255, 255, 255, 0.30);
+  --glass-inner-glow: inset 0 1px 0 0 rgba(255, 255, 255, 0.18);
 
-  --shadow-card: 0 2px 10px rgba(40, 15, 80, 0.35), inset 0 1px 0 0 rgba(255, 255, 255, 0.10);
-  --shadow-toolbar: 0 2px 12px rgba(25, 10, 50, 0.30);
-  --shadow-toast: 0 8px 24px rgba(20, 8, 40, 0.50), inset 0 1px 0 0 rgba(255, 255, 255, 0.12);
-  --shadow-modal: 0 12px 40px rgba(20, 8, 40, 0.60), inset 0 1px 0 0 rgba(255, 255, 255, 0.12);
-  --shadow-image: 0 0 0 1px rgba(139, 92, 246, 0.22), 0 4px 12px rgba(25, 10, 50, 0.40);
+  --shadow-card: 0 2px 10px rgba(40, 15, 80, 0.40), inset 0 1px 0 0 rgba(255, 255, 255, 0.12);
+  --shadow-toolbar: 0 2px 12px rgba(25, 10, 50, 0.35);
+  --shadow-toast: 0 8px 24px rgba(20, 8, 40, 0.55), inset 0 1px 0 0 rgba(255, 255, 255, 0.14);
+  --shadow-modal: 0 12px 40px rgba(20, 8, 40, 0.65), inset 0 1px 0 0 rgba(255, 255, 255, 0.14);
+  --shadow-image: 0 0 0 1px rgba(139, 92, 246, 0.25), 0 4px 12px rgba(25, 10, 50, 0.45);
 
-  --kbd-bg: rgba(30, 18, 55, 0.45);
-  --kbd-border: rgba(139, 92, 246, 0.30);
-  --kbd-shadow: rgba(0, 0, 0, 0.15);
+  --kbd-bg: rgba(30, 18, 55, 0.50);
+  --kbd-border: rgba(139, 92, 246, 0.35);
+  --kbd-shadow: rgba(0, 0, 0, 0.18);
   --kbd-text: #d0c8e0;
 
-  --btn-secondary-bg: rgba(139, 92, 246, 0.16);
-  --btn-secondary-hover: rgba(139, 92, 246, 0.26);
+  --btn-secondary-bg: rgba(139, 92, 246, 0.20);
+  --btn-secondary-hover: rgba(139, 92, 246, 0.30);
 
   --toast-processing: #C4B5FD;
-  --toast-processing-border: rgba(167, 139, 250, 0.35);
+  --toast-processing-border: rgba(167, 139, 250, 0.40);
   --toast-success: #86efac;
-  --toast-success-border: rgba(52, 211, 153, 0.35);
+  --toast-success-border: rgba(52, 211, 153, 0.40);
   --toast-error: #fca5a5;
-  --toast-error-border: rgba(251, 113, 133, 0.35);
+  --toast-error-border: rgba(251, 113, 133, 0.40);
 
-  --tooltip-bg: rgba(15, 8, 30, 0.90);
+  --tooltip-bg: rgba(15, 8, 30, 0.92);
 
-  --segment-reject-bg: rgba(139, 92, 246, 0.14);
-  --segment-reject-hover: rgba(139, 92, 246, 0.22);
-  --segment-reject-text: #b8b0cc;
+  --segment-reject-bg: rgba(139, 92, 246, 0.18);
+  --segment-reject-hover: rgba(139, 92, 246, 0.26);
+  --segment-reject-text: #beb6d2;
   --segment-reject-hover-text: #ddd4ee;
-  --segment-reject-kbd-bg: rgba(139, 92, 246, 0.14);
-  --segment-accept-kbd-bg: rgba(255, 255, 255, 0.25);
+  --segment-reject-kbd-bg: rgba(139, 92, 246, 0.18);
+  --segment-accept-kbd-bg: rgba(255, 255, 255, 0.28);
 }
 
 /*
@@ -299,13 +299,13 @@
 
   /* Glass solid — opaque dark-purple fallback */
   [data-theme="glass"] {
-    --bg-body: #0e0a18;
-    --bg-primary: #140f20;
-    --bg-secondary: #1a1428;
-    --bg-elevated: #221a30;
-    --bg-tertiary: #2a1e3d;
-    --bg-toolbar: #181228;
-    --bg-toast: #1a1428;
+    --bg-body: #100c1c;
+    --bg-primary: #161128;
+    --bg-secondary: #1e1630;
+    --bg-elevated: #261e38;
+    --bg-tertiary: #2e2242;
+    --bg-toolbar: #1c1430;
+    --bg-toast: #161028;
     --bg-overlay: rgba(0, 0, 0, 0.5);
 
     --glass-blur: 0px;

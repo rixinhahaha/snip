@@ -82,12 +82,13 @@ The **Glass** theme (`[data-theme="glass"]`) is a third theme option with lavend
 |------|-------|-------|
 | **Accent** | `#A78BFA` (Violet 400) | Lighter purple for glass contrast |
 | **Accent hover** | `#8B5CF6` (Violet 500) | Hover/pressed states |
-| **Background body** | `rgba(25, 12, 50, 0.18)` | Subtle deep-purple wash |
-| **Background primary** | `rgba(30, 15, 60, 0.25)` | Main content area (readable tint) |
-| **Background secondary** | `rgba(25, 12, 50, 0.38)` | Sidebar (strong structural tint) |
-| **Background elevated** | `rgba(40, 20, 80, 0.30)` | Cards/panels (accent-tinted) |
-| **Background toolbar** | `rgba(25, 12, 50, 0.35)` | Toolbar with strong tint |
+| **Background body** | `rgba(28, 14, 52, 0.18)` | Subtle deep-purple wash |
+| **Background primary** | `rgba(28, 14, 52, 0.28)` | Main content area (readable tint) |
+| **Background secondary** | `rgba(28, 14, 52, 0.38)` | Sidebar (strong structural tint) |
+| **Background elevated** | `rgba(35, 18, 65, 0.36)` | Cards/panels (accent-tinted) |
+| **Background toolbar** | `rgba(28, 14, 52, 0.35)` | Toolbar with strong tint |
 | **Text primary** | `#f0eafa` | Bright lavender body text |
+| **Text muted** | `#9a90b0` | Secondary labels (~4.2:1 contrast) |
 | **Text bright** | `#ffffff` | Headings, active labels |
 
 CSS `backdrop-filter` is disabled (`--glass-blur: 0px`) since the native glass/vibrancy layer handles blur. Enhanced specular highlights and purple-tinted borders provide visual contrast.
@@ -104,11 +105,11 @@ When the OS or renderer doesn't support `backdrop-filter`, translucent `rgba()` 
 
 | Role | Dark solid | Light solid | Glass solid |
 |------|-----------|-------------|-------------|
-| **Body** | `#0a0a0a` | `#FBF8F2` (cream) | `#0e0a18` (deep purple) |
-| **Primary** | `#141414` | `#FFFDF9` | `#140f20` |
-| **Secondary** | `#121212` | `#F7F3EC` | `#1a1428` |
-| **Elevated** | `#1e1e1e` | `#FFFFFF` | `#221a30` |
-| **Toolbar** | `#191919` | `#FFFDF9` | `#181228` |
+| **Body** | `#0a0a0a` | `#FBF8F2` (cream) | `#100c1c` (deep purple) |
+| **Primary** | `#141414` | `#FFFDF9` | `#161128` |
+| **Secondary** | `#121212` | `#F7F3EC` | `#1e1630` |
+| **Elevated** | `#1e1e1e` | `#FFFFFF` | `#261e38` |
+| **Toolbar** | `#191919` | `#FFFDF9` | `#1c1430` |
 
 The fallback also:
 - Sets `--glass-blur` to `0px`
@@ -166,7 +167,7 @@ The setup wizard is an **inline overlay** (`#setup-overlay`) inside the home win
 
 **Settings page** (when overlay is not showing):
 - **Current model card** (ready state): `--bg-elevated` with `--border-card`, 10px radius. Shows "Active Model" uppercase label, large bold model name, and circular info button.
-- **Info tooltip**: Per-theme backgrounds (dark: `rgba(30,30,30,0.95)`, light: `rgba(255,255,255,0.95)`, glass: `rgba(15,8,30,0.85)` with backdrop blur). Positioned below card, `z-index: 20`. Contains a specs table with label column in `--text-secondary` and value column in `--text-primary`.
+- **Info tooltip**: Per-theme backgrounds (dark: `rgba(30,30,30,0.95)`, light: `rgba(255,255,255,0.95)`, glass: `rgba(15,8,30,0.90)` with backdrop blur). Positioned below card, `z-index: 20`. Contains a specs table with label column in `--text-secondary` and value column in `--text-primary`.
 
 ### Buttons
 - **Primary**: Solid accent fill, white text, rounded corners (8px)
