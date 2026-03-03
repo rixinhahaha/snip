@@ -132,7 +132,7 @@ Only Apple Silicon (arm64) is supported. Intel (x64) builds are not produced.
 CSC_LINK=<base64-encoded .p12 certificate>
 CSC_KEY_PASSWORD=<certificate password>
 APPLE_ID=<your Apple ID email>
-APPLE_ID_PASSWORD=<app-specific password>
+APPLE_APP_SPECIFIC_PASSWORD=<app-specific password>
 APPLE_TEAM_ID=<your team ID>
 ```
 

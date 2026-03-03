@@ -59,7 +59,7 @@ These are non-negotiable rules. Violating them causes crashes or broken UX:
 - Three themes exist: `dark`, `light`, `glass`. Changes must work in all three + the solid fallback.
 
 ### Renderer Code Style
-- **ES5 only** in renderer JS: use `var`, no arrow functions, no `import`/`export`.
+- **No ES modules** in renderer JS: prefer `var`, no `import`/`export`. All tools attach to `window` via IIFEs.
 - Main process uses standard CommonJS `require()`.
 
 ### Naming

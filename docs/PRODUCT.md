@@ -94,7 +94,7 @@ Power users on macOS who take 5-50 screenshots per day: developers, designers, P
 - Full keyboard shortcuts reference table
 
 ### Tray Menu
-- Capture, Search, Show Snip, Theme submenu, Quit
+- Snip It, Search Snips, Open Snip, Theme submenu (Dark / Light / Glass), Quit Snip
 
 ---
 

@@ -50,8 +50,9 @@ src/
       animation.js           # fal.ai API integration (upload, queue, poll, MP4 download)
       gif-encoder-worker.js  # Child process: ffmpeg MP4→frames extraction + GIF/APNG encoding
 
-  renderer/                  # Renderer processes (ES5, no modules)
+  renderer/                  # Renderer processes (no modules, globals via IIFEs)
     index.html / app.js      # Capture overlay — fullscreen transparent region selector
+    styles.css               # Overlay-specific styles (capture selection UI)
     home.html / home.js      # Gallery, search, settings UI (main window)
     home.css                 # Home window styles
     editor.html / editor-app.js  # Annotation editor
@@ -61,6 +62,7 @@ src/
     theme.css                # ALL theme tokens (Dark, Light, Glass + solid fallback)
     tools/
       tool-utils.js          # Shared: SEGMENT_OUTLINE_WIDTH, SEGMENT_OVERLAY_OPACITY, getAccentColor(), hexToRgba(), createMosaicImage(), recolorMaskWithOutline() (highlight fill + dilation outline), nextTagId(), lineEndpointForTag()
+      selection.js           # Selection tool (move, resize, multi-select)
       rectangle.js           # Rectangle tool (outline/highlight/blur modes)
       textbox.js             # Text annotation tool
       arrow.js               # Arrow annotation tool
@@ -173,9 +175,8 @@ Only app-saved files trigger AI processing. The `pendingFiles` Set in `watcher.j
 
 ## Code Conventions
 
-### Renderer (ES5)
-- Use `var` (not `let`/`const`)
-- No arrow functions in tool files
+### Renderer (No Modules)
+- Prefer `var` for consistency, but `let`/`const` are acceptable
 - No ES modules — everything is IIFE or global
 - Fabric.js is loaded as a `<script>` tag, not imported
 - All tools attach to `window` via IIFEs (e.g., `window.RectangleTool = { ... }`)

@@ -713,6 +713,20 @@ The setup wizard appears as a **full-window inline overlay** inside the home win
 | "Continue in background" | Shown when download is active, dismisses overlay |
 | App works without Ollama | Capture/annotate work normally, no AI organization |
 
+### 8.3 AI Assistant Settings
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Navigate to Settings page | "Local AI Assistant" section shown with AI Organization toggle |
+| 2 | Toggle AI Organization off | AI features disabled, details section hidden, saved to config |
+| 3 | Toggle AI Organization on | Details section shown with Ollama checklist |
+| 4 | -- | Checklist shows three items: Ollama installed, Ollama running, Model downloaded |
+| 5 | Each item shows ✓ (ready) or ○ (pending) | Based on live `get-ollama-status` IPC result |
+| 6 | If not all ready | "Set up" button visible → click opens setup overlay |
+| 7 | If all ready | "Set up" button hidden, model info card shown |
+| 8 | Click ⓘ on model info card | Tooltip toggles with specs: Model, Host, Parameters, Size, Quantization, Description |
+| 9 | Click ⓘ again or click elsewhere | Tooltip dismissed |
+
 ### 8.4 Theme Toggle
 
 | Step | Action | Expected Result |
@@ -754,10 +768,10 @@ The setup wizard appears as a **full-window inline overlay** inside the home win
 | Action | Expected Result |
 |--------|-----------------|
 | Click tray icon | Tray menu appears |
-| "Capture Screenshot" menu item | Triggers capture (same as Cmd+Shift+2) |
-| "Search" menu item | Opens search page (same as Cmd+Shift+F) |
-| "Show Snip" menu item | Opens/focuses home window |
-| "Quit" menu item | App quits, global shortcuts unregistered |
+| "Snip It" menu item | Triggers capture (same as Cmd+Shift+2) |
+| "Search Snips" menu item | Opens search page (same as Cmd+Shift+F) |
+| "Open Snip" menu item | Opens/focuses home window |
+| "Quit Snip" menu item | App quits, global shortcuts unregistered |
 
 ---
 

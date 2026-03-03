@@ -565,22 +565,22 @@ input:focus { border-color: var(--accent); }
 
 /* Glass theme: white borders + brighter active state for contrast on purple glass */
 [data-theme="glass"] .theme-btn {
-  border-color: rgba(255, 255, 255, 0.25);
-  color: rgba(255, 255, 255, 0.7);
-  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.28);
+  color: rgba(255, 255, 255, 0.75);
+  background: rgba(255, 255, 255, 0.10);
 }
 
 [data-theme="glass"] .theme-btn:hover {
-  border-color: rgba(255, 255, 255, 0.4);
+  border-color: rgba(255, 255, 255, 0.42);
   color: #fff;
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.14);
 }
 
 [data-theme="glass"] .theme-btn.active {
   border-color: #A78BFA;
   color: #fff;
-  background: rgba(167, 139, 250, 0.35);
-  box-shadow: 0 0 12px rgba(167, 139, 250, 0.3), var(--glass-inner-glow);
+  background: rgba(167, 139, 250, 0.38);
+  box-shadow: 0 0 12px rgba(167, 139, 250, 0.35), var(--glass-inner-glow);
 }
 
 .status { font-size: 12px; margin-top: 8px; min-height: 18px; }
@@ -946,8 +946,8 @@ input:focus { border-color: var(--accent); }
 
 /* Glass theme tooltip */
 [data-theme="glass"] .model-info-tooltip {
-  background: rgba(15, 8, 30, 0.85);
-  border-color: rgba(255, 255, 255, 0.15);
+  background: rgba(15, 8, 30, 0.90);
+  border-color: rgba(255, 255, 255, 0.18);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
 }
@@ -1170,15 +1170,15 @@ kbd {
 [data-theme="dark"] .setup-overlay { background: #111113; }
 [data-theme="light"] .setup-overlay { background: #f5f3ef; }
 [data-theme="glass"] .setup-overlay {
-  background: rgba(25, 12, 50, 0.45);
+  background: rgba(25, 12, 50, 0.50);
   backdrop-filter: blur(40px);
   -webkit-backdrop-filter: blur(40px);
 }
 
 [data-theme="glass"] .setup-card {
-  background: rgba(40, 20, 80, 0.35);
-  border-color: rgba(255, 255, 255, 0.12);
-  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.1), 0 2px 8px rgba(25, 10, 50, 0.3);
+  background: rgba(40, 20, 80, 0.40);
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.12), 0 2px 8px rgba(25, 10, 50, 0.35);
 }
 
 [data-theme="glass"] .setup-btn-icon {
@@ -1196,7 +1196,7 @@ kbd {
 }
 
 [data-theme="glass"] .setup-progress-track {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.10);
 }
 
 [data-theme="glass"] .setup-btn-glow {
