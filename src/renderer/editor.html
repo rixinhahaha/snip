@@ -173,12 +173,30 @@
     <!-- Segment tutorial modal -->
     <div id="segment-tutorial-backdrop" class="tutorial-backdrop hidden">
       <div class="tutorial-modal">
+        <div class="tutorial-header-icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17 3a2.85 2.85 0 114 4L7.5 20.5 2 22l1.5-5.5Z"/>
+            <path d="M15 5l4 4"/>
+          </svg>
+        </div>
         <div class="tutorial-title">Segment Tool</div>
-        <div class="tutorial-text">
-          <strong>Click</strong> on any object to automatically select it.<br>
-          <strong>Shift + Click</strong> to add more points and refine the selection.<br>
-          Then choose: <strong>Tag Segment (T)</strong> to highlight and label,<br>
-          or <strong>Apply Cutout (Enter)</strong> to isolate.
+        <div class="tutorial-steps">
+          <div class="tutorial-step">
+            <kbd class="tutorial-kbd">Click</kbd>
+            <span>Select any object automatically</span>
+          </div>
+          <div class="tutorial-step">
+            <kbd class="tutorial-kbd">Shift + Click</kbd>
+            <span>Add points to refine the selection</span>
+          </div>
+          <div class="tutorial-step">
+            <kbd class="tutorial-kbd">T</kbd>
+            <span>Tag segment with a label</span>
+          </div>
+          <div class="tutorial-step">
+            <kbd class="tutorial-kbd">Enter</kbd>
+            <span>Apply cutout to isolate</span>
+          </div>
         </div>
         <button id="segment-tutorial-dismiss" class="tutorial-dismiss-btn">Got it</button>
       </div>

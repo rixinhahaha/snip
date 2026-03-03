@@ -34,7 +34,7 @@ src/
     ipc-handlers.js          # All IPC channel handlers
     tray.js                  # Menu-bar tray icon and context menu
     shortcuts.js             # Global keyboard shortcuts (Cmd+Shift+2, Cmd+Shift+F)
-    store.js                 # Config persistence, index I/O, fal.ai API key storage, reloadConfig()
+    store.js                 # Config persistence, index I/O, fal.ai API key storage, aiEnabled flag, reloadConfig()
     constants.js             # Shared constants (BASE_WEB_PREFERENCES)
     ollama-manager.js        # Ollama process lifecycle (spawn/kill on dynamic port, ready/status/model pull)
     model-paths.js           # Bundled model path resolution (dev vs packaged)
@@ -225,6 +225,7 @@ The preload script (`preload.js`) exposes `window.snip` with these methods:
 
 | Method | Direction | Purpose |
 |--------|-----------|---------|
+| `getAiEnabled()` / `setAiEnabled(val)` | R -> M | AI opt-in flag (`true`, `false`, or `undefined` on first launch) |
 | `getOllamaConfig()` / `setOllamaConfig(cfg)` | R -> M | Ollama model/URL settings |
 | `getOllamaStatus()` | R -> M | Server running? Model ready? Pull progress? |
 | `getOllamaPullProgress()` | R -> M | Current model download progress |
@@ -327,6 +328,13 @@ The native Liquid Glass layer is always present (macOS 26+). Dark and Light them
 | Animations | `~/Documents/snip/screenshots/animations/` | same |
 | Index | `~/Documents/snip/screenshots/.index.json` | same |
 | Config | `~/Library/Application Support/snip/snip-config.json` | same |
+
+**Config fields of note:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `aiEnabled` | `boolean \| undefined` | `undefined` on first launch (triggers AI choice screen), `true` if user opted in, `false` if user opted out. When `false`, Ollama is not started and AI organization is skipped entirely. |
+
 | Ollama binary | `/usr/local/bin/ollama`, `/opt/homebrew/bin/ollama`, or `/Applications/Ollama.app/Contents/Resources/ollama` | same (user-installed) |
 | Ollama models | `~/.ollama/models/` | same (shared with system Ollama) |
 | HF models (MiniLM + SlimSAM) | `vendor/models/` | `Resources/models/` |

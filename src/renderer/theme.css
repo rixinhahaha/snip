@@ -24,6 +24,7 @@
   --bg-primary: rgba(20, 20, 20, 0.75);
   --bg-secondary: rgba(18, 18, 18, 0.8);
   --bg-elevated: rgba(40, 40, 40, 0.7);
+  --bg-tertiary: rgba(255, 255, 255, 0.1);
   --bg-toolbar: rgba(25, 25, 25, 0.6);
   --bg-hover: rgba(255, 255, 255, 0.06);
   --bg-hover-strong: rgba(255, 255, 255, 0.12);
@@ -99,6 +100,7 @@
   --bg-primary: rgba(255, 253, 250, 0.7);
   --bg-secondary: rgba(250, 247, 242, 0.8);
   --bg-elevated: rgba(255, 255, 255, 0.75);
+  --bg-tertiary: rgba(0, 0, 0, 0.06);
   --bg-toolbar: rgba(255, 253, 250, 0.6);
   --bg-hover: rgba(139, 92, 246, 0.06);
   --bg-hover-strong: rgba(139, 92, 246, 0.1);
@@ -179,6 +181,7 @@
   --bg-primary: rgba(25, 12, 50, 0.20);
   --bg-secondary: rgba(25, 12, 50, 0.30);
   --bg-elevated: rgba(30, 15, 60, 0.32);
+  --bg-tertiary: rgba(139, 92, 246, 0.15);
   --bg-toolbar: rgba(25, 12, 50, 0.28);
   --bg-hover: rgba(139, 92, 246, 0.20);
   --bg-hover-strong: rgba(139, 92, 246, 0.30);
@@ -262,6 +265,7 @@
     --bg-primary: #141414;
     --bg-secondary: #121212;
     --bg-elevated: #1e1e1e;
+    --bg-tertiary: #2a2a2a;
     --bg-toolbar: #191919;
     --bg-toast: #141414;
     --bg-overlay: rgba(0, 0, 0, 0.6);
@@ -280,6 +284,7 @@
     --bg-primary: #FFFDF9;
     --bg-secondary: #F7F3EC;
     --bg-elevated: #FFFFFF;
+    --bg-tertiary: #EFECE6;
     --bg-toolbar: #FFFDF9;
     --bg-toast: #FFFDF9;
     --bg-overlay: rgba(0, 0, 0, 0.3);
@@ -298,6 +303,7 @@
     --bg-primary: #140f20;
     --bg-secondary: #1a1428;
     --bg-elevated: #221a30;
+    --bg-tertiary: #2a1e3d;
     --bg-toolbar: #181228;
     --bg-toast: #1a1428;
     --bg-overlay: rgba(0, 0, 0, 0.5);

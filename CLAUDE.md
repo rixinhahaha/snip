@@ -32,7 +32,7 @@ This project is **fully autonomous**. Claude Code operates independently across 
 | Build / scripts / native modules | `docs/DEVOPS.md` scripts table + build pipeline |
 | Code conventions changed | `docs/ARCHITECTURE.md` conventions section |
 | New tool or annotation type | `docs/PRODUCT.md` tool table + `docs/USER_FLOWS.md` new tool flow + `docs/ARCHITECTURE.md` directory tree + `README.md` shortcut table |
-| Theme system changes | `docs/DESIGN.md` + `docs/ARCHITECTURE.md` theme system section + `docs/USER_FLOWS.md` §8.3 |
+| Theme system changes | `docs/DESIGN.md` + `docs/ARCHITECTURE.md` theme system section + `docs/USER_FLOWS.md` §8.4 |
 
 ### How to Update
 

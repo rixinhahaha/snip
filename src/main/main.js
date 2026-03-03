@@ -264,20 +264,18 @@ app.whenReady().then(() => {
     sendToHomeWindow('show-setup-overlay');
   });
 
-  // Detect system Ollama and connect (no bundled binary)
-  startOllama().then(async function () {
-    var { checkModel, isReady } = require('./ollama-manager');
-    await checkModel();
-    // Show setup overlay if Ollama is not fully ready
-    var ready = await isReady();
-    if (!ready) {
-      sendToHomeWindow('show-setup-overlay');
-    }
-  }).catch(function (err) {
-    console.error('[Snip] Ollama startup failed:', err.message);
-    // Not installed or failed — show setup overlay
-    sendToHomeWindow('show-setup-overlay');
-  });
+  // Detect system Ollama and connect (no bundled binary) — skip if AI not explicitly enabled
+  var { getAiEnabled } = require('./store');
+  if (getAiEnabled() === true) {
+    startOllama().then(async function () {
+      var { checkModel } = require('./ollama-manager');
+      await checkModel();
+    }).catch(function (err) {
+      console.error('[Snip] Ollama startup failed:', err.message);
+    });
+  } else {
+    console.log('[Snip] AI disabled — skipping Ollama startup');
+  }
 
   // Pre-warm SAM segmentation model
   const { warmUp } = require('./segmentation/segmentation');

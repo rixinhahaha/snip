@@ -462,9 +462,9 @@ select:hover {
 }
 
 .tutorial-modal {
-  max-width: 340px;
-  padding: 24px 28px;
-  border-radius: 14px;
+  max-width: 360px;
+  padding: 28px 32px;
+  border-radius: 16px;
   background: var(--bg-toast);
   backdrop-filter: blur(var(--glass-blur));
   -webkit-backdrop-filter: blur(var(--glass-blur));
@@ -473,11 +473,52 @@ select:hover {
   text-align: center;
 }
 
+.tutorial-header-icon {
+  margin-bottom: 12px;
+  opacity: 0.9;
+}
+
 .tutorial-title {
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-primary);
-  margin-bottom: 12px;
+  margin-bottom: 16px;
+}
+
+.tutorial-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 22px;
+  text-align: left;
+}
+
+.tutorial-step {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.tutorial-kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 24px;
+  padding: 0 8px;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--text-primary);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-card);
+  border-radius: 6px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .tutorial-text {

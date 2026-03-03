@@ -273,6 +273,16 @@ function setTheme(theme) {
   saveConfig();
 }
 
+function getAiEnabled() {
+  var val = loadConfig().aiEnabled;
+  return val === undefined ? undefined : !!val;
+}
+
+function setAiEnabled(enabled) {
+  loadConfig().aiEnabled = !!enabled;
+  saveConfig();
+}
+
 function getFalApiKey() {
   return loadConfig().falApiKey || '';
 }
@@ -305,6 +315,8 @@ module.exports = {
   rebuildIndex,
   getTheme,
   setTheme,
+  getAiEnabled,
+  setAiEnabled,
   getFalApiKey,
   setFalApiKey,
 };

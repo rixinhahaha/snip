@@ -646,6 +646,63 @@ input:focus { border-color: var(--accent); }
   transform: scale(0.97);
 }
 
+/* AI on/off toggle */
+.ai-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 0 12px;
+}
+
+.ai-toggle-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.ai-switch {
+  position: relative;
+  display: inline-block;
+  width: 36px;
+  height: 20px;
+  cursor: pointer;
+}
+
+.ai-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.ai-switch-track {
+  position: absolute;
+  inset: 0;
+  background: var(--bg-tertiary);
+  border-radius: 20px;
+  transition: background 0.2s ease;
+}
+
+.ai-switch-track::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  background: var(--text-muted);
+  border-radius: 50%;
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.ai-switch input:checked + .ai-switch-track {
+  background: var(--accent);
+}
+
+.ai-switch input:checked + .ai-switch-track::after {
+  transform: translateX(16px);
+  background: #fff;
+}
+
 /* Ollama settings */
 .ollama-status-row {
   display: flex;
@@ -748,7 +805,8 @@ input:focus { border-color: var(--accent); }
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-top: 6px;
+  margin-top: 10px;
+  margin-bottom: 10px;
   font-size: 12px;
   color: var(--text-secondary);
 }
@@ -1325,6 +1383,24 @@ kbd {
   box-shadow: 0 0 28px rgba(139, 92, 246, 0.5);
 }
 
+.setup-kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.12);
+  color: inherit;
+  margin-left: 6px;
+  opacity: 0.7;
+}
+
 /* Secondary button */
 .setup-btn-secondary {
   padding: 8px 20px;
@@ -1341,6 +1417,15 @@ kbd {
 .setup-btn-secondary:hover {
   color: var(--text-primary);
   border-color: var(--text-muted);
+}
+
+/* AI choice buttons container */
+.setup-ai-choice-btns {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-top: 28px;
 }
 
 /* Skip / continue in background button */

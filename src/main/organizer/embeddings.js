@@ -49,47 +49,46 @@ async function searchScreenshots(query) {
 
   if (index.length === 0) return [];
 
-  // Check if any entries have embeddings
-  const hasEmbeddings = index.some(entry => entry.embedding);
+  // Split entries into embedded vs non-embedded
+  const withEmbeddings = index.filter(entry => entry.embedding);
+  const withoutEmbeddings = index.filter(entry => !entry.embedding);
 
-  if (hasEmbeddings) {
-    // Semantic search using embeddings
+  let semanticResults = [];
+  if (withEmbeddings.length > 0) {
     try {
       const queryEmbedding = await embedText(query);
       const queryArray = Array.from(queryEmbedding);
 
-      const scored = index
-        .filter(entry => entry.embedding)
+      semanticResults = withEmbeddings
         .map(entry => ({
           ...entry,
           score: cosineSimilarity(queryArray, entry.embedding)
-        }))
-        .sort((a, b) => b.score - a.score)
-        .slice(0, 20);
-
-      return scored;
+        }));
     } catch (err) {
       console.error('[Search] Embedding search failed, falling back to text:', err.message);
+      // Treat as non-embedded for text fallback
+      withoutEmbeddings.push(...withEmbeddings);
     }
   }
 
-  // Fallback: simple text matching
+  // Text matching for entries without embeddings
   const queryLower = query.toLowerCase();
   const words = queryLower.split(/\s+/);
 
-  const scored = index.map(entry => {
-    const searchable = `${entry.name || ''} ${entry.description || ''} ${(entry.tags || []).join(' ')} ${entry.category || ''}`.toLowerCase();
+  const textResults = withoutEmbeddings.map(entry => {
+    const searchable = `${entry.filename || ''} ${entry.name || ''} ${entry.description || ''} ${(entry.tags || []).join(' ')} ${entry.category || ''}`.toLowerCase();
     let score = 0;
     for (const word of words) {
       if (searchable.includes(word)) score += 1;
     }
-    return { ...entry, score: score / words.length };
-  })
-    .filter(entry => entry.score > 0)
+    return { ...entry, score: words.length > 0 ? score / words.length : 0 };
+  });
+
+  // Merge and sort by score
+  return semanticResults
+    .concat(textResults)
     .sort((a, b) => b.score - a.score)
     .slice(0, 20);
-
-  return scored;
 }
 
 module.exports = { embedText, searchScreenshots };

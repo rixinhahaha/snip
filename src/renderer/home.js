@@ -321,6 +321,18 @@
     hideContextMenu();
   });
 
+  // ── AI settings visibility ──
+  function updateAiSettingsVisibility(enabled) {
+    var details = document.getElementById('ai-details');
+    var toggle = document.getElementById('ai-toggle-input');
+    if (details) {
+      details.style.display = enabled === false ? 'none' : '';
+    }
+    if (toggle) {
+      toggle.checked = enabled !== false;
+    }
+  }
+
   // ── Settings: Local AI Assistant (Ollama) ──
 
   var MODEL_SPECS = {
@@ -333,6 +345,19 @@
     setupBtn.addEventListener('click', function() {
       if (window._showSetupOverlay) window._showSetupOverlay();
     });
+
+    // AI on/off toggle switch
+    var aiToggle = document.getElementById('ai-toggle-input');
+    if (aiToggle) {
+      aiToggle.addEventListener('change', async function() {
+        var enabled = aiToggle.checked;
+        await window.snip.setAiEnabled(enabled);
+        updateAiSettingsVisibility(enabled);
+        if (enabled) {
+          refreshOllamaChecklist();
+        }
+      });
+    }
 
     // Info tooltip toggle
     var infoBtn = document.getElementById('model-info-btn');
@@ -397,10 +422,8 @@
       } else if (!status.modelReady) {
         setupBtn.textContent = 'Finish setup';
       }
-      // Keep polling if partially ready
-      if (status.installed && !status.running) {
-        setTimeout(refreshOllamaChecklist, 3000);
-      }
+      // Keep polling until all ready (Ollama may be starting in background)
+      setTimeout(refreshOllamaChecklist, 1000);
     }
   }
 
@@ -842,6 +865,9 @@
     var screen = determineSetupScreen(status);
     if (screen) {
       applySetupScreen(screen, status);
+    } else if (setupFromSettings) {
+      // From Settings — just dismiss, no welcome screen
+      hideSetupOverlay();
     } else {
       showSetupView('welcome');
       burstSparkles(30);
@@ -874,6 +900,22 @@
     var modelBtn = document.getElementById('setup-model-btn');
     var skipBtn = document.getElementById('setup-skip-btn');
 
+    // AI choice buttons
+    var aiEnableBtn = document.getElementById('setup-ai-enable-btn');
+    var aiSkipBtn = document.getElementById('setup-ai-skip-btn');
+
+    aiEnableBtn.addEventListener('click', async function() {
+      await window.snip.setAiEnabled(true);
+      updateAiSettingsVisibility(true);
+      applySetupStatus(await window.snip.getOllamaStatus());
+    });
+
+    aiSkipBtn.addEventListener('click', async function() {
+      await window.snip.setAiEnabled(false);
+      updateAiSettingsVisibility(false);
+      hideSetupOverlay();
+    });
+
     // Action buttons — both primary and retry share the same handler
     var installAction = function() { startSetupAction('install', installBtn, skipBtn, window.snip.installOllama); };
     var modelAction = function() { startSetupAction('model', modelBtn, skipBtn, window.snip.pullOllamaModel); };
@@ -889,9 +931,26 @@
       dismissBtns[i].addEventListener('click', hideSetupOverlay);
     }
 
-    // Enter key triggers the primary action for the active setup screen
+    // Keyboard shortcuts for setup overlay
     document.addEventListener('keydown', function(e) {
-      if (e.key !== 'Enter' || overlay.classList.contains('hidden')) return;
+      if (overlay.classList.contains('hidden')) return;
+
+      // AI choice screen — Y to enable, N to skip
+      var aiChoiceView = document.getElementById('setup-ai-choice-view');
+      if (aiChoiceView && !aiChoiceView.classList.contains('hidden')) {
+        if (e.key === 'y' || e.key === 'Y') { aiEnableBtn.click(); return; }
+        if (e.key === 'n' || e.key === 'N') { aiSkipBtn.click(); return; }
+        if (e.key === 'Enter') { aiEnableBtn.click(); return; }
+        return;
+      }
+
+      // Escape → skip / continue in background
+      if (e.key === 'Escape') {
+        hideSetupOverlay();
+        return;
+      }
+
+      if (e.key !== 'Enter') return;
 
       // Welcome screen → dismiss
       var welcomeView = document.getElementById('setup-welcome-view');
@@ -944,7 +1003,12 @@
     window.snip.onOllamaStatusChanged(function() { refreshSetupOverlay(); });
 
     if (window.snip.onShowSetupOverlay) {
-      window.snip.onShowSetupOverlay(function() { showSetupOverlay(); });
+      window.snip.onShowSetupOverlay(function() {
+        // Don't override the AI choice view if it's showing
+        var aiChoiceView = document.getElementById('setup-ai-choice-view');
+        if (aiChoiceView && !aiChoiceView.classList.contains('hidden')) return;
+        showSetupOverlay();
+      });
     }
 
     window._showSetupOverlay = function() {
@@ -956,20 +1020,30 @@
   }
 
   async function checkAndShowSetup() {
-    try {
-      var status = await window.snip.getOllamaStatus();
-      if (determineSetupScreen(status)) {
-        document.getElementById('setup-overlay').classList.remove('hidden');
-        applySetupScreen(determineSetupScreen(status), status);
-      }
-    } catch (err) {
+    var aiEnabled = await window.snip.getAiEnabled();
+
+    // Sync toggle to current state
+    updateAiSettingsVisibility(aiEnabled === true ? true : false);
+
+    // First launch — show AI choice screen
+    if (aiEnabled === undefined || aiEnabled === null) {
       document.getElementById('setup-overlay').classList.remove('hidden');
-      applySetupScreen('install', FALLBACK_STATUS);
+      showSetupView('ai-choice');
+      return;
     }
+
+    // AI disabled or already enabled — no overlay on launch.
+    // User can manage setup from Settings if needed.
+    return;
   }
 
   async function showSetupOverlay() {
     document.getElementById('setup-overlay').classList.remove('hidden');
+    // When opened from Settings, set aiEnabled=true and skip choice view
+    if (setupFromSettings) {
+      await window.snip.setAiEnabled(true);
+      updateAiSettingsVisibility(true);
+    }
     try {
       applySetupStatus(await window.snip.getOllamaStatus());
     } catch (err) {
@@ -998,7 +1072,7 @@
   }
 
   function showSetupView(viewName) {
-    var views = { steps: 'setup-steps-view', welcome: 'setup-welcome-view', failed: 'setup-failed-view' };
+    var views = { 'ai-choice': 'setup-ai-choice-view', steps: 'setup-steps-view', welcome: 'setup-welcome-view', failed: 'setup-failed-view' };
     var keys = Object.keys(views);
     for (var i = 0; i < keys.length; i++) {
       document.getElementById(views[keys[i]]).classList.add('hidden');
@@ -1014,8 +1088,12 @@
     } else if (viewName === 'failed') {
       document.getElementById(views.failed).classList.remove('hidden');
       stopSparkles();
+    } else if (viewName === 'ai-choice') {
+      document.getElementById(views['ai-choice']).classList.remove('hidden');
+      startSparkles();
     } else {
       document.getElementById(views.steps).classList.remove('hidden');
+      startSparkles();
     }
   }
 

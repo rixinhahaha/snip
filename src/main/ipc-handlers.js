@@ -7,6 +7,7 @@ const {
   getAllTagsWithDescriptions, setTagDescription, addCustomCategoryWithDescription,
   readIndex, removeFromIndex, removeFromIndexByDir, rebuildIndex,
   getTheme, setTheme,
+  getAiEnabled, setAiEnabled,
   getFalApiKey, setFalApiKey
 } = require('./store');
 const { queueNewFile } = require('./organizer/watcher');
@@ -84,6 +85,27 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn) {
       'Courier New', 'Georgia', 'Times New Roman', 'Verdana',
       'Comic Sans MS', 'Impact', 'Futura', 'Avenir'
     ];
+  });
+
+  // AI preference
+  ipcMain.handle('get-ai-enabled', async () => {
+    return getAiEnabled();
+  });
+
+  ipcMain.handle('set-ai-enabled', async (event, enabled) => {
+    setAiEnabled(enabled);
+    if (enabled) {
+      // User opted in — start Ollama immediately
+      const { startOllama } = require('./ollama-manager');
+      startOllama().catch(err => {
+        console.warn('[Snip] Ollama start after AI enable failed:', err.message);
+      });
+    } else {
+      // User opted out — stop Ollama to free resources
+      const { stopOllama } = require('./ollama-manager');
+      stopOllama();
+    }
+    return true;
   });
 
   // Settings: Ollama

@@ -604,15 +604,54 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 
 ## 8. Settings
 
-### 8.1 Setting Up Your AI Assistant (Inline Overlay)
+### 8.1 AI Choice Screen
 
-The setup wizard appears as a **full-window inline overlay** inside the home window (not a separate popup). It auto-shows on first launch if Ollama is not fully ready, and can be reopened from the Settings "Set up" button.
+On first launch, the app presents an AI choice screen before any Ollama setup. The user's decision is persisted as `aiEnabled` in the config file.
 
-**Overlay structure:** Three views — Steps (install/running/model), Welcome, Failed. Only one visible at a time. Step cards show numbered indicators (pending → active → done with checkmark).
+**First Launch (aiEnabled = undefined):**
 
 | Step | Action | Expected Result |
 |------|--------|-----------------|
-| 1 | App launches without Ollama ready | Inline overlay covers home window with step-by-step wizard |
+| 1 | App launches, `aiEnabled` not set in config | main.js starts Ollama detection (may find it not installed) |
+| 2 | -- | Overlay shows AI choice view first, with title **"Smart Organization"** |
+| 3 | -- | Description: "Snip can use a local AI to automatically name, tag, and organize your snips. Everything runs on your machine." |
+| 4 | -- | Two buttons: **"Set up AI"** and **"Continue without AI"** |
+| 5a | Click "Set up AI" | `aiEnabled` set to `true` in config; proceeds to install/running/model setup steps (see 8.2) |
+| 5b | Click "Continue without AI" | `aiEnabled` set to `false` in config; overlay dismissed; app works without AI |
+
+**Subsequent Launch (aiEnabled = true):**
+
+| Condition | Expected Behavior |
+|-----------|-------------------|
+| Ollama fully ready | Normal startup, no overlay |
+| Ollama not fully ready | Setup overlay shows install/running/model steps (see 8.2), skips AI choice screen |
+
+**Subsequent Launch (aiEnabled = false):**
+
+| Condition | Expected Behavior |
+|-----------|-------------------|
+| App starts | Ollama skipped entirely — no spawn, no health check |
+| -- | No setup overlay shown |
+| -- | Screenshots indexed with basic metadata only (filename, `category: 'other'`, no AI naming/tagging) |
+| -- | AI assistant section hidden in Settings page |
+
+**Settings "Set up" button (when aiEnabled = false):**
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | User navigates to Settings, clicks "Set up" | Goes straight to steps view (skips AI choice screen) |
+| 2 | -- | `aiEnabled` set to `true` |
+| 3 | -- | Ollama install/running/model flow proceeds normally |
+
+### 8.2 Setting Up Your AI Assistant (Inline Overlay)
+
+The setup wizard appears as a **full-window inline overlay** inside the home window (not a separate popup). It auto-shows on first launch if the user chose "Set up AI" (aiEnabled = true) and Ollama is not fully ready, and can be reopened from the Settings "Set up" button.
+
+**Overlay structure:** Four views — AI Choice (first launch only), Steps (install/running/model), Welcome, Failed. Only one visible at a time. Step cards show numbered indicators (pending -> active -> done with checkmark).
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | App launches without Ollama ready (and aiEnabled = true) | Inline overlay covers home window with step-by-step wizard |
 | 2 | -- | App auto-detects current state and shows appropriate step |
 
 **Step: Install Ollama**
@@ -674,7 +713,7 @@ The setup wizard appears as a **full-window inline overlay** inside the home win
 | "Continue in background" | Shown when download is active, dismisses overlay |
 | App works without Ollama | Capture/annotate work normally, no AI organization |
 
-### 8.3 Theme Toggle
+### 8.4 Theme Toggle
 
 | Step | Action | Expected Result |
 |------|--------|-----------------|
@@ -686,7 +725,7 @@ The setup wizard appears as a **full-window inline overlay** inside the home win
 | 6 | -- | CSS `backdrop-filter` disabled (native layer handles blur) |
 | 7 | Select Dark or Light theme | Standard opaque backgrounds restored, glass layer hidden |
 
-### 8.4 Category Management
+### 8.5 Category Management
 
 | Step | Action | Expected Result |
 |------|--------|-----------------|
@@ -698,7 +737,7 @@ The setup wizard appears as a **full-window inline overlay** inside the home win
 | 6 | Click remove (X) on a custom tag | Tag removed from config |
 | 7 | -- | Built-in tags cannot be removed |
 
-### 8.5 Keyboard Shortcuts Reference
+### 8.6 Keyboard Shortcuts Reference
 
 | Step | Action | Expected Result |
 |------|--------|-----------------|

@@ -177,47 +177,57 @@
 
         <div class="settings-section" id="ai-assistant-section">
           <h3>Local AI Assistant</h3>
-          <p>AI-powered snip organization runs locally on your machine using Ollama.</p>
-
-          <div class="ollama-checklist">
-            <div class="checklist-item">
-              <span id="check-installed" class="check-icon pending">○</span>
-              <span class="checklist-label">Ollama installed</span>
-            </div>
-            <div class="checklist-item">
-              <span id="check-running" class="check-icon pending">○</span>
-              <span class="checklist-label">Ollama running</span>
-            </div>
-            <div class="checklist-item">
-              <span id="check-model" class="check-icon pending">○</span>
-              <span class="checklist-label">Model downloaded</span>
-            </div>
+          <div class="ai-toggle-row">
+            <span class="ai-toggle-label">AI Organization</span>
+            <label class="ai-switch" id="ai-switch">
+              <input type="checkbox" id="ai-toggle-input">
+              <span class="ai-switch-track"></span>
+            </label>
           </div>
 
-          <button id="ollama-setup-btn" class="ollama-action-btn" style="margin-top: 12px;">Set up</button>
+          <div id="ai-details">
+            <p>AI-powered snip organization runs locally on your machine using Ollama.</p>
 
-          <div id="ollama-ready-info" class="hidden" style="margin-top: 12px;">
-            <div class="current-model-card">
-              <span class="current-model-label">Active Model</span>
-              <div class="current-model-header">
-                <span id="current-model-name" class="current-model-name">—</span>
-                <button class="icon-btn model-info-btn" id="model-info-btn" title="Model info">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="10"/>
-                    <path d="M12 16v-4"/>
-                    <circle cx="12" cy="8" r="0.5" fill="currentColor" stroke="none"/>
-                  </svg>
-                </button>
+            <div class="ollama-checklist">
+              <div class="checklist-item">
+                <span id="check-installed" class="check-icon pending">○</span>
+                <span class="checklist-label">Ollama installed</span>
               </div>
-              <div id="model-info-tooltip" class="model-info-tooltip hidden">
-                <table class="model-info-table">
-                  <tr><td class="model-info-label">Model</td><td id="info-model">—</td></tr>
-                  <tr><td class="model-info-label">Host</td><td id="info-host">—</td></tr>
-                  <tr><td class="model-info-label">Parameters</td><td id="info-params">—</td></tr>
-                  <tr><td class="model-info-label">Size</td><td id="info-size">—</td></tr>
-                  <tr><td class="model-info-label">Quantization</td><td id="info-quant">—</td></tr>
-                  <tr><td class="model-info-label">Description</td><td id="info-desc">—</td></tr>
-                </table>
+              <div class="checklist-item">
+                <span id="check-running" class="check-icon pending">○</span>
+                <span class="checklist-label">Ollama running</span>
+              </div>
+              <div class="checklist-item">
+                <span id="check-model" class="check-icon pending">○</span>
+                <span class="checklist-label">Model downloaded</span>
+              </div>
+            </div>
+
+            <button id="ollama-setup-btn" class="ollama-action-btn" style="margin-top: 12px;">Set up</button>
+
+            <div id="ollama-ready-info" class="hidden" style="margin-top: 12px;">
+              <div class="current-model-card">
+                <span class="current-model-label">Active Model</span>
+                <div class="current-model-header">
+                  <span id="current-model-name" class="current-model-name">—</span>
+                  <button class="icon-btn model-info-btn" id="model-info-btn" title="Model info">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="10"/>
+                      <path d="M12 16v-4"/>
+                      <circle cx="12" cy="8" r="0.5" fill="currentColor" stroke="none"/>
+                    </svg>
+                  </button>
+                </div>
+                <div id="model-info-tooltip" class="model-info-tooltip hidden">
+                  <table class="model-info-table">
+                    <tr><td class="model-info-label">Model</td><td id="info-model">—</td></tr>
+                    <tr><td class="model-info-label">Host</td><td id="info-host">—</td></tr>
+                    <tr><td class="model-info-label">Parameters</td><td id="info-params">—</td></tr>
+                    <tr><td class="model-info-label">Size</td><td id="info-size">—</td></tr>
+                    <tr><td class="model-info-label">Quantization</td><td id="info-quant">—</td></tr>
+                    <tr><td class="model-info-label">Description</td><td id="info-desc">—</td></tr>
+                  </table>
+                </div>
               </div>
             </div>
           </div>
@@ -329,6 +339,34 @@
   <div id="setup-overlay" class="setup-overlay hidden">
     <div id="setup-sparkles" class="setup-sparkles"></div>
 
+    <!-- AI choice view (first-launch opt-in/out) -->
+    <div id="setup-ai-choice-view" class="setup-view hidden">
+      <div class="setup-header">
+        <div class="setup-header-icon">
+          <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+            <rect x="22" y="20" width="4" height="24" rx="2" transform="rotate(-45 22 20)" fill="var(--accent)" opacity="0.85"/>
+            <path d="M14 6L16 11.5L21.5 13L16 15L14 20.5L12 15L6.5 13L12 11.5L14 6Z" fill="var(--accent)"/>
+            <path d="M8 24L9 26.5L11.5 27.5L9 28.5L8 31L7 28.5L4.5 27.5L7 26.5L8 24Z" fill="var(--accent)" opacity="0.5"/>
+            <path d="M26 4L26.8 6L28.8 6.8L26.8 7.6L26 9.6L25.2 7.6L23.2 6.8L25.2 6L26 4Z" fill="var(--accent)" opacity="0.4"/>
+            <circle cx="21" cy="3" r="1.2" fill="var(--accent)" opacity="0.35"/>
+            <circle cx="4" cy="16" r="1" fill="var(--accent)" opacity="0.3"/>
+          </svg>
+        </div>
+        <h2>Smart Organization</h2>
+        <p>Snip can use a local AI to automatically name, tag, and organize your snips. Everything runs on your machine.</p>
+      </div>
+      <div class="setup-ai-choice-btns">
+        <button id="setup-ai-enable-btn" class="setup-btn-icon setup-btn-glow">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5 12h14"/>
+            <path d="M12 5l7 7-7 7"/>
+          </svg>
+          Enable <kbd class="setup-kbd">Y</kbd>
+        </button>
+        <button id="setup-ai-skip-btn" class="setup-btn-skip">Skip for now <kbd class="setup-kbd">N</kbd></button>
+      </div>
+    </div>
+
     <!-- Steps view (install / running / model) -->
     <div id="setup-steps-view" class="setup-view">
       <div class="setup-header">
@@ -362,7 +400,7 @@
                   <polyline points="7 10 12 15 17 10"/>
                   <line x1="12" y1="15" x2="12" y2="3"/>
                 </svg>
-                Install
+                Install <kbd class="setup-kbd">Enter</kbd>
               </button>
               <div id="setup-install-progress" class="setup-progress hidden">
                 <div class="setup-progress-track">
@@ -406,7 +444,7 @@
                   <polyline points="7 10 12 15 17 10"/>
                   <line x1="12" y1="15" x2="12" y2="3"/>
                 </svg>
-                Download
+                Download <kbd class="setup-kbd">Enter</kbd>
               </button>
               <div id="setup-model-progress" class="setup-progress hidden">
                 <div class="setup-progress-track">
@@ -423,7 +461,7 @@
         </div>
       </div>
 
-      <button id="setup-skip-btn" class="setup-btn-skip">Skip for now</button>
+      <button id="setup-skip-btn" class="setup-btn-skip">Skip for now <kbd class="setup-kbd">Esc</kbd></button>
     </div>
 
     <!-- Welcome view -->
@@ -449,7 +487,7 @@
           <path d="M5 12h14"/>
           <path d="M12 5l7 7-7 7"/>
         </svg>
-        Let's go
+        Let's go <kbd class="setup-kbd">Enter</kbd>
       </button>
     </div>
 
@@ -464,8 +502,8 @@
       <h2 class="setup-failed-title">Snip works great without AI too</h2>
       <p class="setup-failed-desc">You can capture, annotate, and save snips. AI organization can be set up later from Settings.</p>
       <div class="setup-failed-btns">
-        <button id="setup-continue-without" class="setup-btn-primary">Continue without AI</button>
-        <button id="setup-try-again" class="setup-btn-secondary">Try again</button>
+        <button id="setup-continue-without" class="setup-btn-primary">Continue without AI <kbd class="setup-kbd">Esc</kbd></button>
+        <button id="setup-try-again" class="setup-btn-secondary">Try again <kbd class="setup-kbd">Enter</kbd></button>
       </div>
     </div>
   </div>

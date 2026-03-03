@@ -15,6 +15,10 @@ contextBridge.exposeInMainWorld('snip', {
   getEditorImage: () => ipcRenderer.invoke('get-editor-image'),
   closeEditor: () => ipcRenderer.send('close-editor'),
 
+  // AI preference
+  getAiEnabled: () => ipcRenderer.invoke('get-ai-enabled'),
+  setAiEnabled: (enabled) => ipcRenderer.invoke('set-ai-enabled', enabled),
+
   // Settings: Ollama
   getOllamaConfig: () => ipcRenderer.invoke('get-ollama-config'),
   setOllamaConfig: (config) => ipcRenderer.invoke('set-ollama-config', config),
@@ -91,7 +95,7 @@ contextBridge.exposeInMainWorld('snip', {
   animateCutout: ({ cutoutDataURL, presetName, options }) =>
     ipcRenderer.invoke('animate-cutout', { cutoutDataURL, presetName, options }),
   onAnimateProgress: (callback) => {
-    const handler = (event, progress) => callback(progress);
+    var handler = (event, progress) => callback(progress);
     ipcRenderer.on('animate-progress', handler);
     return () => ipcRenderer.removeListener('animate-progress', handler);
   },

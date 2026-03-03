@@ -49,6 +49,13 @@ function startWatcher() {
     var ext = path.extname(filepath).toLowerCase();
     if (!['.jpg', '.jpeg', '.png'].includes(ext)) return;
 
+    // Skip agent processing if AI is not explicitly enabled
+    var { getAiEnabled } = require('../store');
+    if (getAiEnabled() !== true) {
+      addBasicIndexEntry(filepath);
+      return;
+    }
+
     // Only run the agent on files saved by the app (not manual renames/copies)
     if (!pendingFiles.has(filepath)) {
       console.log('[Organizer] External file detected, indexing without agent:', path.basename(filepath));
