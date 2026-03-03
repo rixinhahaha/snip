@@ -73,7 +73,8 @@ These are non-negotiable rules. Violating them causes crashes or broken UX:
 - `--glass-blur: 0px` in Glass theme because the native layer handles blur.
 
 ### Releases
-- **Before creating a new release tag**, always bump the version in **both** `package.json` and `package-lock.json` (run `npm install --package-lock-only` to sync the lock file) **and** `site/script.js` (`SNIP_VERSION`). Commit the version bump before tagging.
+- **Before creating a new release tag**, always bump the version in **both** `package.json` and `package-lock.json` (run `npm install --package-lock-only` to sync the lock file). Commit the version bump before tagging.
+- **Do NOT update the marketing site** (`site/script.js` `SNIP_VERSION` or download buttons) at tag time. Wait until the GitHub Release workflow completes successfully and the DMG artifact is publicly available, then update the marketing site in a separate commit.
 
 ---
 
