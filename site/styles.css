@@ -273,13 +273,12 @@ kbd {
 
 .ph-badge {
   display: inline-block;
-  margin-bottom: 20px;
   transition: transform var(--transition), opacity var(--transition);
 }
 
 .ph-badge:hover {
   transform: translateY(-2px);
-  opacity: 0.9;
+  opacity: 0.85;
 }
 
 .ph-badge img {
@@ -408,8 +407,18 @@ kbd {
   font-size: 0.82rem;
 }
 
+.btn.btn-lg {
+  padding: 14px 32px;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
 .hero-guide-link {
   margin-top: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
 }
 
 .hero-visual {
