@@ -1,12 +1,11 @@
 <p align="center">
-  <img src="assets/icon.png" alt="Snip" width="128" height="128">
+  <img src="assets/icon.png" alt="Snip" width="128" height="128"><br><br>
+  <a href="https://www.producthunt.com/products/snip-ai-powered-macos-screenshot-tool?utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-snip-ai-powered-macos-screenshot-tool-2" target="_blank"><img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1089620&theme=dark" alt="Snip on Product Hunt" height="40"></a>
 </p>
 
 # Snip
 
 **[snipit.dev](https://snipit.dev)**
-
-<a href="https://www.producthunt.com/products/snip-ai-powered-macos-screenshot-tool?utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-snip-ai-powered-macos-screenshot-tool-2" target="_blank"><img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1089620&theme=dark" alt="Snip on Product Hunt" height="40"></a>
 
 macOS screenshot tool with annotation and AI-powered organization.
 
