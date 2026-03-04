@@ -451,11 +451,62 @@
     <div class="hero-glow"></div>
     <div class="section-badge">Setup Guide</div>
     <h1>Get Snip <span class="hero-gradient">up and running</span></h1>
-    <p>Snip needs a couple of macOS permissions to capture your screen and register global shortcuts. Here's how to set everything up.</p>
+    <p>Snip guides you through setup automatically on first launch. This page covers what happens and how to troubleshoot if needed.</p>
   </div>
 
   <!-- Guide Content -->
   <div class="guide-content">
+
+    <!-- Section 0: First Launch -->
+    <div class="guide-section" id="first-launch">
+      <div class="guide-section-header">
+        <div class="guide-section-icon">
+          <!-- Rocket icon -->
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>
+        </div>
+        <div>
+          <h2>First Launch</h2>
+          <p>Snip sets itself up automatically</p>
+        </div>
+      </div>
+
+      <div class="guide-why">
+        <strong>Guided onboarding</strong>
+        <p>When you open Snip for the first time, it walks you through everything — permissions, AI setup, and model downloads. Most users won't need the manual steps below.</p>
+      </div>
+
+      <div class="guide-steps">
+        <div class="guide-step">
+          <div class="guide-step-num">1</div>
+          <div class="guide-step-content">
+            <h4>Screen Recording permission</h4>
+            <p>Snip asks you to allow Screen Recording. Click <strong>Allow</strong>, grant permission in the macOS dialog, then <strong>Restart Snip</strong> when prompted.</p>
+          </div>
+        </div>
+        <div class="guide-step">
+          <div class="guide-step-num">2</div>
+          <div class="guide-step-content">
+            <h4>Choose AI setup</h4>
+            <p>After restart, Snip shows an AI choice screen. Pick <strong>"Set up AI"</strong> for automatic naming, tagging, and search — or <strong>"Continue without AI"</strong> to skip.</p>
+          </div>
+        </div>
+        <div class="guide-step">
+          <div class="guide-step-num">3</div>
+          <div class="guide-step-content">
+            <h4>Automatic Ollama install &amp; model download</h4>
+            <p>If you chose AI, Snip downloads and installs Ollama automatically, then pulls the vision model (~5 GB). A progress bar shows each step. No terminal commands needed.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="guide-callout">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        <div>
+          <strong>Changed your mind?</strong>
+          <p>You can enable or disable AI anytime in Settings. If you skipped AI during first launch, click "Set up" in Settings to start the guided install.</p>
+        </div>
+      </div>
+    </div>
 
     <!-- Section 1: Screen Recording -->
     <div class="guide-section" id="screen-recording">
@@ -470,6 +521,14 @@
         </div>
       </div>
 
+      <div class="guide-callout">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        <div>
+          <strong>Handled automatically on first launch</strong>
+          <p>See <a href="#first-launch" class="inline-link">First Launch</a> above. The steps below are for manual troubleshooting only.</p>
+        </div>
+      </div>
+
       <div class="guide-image">
         <img src="assets/enable-screen-recording.jpg" alt="macOS Screen Recording permission settings with Snip enabled" width="978" height="604" loading="lazy">
       </div>
@@ -479,6 +538,7 @@
         <p>macOS requires Screen Recording permission for any app that captures your screen.</p>
       </div>
 
+      <h4 style="margin-bottom: 16px; color: var(--text-secondary); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em;">Manual setup</h4>
       <div class="guide-steps">
         <div class="guide-step">
           <div class="guide-step-num">1</div>
@@ -560,6 +620,14 @@
         </div>
       </div>
 
+      <div class="guide-callout">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        <div>
+          <strong>Installed automatically on first launch</strong>
+          <p>See <a href="#first-launch" class="inline-link">First Launch</a> above. The steps below are for manual setup if the automatic install fails.</p>
+        </div>
+      </div>
+
       <div class="guide-image">
         <img src="assets/ollama-setup.jpg" alt="Snip AI settings showing Ollama setup" width="1774" height="946" loading="lazy">
       </div>
@@ -569,6 +637,7 @@
         <p>Snip works without AI. Enable it for automatic naming, tagging, and semantic search.</p>
       </div>
 
+      <h4 style="margin-bottom: 16px; color: var(--text-secondary); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em;">Manual setup</h4>
       <div class="guide-steps">
         <div class="guide-step">
           <div class="guide-step-num">1</div>
