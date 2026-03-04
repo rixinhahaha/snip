@@ -1221,6 +1221,9 @@ kbd {
   max-width: 420px;
   width: 100%;
   padding: 48px 28px;
+}
+
+.setup-view.setup-animate {
   animation: setup-fade-in 0.35s ease;
 }
 

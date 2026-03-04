@@ -1066,13 +1066,13 @@
     // First launch — check permission first, then AI choice
     if (aiEnabled === undefined || aiEnabled === null) {
       var permStatus = await window.snip.getScreenPermission();
-      document.getElementById('setup-overlay').classList.remove('hidden');
       if (permStatus !== 'granted') {
-        showSetupView('permission');
+        showSetupView('permission', false);
         applyPermissionState(permStatus);
       } else {
-        showSetupView('ai-choice');
+        showSetupView('ai-choice', false);
       }
+      document.getElementById('setup-overlay').classList.remove('hidden');
       return;
     }
 
@@ -1177,33 +1177,39 @@
     return null;
   }
 
-  function showSetupView(viewName) {
+  function showSetupView(viewName, animate) {
+    if (animate === undefined) animate = true;
     var views = { permission: 'setup-permission-view', 'ai-choice': 'setup-ai-choice-view', steps: 'setup-steps-view', welcome: 'setup-welcome-view', failed: 'setup-failed-view' };
     var keys = Object.keys(views);
     for (var i = 0; i < keys.length; i++) {
-      document.getElementById(views[keys[i]]).classList.add('hidden');
+      var el = document.getElementById(views[keys[i]]);
+      el.classList.add('hidden');
+      el.classList.remove('setup-animate');
     }
 
+    var target;
     if (viewName === 'welcome') {
-      document.getElementById(views.welcome).classList.remove('hidden');
+      target = document.getElementById(views.welcome);
       var welcomeTitle = document.querySelector('.setup-welcome-title');
       if (welcomeTitle) {
         welcomeTitle.textContent = setupFromSettings ? 'Your AI assistant is ready!' : 'Welcome to Snip';
       }
       startSparkles();
     } else if (viewName === 'failed') {
-      document.getElementById(views.failed).classList.remove('hidden');
+      target = document.getElementById(views.failed);
       stopSparkles();
     } else if (viewName === 'ai-choice') {
-      document.getElementById(views['ai-choice']).classList.remove('hidden');
+      target = document.getElementById(views['ai-choice']);
       startSparkles();
     } else if (viewName === 'permission') {
-      document.getElementById(views.permission).classList.remove('hidden');
+      target = document.getElementById(views.permission);
       startSparkles();
     } else {
-      document.getElementById(views.steps).classList.remove('hidden');
+      target = document.getElementById(views.steps);
       startSparkles();
     }
+    target.classList.remove('hidden');
+    if (animate) target.classList.add('setup-animate');
   }
 
   function applySetupScreen(screen, status) {
