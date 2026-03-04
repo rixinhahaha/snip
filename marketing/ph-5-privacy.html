@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { height: 100%; display: flex; align-items: center; justify-content: center; background: #13101e; }
+  body {
+    width: 1270px; height: 760px; overflow: hidden; margin: 0 auto;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif;
+    background: #13101e;
+    color: white;
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+  }
+
+  .glow { display: none; }
+
+  .content {
+    display: flex; align-items: center; gap: 70px; z-index: 1;
+  }
+
+  .left { max-width: 440px; text-align: center; }
+
+  .badge-label {
+    display: inline-block; padding: 6px 16px; border-radius: 100px;
+    background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.25);
+    font-size: 13px; color: #86efac; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 1.5px; margin-bottom: 20px;
+  }
+  h1 {
+    font-size: 48px; font-weight: 700; letter-spacing: -1.5px;
+    line-height: 1.15; margin-bottom: 16px;
+  }
+  h1 span { color: #86efac; }
+  .subtitle {
+    font-size: 19px; color: rgba(255,255,255,0.5); line-height: 1.5;
+    margin-bottom: 32px;
+  }
+
+  .cards {
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .card {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 18px; border-radius: 12px;
+    background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05);
+  }
+  .card-icon {
+    width: 40px; height: 40px; border-radius: 10px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  .ci-lock { background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.2); }
+  .ci-chip { background: rgba(139,92,246,0.1); border: 1px solid rgba(139,92,246,0.2); }
+  .ci-eye { background: rgba(251,191,36,0.1); border: 1px solid rgba(251,191,36,0.2); }
+  .ci-code { background: rgba(96,165,250,0.1); border: 1px solid rgba(96,165,250,0.2); }
+
+  .card-text { font-size: 15px; color: rgba(255,255,255,0.6); }
+  .card-text strong { color: white; }
+
+  /* Right - real settings screenshot */
+  .right { position: relative; }
+
+  .settings-screenshot {
+    width: 500px; border-radius: 0; overflow: hidden;
+    box-shadow: none;
+    border: none;
+  }
+  .settings-screenshot img {
+    width: 100%; height: auto; display: block;
+  }
+
+  /* Architecture bar at bottom */
+  .arch-bar {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    display: flex; align-items: center; justify-content: center; gap: 16px;
+    padding: 16px 0;
+    z-index: 2;
+  }
+  .arch-node {
+    padding: 8px 16px; border-radius: 8px;
+    font-size: 12px; font-weight: 600;
+  }
+  .an-app {
+    background: rgba(139,92,246,0.15); border: 1px solid rgba(139,92,246,0.3); color: #c4b5fd;
+  }
+  .an-ollama {
+    background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.25); color: #86efac;
+  }
+  .an-embed {
+    background: rgba(96,165,250,0.12); border: 1px solid rgba(96,165,250,0.25); color: #93c5fd;
+  }
+  .arch-arrow {
+    width: 24px; height: 2px;
+    background: linear-gradient(90deg, rgba(255,255,255,0.15), rgba(255,255,255,0.05));
+    position: relative;
+  }
+  .arch-arrow::after {
+    content: ''; position: absolute; right: -1px; top: -4px;
+    border: 5px solid transparent; border-left: 6px solid rgba(255,255,255,0.15);
+  }
+  .arch-sep { width: 30px; }
+  .no-cloud {
+    font-size: 12px; color: rgba(239,68,68,0.6); font-weight: 600;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .no-cloud-icon {
+    position: relative; display: inline-block;
+  }
+  .no-cloud-icon::after {
+    content: ''; position: absolute; top: 50%; left: -2px;
+    width: 22px; height: 2px; background: #ef4444;
+    transform: rotate(-45deg); border-radius: 2px;
+  }
+</style>
+</head>
+<body>
+  <div class="glow"></div>
+
+  <div class="content">
+    <div class="left">
+      <div class="badge-label">Privacy First</div>
+      <h1>100% On Your Mac.<br><span>Zero Cloud.</span></h1>
+      <p class="subtitle">Every AI feature runs locally on your machine. Your screenshots never leave your computer.</p>
+      <div class="cards">
+        <div class="card">
+          <div class="card-icon ci-lock">&#128274;</div>
+          <div class="card-text"><strong>No cloud uploads</strong> — screenshots stay on your Mac</div>
+        </div>
+        <div class="card">
+          <div class="card-icon ci-chip">&#129302;</div>
+          <div class="card-text"><strong>Local LLM</strong> — vision model runs via Ollama on Apple Silicon</div>
+        </div>
+        <div class="card">
+          <div class="card-icon ci-eye">&#128065;</div>
+          <div class="card-text"><strong>No tracking</strong> — zero analytics, telemetry, or accounts</div>
+        </div>
+        <div class="card">
+          <div class="card-icon ci-code">&#128736;&#65039;</div>
+          <div class="card-text"><strong>Open source</strong> — MIT licensed, read the code, fork it</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="right">
+      <div class="settings-screenshot">
+        <img src="../site/assets/ollama-setup.jpg" alt="Snip settings with Ollama running locally">
+      </div>
+    </div>
+  </div>
+
+  <div class="arch-bar">
+    <div class="arch-node an-app">Snip App</div>
+    <div class="arch-arrow"></div>
+    <div class="arch-node an-ollama">Ollama (on-device)</div>
+    <div class="arch-arrow"></div>
+    <div class="arch-node an-embed">Embeddings (on-device)</div>
+    <div class="arch-sep"></div>
+    <div class="no-cloud">
+      <span class="no-cloud-icon">&#9729;&#65039;</span>
+      No cloud needed
+    </div>
+  </div>
+</body>
+</html>

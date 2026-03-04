@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { height: 100%; display: flex; align-items: center; justify-content: center; background: #13101e; }
+  body {
+    width: 1270px; height: 760px; overflow: hidden; margin: 0 auto;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif;
+    background: #13101e;
+    color: white;
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+  }
+
+  .glow-1, .glow-2 { display: none; }
+
+  .content {
+    display: flex; align-items: center; gap: 70px; z-index: 1;
+  }
+
+  .left { max-width: 400px; text-align: center; }
+
+  .badge-label {
+    display: inline-block; padding: 6px 16px; border-radius: 100px;
+    background: rgba(139,92,246,0.15); border: 1px solid rgba(139,92,246,0.3);
+    font-size: 13px; color: #c4b5fd; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 1.5px; margin-bottom: 20px;
+  }
+  h1 {
+    font-size: 44px; font-weight: 700; letter-spacing: -1px;
+    line-height: 1.15; margin-bottom: 16px;
+  }
+  h1 span { color: #a78bfa; }
+  .subtitle {
+    font-size: 19px; color: rgba(255,255,255,0.5); line-height: 1.5;
+    margin-bottom: 28px;
+  }
+
+  .features {
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .feature {
+    display: flex; align-items: center; gap: 14px;
+    padding: 12px 18px; border-radius: 12px;
+    background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05);
+  }
+  .feature-icon {
+    width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  .fi-name { background: rgba(139,92,246,0.15); }
+  .fi-cat { background: rgba(59,130,246,0.15); }
+  .fi-tag { background: rgba(34,197,94,0.15); }
+  .feature-text { font-size: 15px; color: rgba(255,255,255,0.7); }
+  .feature-text strong { color: white; }
+
+  .right { position: relative; }
+
+  .transform-container {
+    display: flex; align-items: center; gap: 28px;
+  }
+
+  /* Before card */
+  .before-card {
+    width: 230px; padding: 18px; border-radius: 0;
+    background: rgba(20,15,35,0.8); border: none;
+  }
+  .before-header {
+    font-size: 11px; color: rgba(255,255,255,0.3); text-transform: uppercase;
+    letter-spacing: 1px; margin-bottom: 12px;
+  }
+  .before-thumb {
+    width: 100%; height: 110px; border-radius: 0; margin-bottom: 12px;
+    overflow: hidden; border: none;
+  }
+  .before-thumb img {
+    width: 100%; height: 100%; object-fit: cover;
+  }
+  .before-filename {
+    font-family: 'SF Mono', monospace; font-size: 11px;
+    color: rgba(255,255,255,0.35); padding: 8px 10px;
+    background: rgba(255,255,255,0.03); border-radius: 8px;
+    margin-bottom: 8px; word-break: break-all; line-height: 1.4;
+  }
+  .before-location {
+    font-size: 11px; color: rgba(255,255,255,0.2);
+  }
+
+  /* Arrow */
+  .transform-arrow {
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+  }
+  .arrow-line {
+    width: 44px; height: 2px;
+    background: linear-gradient(90deg, rgba(139,92,246,0.3), #8b5cf6);
+    position: relative;
+  }
+  .arrow-line::after {
+    content: ''; position: absolute; right: -1px; top: -5px;
+    border: 6px solid transparent; border-left: 8px solid #8b5cf6;
+  }
+  .arrow-label {
+    font-size: 11px; color: rgba(139,92,246,0.6); font-weight: 600;
+  }
+  .ai-sparkle { font-size: 18px; margin-bottom: 2px; }
+
+  /* After card */
+  .after-card {
+    width: 260px; padding: 18px; border-radius: 0;
+    background: rgba(20,15,35,0.8); border: none;
+    box-shadow: none;
+  }
+  .after-header {
+    font-size: 11px; color: rgba(139,92,246,0.6); text-transform: uppercase;
+    letter-spacing: 1px; margin-bottom: 12px;
+  }
+  .after-thumb {
+    width: 100%; height: 110px; border-radius: 0; margin-bottom: 12px;
+    overflow: hidden; position: relative;
+    border: none;
+  }
+  .after-thumb img {
+    width: 100%; height: 100%; object-fit: cover;
+  }
+  .after-badge-cat {
+    position: absolute; top: 8px; left: 8px;
+    padding: 3px 10px; border-radius: 6px;
+    background: rgba(139,92,246,0.85); font-size: 10px; font-weight: 600;
+    color: white;
+  }
+  .after-name {
+    font-size: 14px; font-weight: 600; margin-bottom: 6px; color: white;
+  }
+  .after-desc {
+    font-size: 12px; color: rgba(255,255,255,0.4); margin-bottom: 10px; line-height: 1.4;
+  }
+  .after-tags {
+    display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px;
+  }
+  .tag {
+    padding: 3px 10px; border-radius: 100px;
+    background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.2);
+    font-size: 11px; color: #86efac;
+  }
+  .after-location {
+    font-size: 11px; color: rgba(139,92,246,0.5);
+  }
+</style>
+</head>
+<body>
+  <div class="glow-1"></div>
+  <div class="glow-2"></div>
+
+  <div class="content">
+    <div class="left">
+      <div class="badge-label">AI Organization</div>
+      <h1>Every Snip,<br><span>Auto-Organized</span></h1>
+      <p class="subtitle">Save a screenshot and forget about it. The local AI does the rest in the background.</p>
+      <div class="features">
+        <div class="feature">
+          <div class="feature-icon fi-name">&#9997;&#65039;</div>
+          <div class="feature-text"><strong>Smart names</strong> — descriptive, human-readable filenames</div>
+        </div>
+        <div class="feature">
+          <div class="feature-icon fi-cat">&#128193;</div>
+          <div class="feature-text"><strong>Auto-categorize</strong> — sorted into folders like code, chat, design</div>
+        </div>
+        <div class="feature">
+          <div class="feature-icon fi-tag">&#127991;&#65039;</div>
+          <div class="feature-text"><strong>AI tags</strong> — keywords for instant search and filtering</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="right">
+      <div class="transform-container">
+        <div class="before-card">
+          <div class="before-header">Before</div>
+          <div class="before-thumb">
+            <img src="../site/assets/hero-poster.jpg" alt="Raw screenshot">
+          </div>
+          <div class="before-filename">Screenshot 2025-03-14 at 3.42.17 PM.png</div>
+          <div class="before-location">&#128193; ~/Desktop</div>
+        </div>
+
+        <div class="transform-arrow">
+          <div class="ai-sparkle">&#10024;</div>
+          <div class="arrow-line"></div>
+          <div class="arrow-label">AI Magic</div>
+        </div>
+
+        <div class="after-card">
+          <div class="after-header">After</div>
+          <div class="after-thumb">
+            <img src="../site/assets/hero-poster.jpg" alt="Organized screenshot">
+            <div class="after-badge-cat">web</div>
+          </div>
+          <div class="after-name">google-image-search-dogs</div>
+          <div class="after-desc">Google Images search results page showing various dog breeds and puppy photos</div>
+          <div class="after-tags">
+            <span class="tag">google</span>
+            <span class="tag">dogs</span>
+            <span class="tag">search</span>
+          </div>
+          <div class="after-location">&#128193; ~/Documents/snip/screenshots/web/</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

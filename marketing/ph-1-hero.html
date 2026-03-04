@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { height: 100%; display: flex; align-items: center; justify-content: center; background: #13101e; }
+  body {
+    width: 1270px; height: 760px; overflow: hidden; margin: 0 auto;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif;
+    background: #13101e;
+    color: white;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    position: relative;
+  }
+
+  .icon {
+    width: 72px; height: 72px; border-radius: 16px; margin-bottom: 24px;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(139,92,246,0.3);
+  }
+  .icon img { width: 100%; height: 100%; object-fit: cover; }
+
+  h1 {
+    font-size: 52px; font-weight: 700; line-height: 1.1;
+    letter-spacing: -1.5px; margin-bottom: 16px; text-align: center;
+  }
+  h1 span { color: #a78bfa; }
+
+  .subtitle {
+    font-size: 20px; color: rgba(255,255,255,0.55); line-height: 1.5;
+    max-width: 600px; margin-bottom: 28px; text-align: center;
+  }
+
+  .pills {
+    display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-bottom: 36px;
+  }
+  .pill {
+    padding: 9px 18px; border-radius: 100px;
+    background: rgba(139,92,246,0.12); border: none;
+    font-size: 14px; color: #c4b5fd; font-weight: 500;
+    display: flex; align-items: center; gap: 7px;
+  }
+
+  .screenshot-wrap {
+    position: relative; width: 700px; height: 340px; overflow: hidden;
+  }
+  .screenshot-wrap img {
+    width: 100%; height: 100%; object-fit: cover; object-position: top;
+  }
+
+  .badge {
+    position: absolute; bottom: 12px; right: 16px;
+    background: rgba(139,92,246,0.2); border: 1px solid rgba(139,92,246,0.3); opacity: 1;
+    border-radius: 12px; padding: 10px 16px;
+    font-size: 13px; color: #c4b5fd;
+    backdrop-filter: blur(10px);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .badge-dot {
+    width: 8px; height: 8px; border-radius: 50%; background: #22c55e;
+  }
+</style>
+</head>
+<body>
+  <div class="icon">
+    <img src="../site/assets/icon.png" alt="Snip">
+  </div>
+  <h1>AI-Powered Screenshots<br>for <span>macOS</span></h1>
+  <p class="subtitle">Capture, annotate, and find any screenshot instantly. Local AI names, tags, and organizes everything — no cloud required.</p>
+  <div class="pills">
+    <div class="pill">&#128274; 100% Local AI</div>
+    <div class="pill">&#10003; Free &amp; Open Source</div>
+    <div class="pill">&#9889; 5-Second Workflow</div>
+  </div>
+  <div class="screenshot-wrap">
+    <img src="../site/assets/hero-editor.jpg" alt="Editor">
+    <div class="badge">
+      <div class="badge-dot"></div>
+      AI organizing in background...
+    </div>
+  </div>
+</body>
+</html>

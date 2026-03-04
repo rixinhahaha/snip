@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { height: 100%; display: flex; align-items: center; justify-content: center; background: #13101e; }
+  body {
+    width: 1270px; height: 760px; overflow: hidden; margin: 0 auto;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif;
+    background: #13101e;
+    color: white;
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+  }
+
+  .glow { display: none; }
+
+  .content {
+    display: flex; align-items: center; gap: 70px; z-index: 1;
+  }
+
+  /* Left - real search screenshot */
+  .search-panel {
+    width: 560px; border-radius: 0; overflow: hidden;
+    box-shadow: none;
+    border: none;
+  }
+  .search-panel img {
+    width: 100%; height: auto; display: block;
+  }
+
+  /* Right - text */
+  .right { max-width: 400px; text-align: center; }
+
+  .badge-label {
+    display: inline-block; padding: 6px 16px; border-radius: 100px;
+    background: rgba(139,92,246,0.15); border: 1px solid rgba(139,92,246,0.3);
+    font-size: 13px; color: #c4b5fd; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 1.5px; margin-bottom: 20px;
+  }
+  h1 {
+    font-size: 44px; font-weight: 700; letter-spacing: -1px;
+    line-height: 1.15; margin-bottom: 16px;
+  }
+  h1 span { color: #a78bfa; }
+  .subtitle {
+    font-size: 19px; color: rgba(255,255,255,0.5); line-height: 1.5;
+    margin-bottom: 28px;
+  }
+
+  .examples {
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .example {
+    padding: 12px 16px; border-radius: 10px;
+    background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05);
+    font-size: 14px; color: rgba(255,255,255,0.5);
+    font-style: italic;
+  }
+  .example::before {
+    content: '\201C'; color: #8b5cf6; font-size: 18px; margin-right: 4px;
+    font-style: normal;
+  }
+  .example::after {
+    content: '\201D'; color: #8b5cf6; font-size: 18px; margin-left: 4px;
+    font-style: normal;
+  }
+
+  .shortcut-hint {
+    margin-top: 20px; display: flex; align-items: center; gap: 10px;
+    font-size: 14px; color: rgba(255,255,255,0.3);
+  }
+  .kbd {
+    display: inline-block; padding: 4px 10px; border-radius: 6px;
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+    font-family: 'SF Mono', monospace; font-size: 13px; color: rgba(255,255,255,0.5);
+  }
+</style>
+</head>
+<body>
+  <div class="glow"></div>
+
+  <div class="content">
+    <div class="search-panel">
+      <img src="../site/assets/search-view.jpg" alt="Semantic search view">
+    </div>
+
+    <div class="right">
+      <div class="badge-label">Semantic Search</div>
+      <h1>Describe It.<br><span>Find It.</span></h1>
+      <p class="subtitle">No more digging through folders. Just describe what you remember and semantic search finds the right screenshot.</p>
+      <div class="examples">
+        <div class="example">error message in the terminal</div>
+        <div class="example">figma mockup of the settings page</div>
+        <div class="example">that chart from the Q4 report</div>
+      </div>
+      <div class="shortcut-hint">
+        <span class="kbd">&#8984;&#8679;F</span> to search from anywhere
+      </div>
+    </div>
+  </div>
+</body>
+</html>

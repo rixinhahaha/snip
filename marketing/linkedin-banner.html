@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1584">
+  <title>Snip LinkedIn Banner</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { height: 100%; display: flex; align-items: center; justify-content: center; background: #13101e; }
+
+    body {
+      background: #13101e;
+      font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+      overflow: hidden;
+    }
+
+    .banner {
+      width: 1584px;
+      height: 396px;
+      background: #13101e;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .orb, .grid, .sparkle { display: none; }
+
+    /* Content */
+    .content {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      gap: 44px;
+      width: 100%;
+      justify-content: center;
+    }
+
+    .logo-wrapper {
+      flex-shrink: 0;
+      width: 160px;
+      height: 160px;
+      background: linear-gradient(135deg, #0f0a1e, #1a1030);
+      border-radius: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1.5px solid rgba(139, 92, 246, 0.3);
+      box-shadow:
+        0 0 40px rgba(139, 92, 246, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    }
+
+    .text-section {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .app-name {
+      font-size: 72px;
+      font-weight: 800;
+      color: #ffffff;
+      letter-spacing: -0.03em;
+      line-height: 1;
+    }
+
+    .tagline {
+      font-size: 26px;
+      font-weight: 400;
+      color: rgba(255, 255, 255, 0.6);
+      letter-spacing: -0.01em;
+    }
+
+    .tagline .highlight {
+      color: #a78bfa;
+      font-weight: 500;
+    }
+
+    .badge-row {
+      display: flex;
+      gap: 12px;
+      margin-top: 4px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #a78bfa;
+      background: rgba(139, 92, 246, 0.1);
+      border: 1px solid rgba(139, 92, 246, 0.2);
+      border-radius: 100px;
+      letter-spacing: 0.02em;
+    }
+
+    .domain {
+      position: absolute;
+      bottom: 28px;
+      right: 60px;
+      font-size: 22px;
+      font-weight: 600;
+      color: #a78bfa;
+      letter-spacing: 0.04em;
+      z-index: 2;
+      padding: 8px 20px;
+      background: rgba(139, 92, 246, 0.1);
+      border: 1px solid rgba(139, 92, 246, 0.25);
+      border-radius: 100px;
+    }
+
+    .accent-line {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, transparent, #8B5CF6, #6366f1, transparent);
+      opacity: 0.6;
+    }
+  </style>
+</head>
+<body>
+  <div class="banner">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+    <div class="grid"></div>
+
+    <div class="sparkle"></div>
+    <div class="sparkle"></div>
+    <div class="sparkle"></div>
+    <div class="sparkle"></div>
+    <div class="sparkle"></div>
+    <div class="sparkle"></div>
+    <div class="sparkle"></div>
+
+    <div class="content">
+      <div class="logo-wrapper">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="120" height="120">
+          <defs>
+            <linearGradient id="bl" x1="0.3" y1="0" x2="0.7" y2="1"><stop offset="0%" stop-color="#93c5fd"/><stop offset="60%" stop-color="#818cf8"/><stop offset="100%" stop-color="#6366f1"/></linearGradient>
+            <linearGradient id="br" x1="0.7" y1="0" x2="0.3" y2="1"><stop offset="0%" stop-color="#93c5fd"/><stop offset="60%" stop-color="#818cf8"/><stop offset="100%" stop-color="#6366f1"/></linearGradient>
+            <linearGradient id="h" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#818cf8"/><stop offset="100%" stop-color="#6366f1"/></linearGradient>
+            <filter id="g" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="1.5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          </defs>
+          <g transform="translate(50,46)">
+            <path d="M-2,2 L-13,-22 Q-11.5,-25 -8,-23 L1,-1 Z" fill="url(#bl)" opacity="0.95"/>
+            <path d="M2,2 L13,-22 Q11.5,-25 8,-23 L-1,-1 Z" fill="url(#br)" opacity="0.95"/>
+            <circle cx="0" cy="1" r="2.8" fill="#a5b4fc" opacity="0.85" filter="url(#g)"/>
+            <circle cx="-7" cy="16" r="9.5" fill="none" stroke="url(#h)" stroke-width="3.5" opacity="0.9"/>
+            <circle cx="7" cy="16" r="9.5" fill="none" stroke="url(#h)" stroke-width="3.5" opacity="0.8"/>
+          </g>
+          <g transform="translate(42,18)"><path d="M0,-5.5 L1.1,-1.1 L5.5,0 L1.1,1.1 L0,5.5 L-1.1,1.1 L-5.5,0 L-1.1,-1.1 Z" fill="#93c5fd" opacity="0.9"/></g>
+          <g transform="translate(62,14)"><path d="M0,-4 L0.8,-0.8 L4,0 L0.8,0.8 L0,4 L-0.8,0.8 L-4,0 L-0.8,-0.8 Z" fill="#93c5fd" opacity="0.6"/></g>
+        </svg>
+      </div>
+
+      <div class="text-section">
+        <div class="app-name">Snip</div>
+        <div class="tagline">Capture. Annotate. <span class="highlight">Find anything.</span></div>
+        <div class="badge-row">
+          <div class="badge">
+            <svg width="14" height="14" viewBox="0 0 814 1000" fill="currentColor"><path d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76.5 0-103.7 40.8-165.9 40.8s-105.6-57.8-155.5-127.4c-58.3-81.3-105.6-207.4-105.6-326.5 0-192 124.7-293.6 247.2-293.6 65.2 0 119.6 42.8 160.5 42.8 39.2 0 100.2-45.3 174.5-45.3 28.2 0 129.6 2.6 196.5 99.8zm-269.5-86.7c31.9-38.5 54.6-92 54.6-145.5 0-7.4-.8-14.8-2.6-20.7-52 1.9-113.6 34.6-150.8 78.4-28.2 32.6-57.2 86-57.2 140.2 0 8.1 1.3 16.1 1.9 18.7 3.2.6 8.4 1.3 13.5 1.3 46.6 0 105.6-31.2 140.6-72.4z"/></svg>
+            macOS
+          </div>
+          <div class="badge">On-Device AI</div>
+          <div class="badge">Open Source</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="domain">snipit.dev</div>
+    <div class="accent-line"></div>
+  </div>
+</body>
+</html>
