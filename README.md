@@ -6,6 +6,8 @@
 
 **[snipit.dev](https://snipit.dev)**
 
+<a href="https://www.producthunt.com/products/snip-ai-powered-macos-screenshot-tool?utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-snip-ai-powered-macos-screenshot-tool-2" target="_blank"><img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1089620&theme=dark" alt="Snip on Product Hunt" height="40"></a>
+
 macOS screenshot tool with annotation and AI-powered organization.
 
 Capture a region of your screen, annotate with shapes, text, blur, or AI segmentation, then save. An AI agent automatically categorizes, names, and tags each screenshot. Semantic search lets you find any screenshot by description.
