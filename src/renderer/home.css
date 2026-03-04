@@ -1253,8 +1253,8 @@ kbd {
   font-size: 13px;
   color: var(--text-secondary);
   line-height: 1.5;
-  max-width: 320px;
   margin: 0 auto;
+  white-space: nowrap;
 }
 
 /* Step cards */
@@ -1424,14 +1424,14 @@ kbd {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: 18px;
 }
 
 .setup-permission-btns > div {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 14px;
 }
 
 
