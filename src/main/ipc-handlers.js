@@ -1,4 +1,4 @@
-const { ipcMain, clipboard, nativeImage, app, Notification, shell, BrowserWindow } = require('electron');
+const { ipcMain, clipboard, nativeImage, app, Notification, shell, BrowserWindow, systemPreferences, desktopCapturer } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const {
@@ -85,6 +85,23 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn) {
       'Courier New', 'Georgia', 'Times New Roman', 'Verdana',
       'Comic Sans MS', 'Impact', 'Futura', 'Avenir'
     ];
+  });
+
+  // Screen recording permission
+  ipcMain.handle('get-screen-permission', async () => {
+    return systemPreferences.getMediaAccessStatus('screen');
+  });
+
+  ipcMain.handle('request-screen-permission', async () => {
+    try {
+      await desktopCapturer.getSources({ types: ['screen'], thumbnailSize: { width: 1, height: 1 } });
+    } catch (e) { console.log('[Snip] Screen permission probe error (expected):', e.message); }
+    return systemPreferences.getMediaAccessStatus('screen');
+  });
+
+  ipcMain.handle('restart-app', () => {
+    app.relaunch();
+    app.exit(0);
   });
 
   // AI preference

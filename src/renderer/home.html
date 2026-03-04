@@ -340,6 +340,43 @@
   <div id="setup-overlay" class="setup-overlay hidden">
     <div id="setup-sparkles" class="setup-sparkles"></div>
 
+    <!-- Screen Recording permission view -->
+    <div id="setup-permission-view" class="setup-view hidden">
+      <div class="setup-header">
+        <div class="setup-header-icon">
+          <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+            <rect x="8" y="10" width="32" height="22" rx="3" stroke="var(--accent)" stroke-width="2.5" fill="none"/>
+            <path d="M8 28h32" stroke="var(--accent)" stroke-width="2" opacity="0.4"/>
+            <rect x="18" y="32" width="12" height="2" rx="1" fill="var(--accent)" opacity="0.6"/>
+            <rect x="14" y="35" width="20" height="2" rx="1" fill="var(--accent)" opacity="0.4"/>
+            <circle cx="36" cy="14" r="5" fill="var(--accent)" opacity="0.25"/>
+            <path d="M34.5 14l1 1 2.5-2.5" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <h2>Screen Recording</h2>
+        <p id="setup-perm-desc">Snip needs Screen Recording access to capture your screen.</p>
+      </div>
+      <div class="setup-permission-btns">
+        <button id="setup-perm-allow-btn" class="setup-btn-icon setup-btn-glow">
+          Allow <kbd class="setup-kbd">Enter</kbd>
+        </button>
+        <div id="setup-perm-restart" class="hidden">
+          <button id="setup-perm-restart-btn" class="setup-btn-icon setup-btn-glow">
+            Restart Snip <kbd class="setup-kbd">Enter</kbd>
+          </button>
+        </div>
+        <div id="setup-perm-denied" class="hidden">
+          <button id="setup-perm-settings-btn" class="setup-btn-icon setup-btn-glow">
+            Open System Settings <kbd class="setup-kbd">Enter</kbd>
+          </button>
+          <button id="setup-perm-restart-btn2" class="setup-btn-icon">
+            Restart Snip
+          </button>
+        </div>
+      </div>
+      <button id="setup-perm-skip-btn" class="setup-btn-skip">Skip for now <kbd class="setup-kbd">Esc</kbd></button>
+    </div>
+
     <!-- AI choice view (first-launch opt-in/out) -->
     <div id="setup-ai-choice-view" class="setup-view hidden">
       <div class="setup-header">

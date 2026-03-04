@@ -1419,6 +1419,22 @@ kbd {
   border-color: var(--text-muted);
 }
 
+/* Permission buttons container */
+.setup-permission-btns {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.setup-permission-btns > div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+
 /* AI choice buttons container */
 .setup-ai-choice-btns {
   display: flex;

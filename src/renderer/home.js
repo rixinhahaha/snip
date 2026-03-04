@@ -916,6 +916,27 @@
       hideSetupOverlay();
     });
 
+    // Permission view buttons
+    var permAllowBtn = document.getElementById('setup-perm-allow-btn');
+    var permRestartDiv = document.getElementById('setup-perm-restart');
+    var permDeniedDiv = document.getElementById('setup-perm-denied');
+    var permSettingsBtn = document.getElementById('setup-perm-settings-btn');
+    var permRestartBtn = document.getElementById('setup-perm-restart-btn');
+    var permRestartBtn2 = document.getElementById('setup-perm-restart-btn2');
+    var permSkipBtn = document.getElementById('setup-perm-skip-btn');
+
+    permAllowBtn.addEventListener('click', handlePermissionAllow);
+
+    permSettingsBtn.addEventListener('click', function() {
+      window.snip.openExternalUrl('x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture');
+    });
+
+    var handleRestart = function() { window.snip.restartApp(); };
+    permRestartBtn.addEventListener('click', handleRestart);
+    permRestartBtn2.addEventListener('click', handleRestart);
+
+    permSkipBtn.addEventListener('click', skipPermissionView);
+
     // Action buttons — both primary and retry share the same handler
     var installAction = function() { startSetupAction('install', installBtn, skipBtn, window.snip.installOllama); };
     var modelAction = function() { startSetupAction('model', modelBtn, skipBtn, window.snip.pullOllamaModel); };
@@ -934,6 +955,23 @@
     // Keyboard shortcuts for setup overlay
     document.addEventListener('keydown', function(e) {
       if (overlay.classList.contains('hidden')) return;
+
+      // Permission screen — Enter to Allow (or Settings if denied), Esc to skip
+      var permView = document.getElementById('setup-permission-view');
+      if (permView && !permView.classList.contains('hidden')) {
+        if (e.key === 'Escape') { skipPermissionView(); return; }
+        if (e.key === 'Enter') {
+          if (!permAllowBtn.classList.contains('hidden')) {
+            permAllowBtn.click();
+          } else if (!permRestartDiv.classList.contains('hidden')) {
+            permRestartBtn.click();
+          } else if (!permDeniedDiv.classList.contains('hidden')) {
+            permSettingsBtn.click();
+          }
+          return;
+        }
+        return;
+      }
 
       // AI choice screen — Y to enable, N to skip
       var aiChoiceView = document.getElementById('setup-ai-choice-view');
@@ -1025,16 +1063,84 @@
     // Sync toggle to current state
     updateAiSettingsVisibility(aiEnabled === true ? true : false);
 
-    // First launch — show AI choice screen
+    // First launch — check permission first, then AI choice
     if (aiEnabled === undefined || aiEnabled === null) {
+      var permStatus = await window.snip.getScreenPermission();
       document.getElementById('setup-overlay').classList.remove('hidden');
-      showSetupView('ai-choice');
+      if (permStatus !== 'granted') {
+        showSetupView('permission');
+        applyPermissionState(permStatus);
+      } else {
+        showSetupView('ai-choice');
+      }
       return;
     }
 
     // AI disabled or already enabled — no overlay on launch.
     // User can manage setup from Settings if needed.
     return;
+  }
+
+  var PERM_DESC = {
+    'default': 'Snip needs Screen Recording access to capture your screen.',
+    'restart': 'Snip needs Screen Recording access to capture your screen.',
+    'denied': 'Snip needs Screen Recording access to capture your screen.'
+  };
+  var PERM_DESC_SUB = {
+    'restart': 'Restart is needed for the permission to take effect.',
+    'denied': 'Enable Snip in System Settings, then restart.'
+  };
+
+  function setPermDesc(key) {
+    var desc = document.getElementById('setup-perm-desc');
+    desc.textContent = '';
+    desc.appendChild(document.createTextNode(PERM_DESC[key]));
+    if (PERM_DESC_SUB[key]) {
+      desc.appendChild(document.createElement('br'));
+      desc.appendChild(document.createTextNode(PERM_DESC_SUB[key]));
+    }
+  }
+
+  function applyPermissionState(status) {
+    var allowBtn = document.getElementById('setup-perm-allow-btn');
+    var restartDiv = document.getElementById('setup-perm-restart');
+    var deniedDiv = document.getElementById('setup-perm-denied');
+
+    allowBtn.classList.add('hidden');
+    restartDiv.classList.add('hidden');
+    deniedDiv.classList.add('hidden');
+
+    if (status === 'denied') {
+      setPermDesc('denied');
+      deniedDiv.classList.remove('hidden');
+    } else {
+      // not-determined or any other state — show Allow button
+      setPermDesc('default');
+      allowBtn.classList.remove('hidden');
+    }
+  }
+
+  async function handlePermissionAllow() {
+    var allowBtn = document.getElementById('setup-perm-allow-btn');
+    allowBtn.disabled = true;
+    var result = await window.snip.requestScreenPermission();
+    allowBtn.disabled = false;
+
+    if (result === 'granted') {
+      // Permission granted but needs restart to take effect
+      allowBtn.classList.add('hidden');
+      document.getElementById('setup-perm-denied').classList.add('hidden');
+      document.getElementById('setup-perm-restart').classList.remove('hidden');
+      setPermDesc('restart');
+    } else {
+      // User denied — show Settings + Restart
+      applyPermissionState('denied');
+    }
+  }
+
+  function skipPermissionView() {
+    // Dismiss overlay entirely — reactive dialog in capturer.js handles permission later
+    hideSetupOverlay();
   }
 
   async function showSetupOverlay() {
@@ -1072,7 +1178,7 @@
   }
 
   function showSetupView(viewName) {
-    var views = { 'ai-choice': 'setup-ai-choice-view', steps: 'setup-steps-view', welcome: 'setup-welcome-view', failed: 'setup-failed-view' };
+    var views = { permission: 'setup-permission-view', 'ai-choice': 'setup-ai-choice-view', steps: 'setup-steps-view', welcome: 'setup-welcome-view', failed: 'setup-failed-view' };
     var keys = Object.keys(views);
     for (var i = 0; i < keys.length; i++) {
       document.getElementById(views[keys[i]]).classList.add('hidden');
@@ -1090,6 +1196,9 @@
       stopSparkles();
     } else if (viewName === 'ai-choice') {
       document.getElementById(views['ai-choice']).classList.remove('hidden');
+      startSparkles();
+    } else if (viewName === 'permission') {
+      document.getElementById(views.permission).classList.remove('hidden');
       startSparkles();
     } else {
       document.getElementById(views.steps).classList.remove('hidden');

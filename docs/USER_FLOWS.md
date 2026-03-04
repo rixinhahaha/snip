@@ -18,7 +18,8 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 | 2 | -- | No Dock icon visible (`app.dock.hide()` in dev, `LSUIElement: true` in production) |
 | 3 | -- | `~/Documents/snip/screenshots/` directory created automatically |
 | 4 | -- | Config file created at `~/Library/Application Support/snip/snip-config.json` with default categories |
-| 5 | -- | Home window opens with Gallery page showing "No screenshots yet" empty state |
+| 5 | -- | Home window opens; if first launch and Screen Recording not granted, permission view shown first (see §8.0) |
+| 5a | -- | If permission granted (or skipped), shows AI choice view (see §8.1) or Gallery page |
 | 6 | -- | SAM segmentation model begins loading in background (logged: `[Segmentation Worker] Loading SlimSAM model...`) |
 | 7 | -- | File watcher starts monitoring screenshots directory (logged: `[Organizer] Watching: ...`) |
 | 8 | -- | Ollama managed process starts: `findOllamaBinary()` locates CLI binary, `findFreePort()` gets a dynamic port, spawns `ollama serve` |
@@ -604,9 +605,47 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 
 ## 8. Settings
 
+### 8.0 Screen Recording Permission
+
+On first launch, Snip checks Screen Recording permission **before** showing the AI choice. Since granting permission requires an app restart, this must come first.
+
+**First Launch — Permission not granted:**
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | App launches, `aiEnabled` not set in config | Permission check via `systemPreferences.getMediaAccessStatus('screen')` |
+| 2 | Status is `not-determined` | Overlay shows Screen Recording view with **"Allow"** button |
+| 3 | Click "Allow" (or press Enter) | Triggers `desktopCapturer.getSources()` → macOS shows native permission dialog |
+| 4a | User allows | **"Restart Snip"** button shown with hint "Restart is needed for Screen Recording to take effect." |
+| 4b | User denies | Switches to denied state: **"Open System Settings"** + **"Restart Snip"** buttons + hint |
+| 5 | Click "Restart Snip" | App relaunches via `app.relaunch(); app.exit(0)` |
+| 6 | After restart, permission = `granted` | Permission view skipped, proceeds to AI Choice (§8.1) |
+
+**First Launch — Permission already granted (e.g. MDM pre-configured):**
+
+| Condition | Expected Behavior |
+|-----------|-------------------|
+| `getMediaAccessStatus('screen')` returns `granted` | Permission view skipped entirely, goes straight to AI Choice (§8.1) |
+
+**Denied state:**
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Permission status is `denied` | Shows "Open System Settings" + "Restart Snip" buttons |
+| 2 | Click "Open System Settings" | Opens `x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture` |
+| 3 | User enables Snip in System Settings, clicks "Restart Snip" | App relaunches → permission granted → view skipped |
+| 4 | If still denied after restart | Same permission view shown again |
+
+**Skip (Esc):**
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Press Esc or click "Skip for now" | Overlay dismissed entirely |
+| 2 | User tries to capture | Existing reactive dialog in `capturer.js` handles permission (§2.6) |
+
 ### 8.1 AI Choice Screen
 
-On first launch, the app presents an AI choice screen before any Ollama setup. The user's decision is persisted as `aiEnabled` in the config file.
+On first launch (after Screen Recording permission is handled), the app presents an AI choice screen before any Ollama setup. The user's decision is persisted as `aiEnabled` in the config file.
 
 **First Launch (aiEnabled = undefined):**
 
@@ -647,7 +686,7 @@ On first launch, the app presents an AI choice screen before any Ollama setup. T
 
 The setup wizard appears as a **full-window inline overlay** inside the home window (not a separate popup). It auto-shows on first launch if the user chose "Set up AI" (aiEnabled = true) and Ollama is not fully ready, and can be reopened from the Settings "Set up" button.
 
-**Overlay structure:** Four views — AI Choice (first launch only), Steps (install/running/model), Welcome, Failed. Only one visible at a time. Step cards show numbered indicators (pending -> active -> done with checkmark).
+**Overlay structure:** Five views — Permission (first launch, if not granted), AI Choice (first launch only), Steps (install/running/model), Welcome, Failed. Only one visible at a time. Step cards show numbered indicators (pending -> active -> done with checkmark).
 
 | Step | Action | Expected Result |
 |------|--------|-----------------|

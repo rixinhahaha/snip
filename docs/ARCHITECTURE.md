@@ -236,6 +236,9 @@ The preload script (`preload.js`) exposes `window.snip` with these methods:
 
 | Method | Direction | Purpose |
 |--------|-----------|---------|
+| `getScreenPermission()` | R -> M | Check Screen Recording permission status (`granted`, `denied`, `not-determined`) |
+| `requestScreenPermission()` | R -> M | Trigger macOS native Screen Recording prompt via lightweight `desktopCapturer.getSources()` call; returns new status |
+| `restartApp()` | R -> M | Relaunch and exit the app (used after granting Screen Recording permission) |
 | `getAiEnabled()` / `setAiEnabled(val)` | R -> M | AI opt-in flag (`true`, `false`, or `undefined` on first launch) |
 | `getOllamaConfig()` / `setOllamaConfig(cfg)` | R -> M | Ollama model/URL settings |
 | `getOllamaStatus()` | R -> M | Server running? Model ready? Pull progress? |
