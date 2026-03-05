@@ -179,6 +179,7 @@
 
     .guide-step {
       display: flex;
+      align-items: flex-start;
       gap: 16px;
       padding: 20px 24px;
       background: var(--bg-card);
@@ -192,8 +193,8 @@
     }
 
     .guide-step-num {
-      width: 32px;
-      height: 32px;
+      width: 28px;
+      height: 28px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -201,9 +202,10 @@
       border: 1px solid var(--border-hover);
       border-radius: 50%;
       color: var(--accent);
-      font-size: 0.85rem;
+      font-size: 0.8rem;
       font-weight: 700;
       flex-shrink: 0;
+      margin-top: 2px;
     }
 
     .guide-step-content h3 {
@@ -428,7 +430,6 @@
       }
 
       .guide-step {
-        flex-direction: column;
         gap: 12px;
       }
 
@@ -437,7 +438,6 @@
       }
 
       .guide-callout {
-        flex-direction: column;
         gap: 10px;
       }
 
