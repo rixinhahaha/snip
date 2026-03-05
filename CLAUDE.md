@@ -74,7 +74,7 @@ These are non-negotiable rules. Violating them causes crashes or broken UX:
 
 ### Releases
 - **Before creating a new release tag**, always bump the version in **both** `package.json` and `package-lock.json` (run `npm install --package-lock-only` to sync the lock file). Commit the version bump before tagging.
-- **Do NOT update the marketing site** (`site/script.js` `SNIP_VERSION` or download buttons) at tag time. Wait until the GitHub Release workflow completes successfully and the DMG artifact is publicly available, then update the marketing site in a separate commit.
+- The marketing site's download link is **dynamic** — `site/script.js` fetches the latest release from GitHub's API at runtime. No manual version update is needed; it automatically points to the newest DMG once the release workflow completes.
 
 ---
 
