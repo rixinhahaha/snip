@@ -28,9 +28,13 @@ function registerGlobalShortcuts() {
     }
   } catch (err) {
     console.error('[Snip] Invalid capture accelerator "%s", falling back to default', captureAccel);
-    globalShortcut.register(defaults['capture'], () => {
-      if (captureCallback) captureCallback().catch(() => {});
-    });
+    try {
+      globalShortcut.register(defaults['capture'], () => {
+        if (captureCallback) captureCallback().catch(() => {});
+      });
+    } catch (fallbackErr) {
+      console.error('[Snip] Failed to register default capture shortcut:', fallbackErr);
+    }
   }
 
   const searchAccel = shortcuts['search'];
@@ -43,9 +47,13 @@ function registerGlobalShortcuts() {
     }
   } catch (err) {
     console.error('[Snip] Invalid search accelerator "%s", falling back to default', searchAccel);
-    globalShortcut.register(defaults['search'], () => {
-      if (searchCallback) searchCallback();
-    });
+    try {
+      globalShortcut.register(defaults['search'], () => {
+        if (searchCallback) searchCallback();
+      });
+    } catch (fallbackErr) {
+      console.error('[Snip] Failed to register default search shortcut:', fallbackErr);
+    }
   }
 }
 

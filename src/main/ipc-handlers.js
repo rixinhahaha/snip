@@ -17,7 +17,7 @@ const ollamaManager = require('./ollama-manager');
 let pendingEditorData = null;
 let editorWindowRef = null;
 
-function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterShortcutsFn) {
+function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterShortcutsFn, rebuildTrayMenuFn) {
   // Copy annotated image to clipboard
   ipcMain.handle('copy-to-clipboard', async (event, dataURL) => {
     const image = nativeImage.createFromDataURL(dataURL);
@@ -499,6 +499,7 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
     if ((action === 'capture' || action === 'search') && reregisterShortcutsFn) {
       reregisterShortcutsFn();
     }
+    if (rebuildTrayMenuFn) rebuildTrayMenuFn();
     // Broadcast to all windows
     const shortcuts = getShortcuts();
     for (const win of BrowserWindow.getAllWindows()) {
@@ -510,6 +511,7 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
   ipcMain.handle('reset-shortcuts', async () => {
     resetShortcuts();
     if (reregisterShortcutsFn) reregisterShortcutsFn();
+    if (rebuildTrayMenuFn) rebuildTrayMenuFn();
     const shortcuts = getShortcuts();
     for (const win of BrowserWindow.getAllWindows()) {
       if (!win.isDestroyed()) win.webContents.send('shortcuts-changed', shortcuts);

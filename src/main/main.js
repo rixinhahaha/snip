@@ -1,7 +1,7 @@
 const { app, BrowserWindow, screen } = require('electron');
 const path = require('path');
 const { registerShortcuts, unregisterShortcuts, reregisterShortcuts } = require('./shortcuts');
-const { createTray } = require('./tray');
+const { createTray, rebuildTrayMenu } = require('./tray');
 const { registerIpcHandlers } = require('./ipc-handlers');
 const { captureScreen } = require('./capturer');
 const { initStore } = require('./store');
@@ -253,7 +253,7 @@ app.whenReady().then(() => {
 
   createTray(triggerCapture, showSearchPage, showHomeWindow);
   registerShortcuts(triggerCapture, showSearchPage);
-  registerIpcHandlers(getOverlayWindow, createEditorWindow, reregisterShortcuts);
+  registerIpcHandlers(getOverlayWindow, createEditorWindow, reregisterShortcuts, rebuildTrayMenu);
 
   // Start background organizer
   startWatcher();

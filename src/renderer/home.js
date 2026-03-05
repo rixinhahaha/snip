@@ -636,8 +636,8 @@
 
   // ── Keyboard Shortcuts settings ──
   var SHORTCUT_DEFINITIONS = [
-    { action: 'capture', name: 'Snip It', context: 'Global', configurable: true, global: true },
-    { action: 'search', name: 'Search snips', context: 'Global', configurable: true, global: true },
+    { action: 'capture', name: 'Snip It', context: 'Global', configurable: true },
+    { action: 'search', name: 'Search snips', context: 'Global', configurable: true },
     { action: null, name: 'Select tool', context: 'Annotation', configurable: false, display: 'V' },
     { action: null, name: 'Rectangle tool', context: 'Annotation', configurable: false, display: 'R' },
     { action: null, name: 'Text tool', context: 'Annotation', configurable: false, display: 'T' },
@@ -661,6 +661,7 @@
   var recordingBtn = null;
   var recordingEditBtn = null;
   var recordingKeyHandler = null;
+  var recordingBlurHandler = null;
 
   function acceleratorToDisplay(accel) {
     if (!accel) return '';
@@ -677,8 +678,7 @@
     document.getElementById('shortcuts-reset-btn').addEventListener('click', async function() {
       stopRecording();
       await window.snip.resetShortcuts();
-      var updated = await window.snip.getShortcuts();
-      renderShortcuts(updated);
+      // The broadcast from reset-shortcuts will trigger onShortcutsChanged which re-renders
       var status = document.getElementById('shortcuts-status');
       status.textContent = 'Restored defaults';
       status.classList.add('visible');
@@ -687,6 +687,8 @@
 
     if (window.snip.onShortcutsChanged) {
       window.snip.onShortcutsChanged(function(updated) {
+        // Skip re-render if user is actively recording — avoid orphaning the keydown handler
+        if (recordingAction !== null) return;
         renderShortcuts(updated);
       });
     }
@@ -820,6 +822,13 @@
     };
 
     document.addEventListener('keydown', recordingKeyHandler, true);
+
+    // Cancel recording if window loses focus
+    recordingBlurHandler = function() {
+      stopRecording();
+      renderShortcutsFromStore();
+    };
+    window.addEventListener('blur', recordingBlurHandler);
   }
 
   function electronKeyName(e) {
@@ -841,6 +850,10 @@
     if (recordingKeyHandler) {
       document.removeEventListener('keydown', recordingKeyHandler, true);
       recordingKeyHandler = null;
+    }
+    if (recordingBlurHandler) {
+      window.removeEventListener('blur', recordingBlurHandler);
+      recordingBlurHandler = null;
     }
     if (recordingBtn) {
       recordingBtn.classList.remove('recording');
