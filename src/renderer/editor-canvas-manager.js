@@ -93,7 +93,9 @@ const EditorCanvasManager = (() => {
     }
 
     // Layer 2: Fabric annotations at matching resolution
-    var fabricExport = canvas.toCanvasElement(dpr);
+    // Account for viewport zoom: multiply by dpr/zoom so export is full-res
+    var zoom = canvas.getZoom() || 1;
+    var fabricExport = canvas.toCanvasElement(dpr / zoom);
     ctx.drawImage(fabricExport, 0, 0, exportW, exportH);
 
     return exportCanvas.toDataURL('image/' + format, quality);

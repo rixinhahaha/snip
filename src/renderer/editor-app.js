@@ -37,6 +37,9 @@
     // Set background image on <img> element
     EditorCanvasManager.setBackgroundImage(croppedDataURL, canvasW, canvasH);
 
+    // Scale image area to fit viewport if image is larger than available space
+    scaleImageToFit(canvasW, canvasH);
+
     // Load fonts
     const fonts = await window.snip.getSystemFonts();
     var fontSelect = document.getElementById('font-select');
@@ -71,6 +74,31 @@
     } catch (err) {
       console.warn('[Snip] Failed to check segment support:', err.message);
     }
+  }
+
+  function scaleImageToFit(imgW, imgH) {
+    var container = document.getElementById('editor-container');
+    var imageArea = document.getElementById('image-area');
+    var bgImg = document.getElementById('background-image');
+    // Available space: viewport minus some breathing room (24px each side)
+    // padding-top on container already accounts for toolbar
+    var availW = container.clientWidth - 48;
+    var availH = container.clientHeight - 48;
+    if (imgW <= availW && imgH <= availH) return; // fits fine
+
+    var scale = Math.min(availW / imgW, availH / imgH);
+
+    // Scale the visual container (img + canvas overlay)
+    var scaledW = Math.round(imgW * scale);
+    var scaledH = Math.round(imgH * scale);
+    imageArea.style.width = scaledW + 'px';
+    imageArea.style.height = scaledH + 'px';
+    bgImg.style.width = scaledW + 'px';
+    bgImg.style.height = scaledH + 'px';
+
+    // Use Fabric's zoom to scale canvas content + fix pointer mapping
+    canvas.setDimensions({ width: scaledW, height: scaledH });
+    canvas.setZoom(scale);
   }
 
   async function ensureToolbarFits() {
