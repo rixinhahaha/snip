@@ -52,44 +52,47 @@
     selectionInstance.activate();
   }
 
+  function cropRegion(fullImg, region) {
+    if (!region) return capturedDataURL;
+
+    const imgW = fullImg.naturalWidth;
+    const imgH = fullImg.naturalHeight;
+    const scaleX = imgW / window.screen.width;
+    const scaleY = imgH / window.screen.height;
+
+    // Account for overlay window's offset within its display (menu bar / notch on macOS)
+    const winOffsetX = (window.screenX || 0) - displayOrigin.x;
+    const winOffsetY = (window.screenY || 0) - displayOrigin.y;
+
+    const physX = Math.round((region.x + winOffsetX) * scaleX);
+    const physY = Math.round((region.y + winOffsetY) * scaleY);
+    const physW = Math.round(region.width * scaleX);
+    const physH = Math.round(region.height * scaleY);
+
+    // Clamp to image bounds
+    const clampedX = Math.max(0, Math.min(physX, imgW - 1));
+    const clampedY = Math.max(0, Math.min(physY, imgH - 1));
+    const clampedW = Math.min(physW, imgW - clampedX);
+    const clampedH = Math.min(physH, imgH - clampedY);
+
+    const cropCanvas = document.createElement('canvas');
+    cropCanvas.width = clampedW;
+    cropCanvas.height = clampedH;
+    const ctx = cropCanvas.getContext('2d');
+    ctx.drawImage(fullImg, clampedX, clampedY, clampedW, clampedH, 0, 0, clampedW, clampedH);
+    return cropCanvas.toDataURL('image/png');
+  }
+
+  function finishAndClose() {
+    if (selectionInstance) { selectionInstance.cleanup(); selectionInstance = null; }
+    window.snip.closeOverlay();
+  }
+
   function cropAndCopyToClipboard(region) {
     const fullImg = new Image();
     fullImg.onload = () => {
-      let croppedDataURL;
-
-      if (region) {
-        const imgW = fullImg.naturalWidth;
-        const imgH = fullImg.naturalHeight;
-        const scaleX = imgW / window.screen.width;
-        const scaleY = imgH / window.screen.height;
-
-        const winOffsetX = (window.screenX || 0) - displayOrigin.x;
-        const winOffsetY = (window.screenY || 0) - displayOrigin.y;
-
-        const physX = Math.round((region.x + winOffsetX) * scaleX);
-        const physY = Math.round((region.y + winOffsetY) * scaleY);
-        const physW = Math.round(region.width * scaleX);
-        const physH = Math.round(region.height * scaleY);
-
-        const clampedX = Math.max(0, Math.min(physX, imgW - 1));
-        const clampedY = Math.max(0, Math.min(physY, imgH - 1));
-        const clampedW = Math.min(physW, imgW - clampedX);
-        const clampedH = Math.min(physH, imgH - clampedY);
-
-        const cropCanvas = document.createElement('canvas');
-        cropCanvas.width = clampedW;
-        cropCanvas.height = clampedH;
-        const ctx = cropCanvas.getContext('2d');
-        ctx.drawImage(fullImg, clampedX, clampedY, clampedW, clampedH, 0, 0, clampedW, clampedH);
-        croppedDataURL = cropCanvas.toDataURL('image/png');
-      } else {
-        croppedDataURL = capturedDataURL;
-      }
-
-      window.snip.copyToClipboard(croppedDataURL);
-
-      if (selectionInstance) { selectionInstance.cleanup(); selectionInstance = null; }
-      window.snip.closeOverlay();
+      window.snip.copyToClipboard(cropRegion(fullImg, region));
+      finishAndClose();
     };
     fullImg.src = capturedDataURL;
   }
@@ -97,60 +100,17 @@
   function cropAndOpenEditor(region) {
     const fullImg = new Image();
     fullImg.onload = () => {
-      let croppedDataURL;
-      let cssWidth, cssHeight;
+      const croppedDataURL = cropRegion(fullImg, region);
+      const cssWidth = region ? region.width : window.innerWidth;
+      const cssHeight = region ? region.height : window.innerHeight;
 
-      if (region) {
-        cssWidth = region.width;
-        cssHeight = region.height;
-
-        // Use actual image dimensions for coordinate mapping instead of dpr.
-        // The screenshot covers the full physical display, but the overlay window
-        // may be offset from the screen origin (e.g., macOS menu bar pushes it down).
-        const imgW = fullImg.naturalWidth;
-        const imgH = fullImg.naturalHeight;
-        const scaleX = imgW / window.screen.width;
-        const scaleY = imgH / window.screen.height;
-
-        // Account for overlay window's offset within its display (menu bar / notch on macOS)
-        const winOffsetX = (window.screenX || 0) - displayOrigin.x;
-        const winOffsetY = (window.screenY || 0) - displayOrigin.y;
-
-        const physX = Math.round((region.x + winOffsetX) * scaleX);
-        const physY = Math.round((region.y + winOffsetY) * scaleY);
-        const physW = Math.round(region.width * scaleX);
-        const physH = Math.round(region.height * scaleY);
-
-        // Clamp to image bounds
-        const clampedX = Math.max(0, Math.min(physX, imgW - 1));
-        const clampedY = Math.max(0, Math.min(physY, imgH - 1));
-        const clampedW = Math.min(physW, imgW - clampedX);
-        const clampedH = Math.min(physH, imgH - clampedY);
-
-        const cropCanvas = document.createElement('canvas');
-        cropCanvas.width = clampedW;
-        cropCanvas.height = clampedH;
-        const ctx = cropCanvas.getContext('2d');
-        ctx.drawImage(fullImg, clampedX, clampedY, clampedW, clampedH, 0, 0, clampedW, clampedH);
-        croppedDataURL = cropCanvas.toDataURL('image/png');
-      } else {
-        // Full screen capture
-        cssWidth = window.innerWidth;
-        cssHeight = window.innerHeight;
-        croppedDataURL = capturedDataURL;
-      }
-
-      const dpr = window.devicePixelRatio || 1;
       window.snip.openEditor({
         croppedDataURL: croppedDataURL,
         cssWidth: cssWidth,
         cssHeight: cssHeight,
-        scaleFactor: dpr
+        scaleFactor: window.devicePixelRatio || 1
       });
-
-      // Cleanup overlay
-      if (selectionInstance) { selectionInstance.cleanup(); selectionInstance = null; }
-      window.snip.closeOverlay();
+      finishAndClose();
     };
     fullImg.src = capturedDataURL;
   }
