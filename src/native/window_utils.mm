@@ -1,4 +1,8 @@
 #include <napi.h>
+#include <algorithm>
+#include <map>
+#include <vector>
+#include <string>
 #import <Cocoa/Cocoa.h>
 #import <CoreGraphics/CoreGraphics.h>
 
@@ -41,8 +45,10 @@ Napi::Boolean SetMoveToActiveSpace(const Napi::CallbackInfo& info) {
 }
 
 // Get on-screen window list with bounds, owner, and title.
+// Sub-windows from the same app (PID) are merged into a single bounding rect
+// so that clicking a browser selects the full window, not individual sub-panes.
 // Returns an array of { x, y, width, height, owner, name, layer } objects
-// sorted front-to-back (topmost first). Filters to the specified display bounds.
+// sorted by area ascending (smallest first). Filters to the specified display bounds.
 //
 // Usage from JS:
 //   const windows = windowUtils.getWindowList(displayX, displayY, displayW, displayH);
@@ -69,8 +75,20 @@ Napi::Value GetWindowList(const Napi::CallbackInfo& info) {
   }
 
   CFIndex count = CFArrayGetCount(windowList);
-  Napi::Array result = Napi::Array::New(env);
-  uint32_t idx = 0;
+
+  // First pass: collect all qualifying windows grouped by owner PID.
+  // CGWindowList returns sub-windows (toolbar, content area, etc.) as separate
+  // entries. We merge them per-app so clicking a browser selects the full window.
+  struct WinInfo {
+    CGRect bounds;
+    std::string owner;
+    std::string name;
+    pid_t pid;
+    double largestSubArea; // area of the largest sub-window (for name tracking)
+  };
+
+  // Map from PID -> merged bounding rect + metadata (from the largest window)
+  std::map<pid_t, WinInfo> mergedByPid;
 
   for (CFIndex i = 0; i < count; i++) {
     NSDictionary* entry = (__bridge NSDictionary*)CFArrayGetValueAtIndex(windowList, i);
@@ -97,19 +115,56 @@ Napi::Value GetWindowList(const Napi::CallbackInfo& info) {
     NSString* owner = entry[(__bridge NSString*)kCGWindowOwnerName] ?: @"";
     NSString* name  = entry[(__bridge NSString*)kCGWindowName] ?: @"";
 
-    // Skip our own overlay (Snip / Electron windows with no title on layer 0
-    // are likely our overlay). We check the owner name.
+    // Skip our own overlay
     if ([owner isEqualToString:@"Snip"] || [owner isEqualToString:@"Electron"]) continue;
 
-    Napi::Object obj = Napi::Object::New(env);
-    obj.Set("x", Napi::Number::New(env, bounds.origin.x));
-    obj.Set("y", Napi::Number::New(env, bounds.origin.y));
-    obj.Set("width", Napi::Number::New(env, bounds.size.width));
-    obj.Set("height", Napi::Number::New(env, bounds.size.height));
-    obj.Set("owner", Napi::String::New(env, [owner UTF8String]));
-    obj.Set("name", Napi::String::New(env, [name UTF8String]));
-    obj.Set("layer", Napi::Number::New(env, layer));
+    pid_t pid = [entry[(__bridge NSString*)kCGWindowOwnerPID] intValue];
+    double area = bounds.size.width * bounds.size.height;
 
+    auto it = mergedByPid.find(pid);
+    if (it == mergedByPid.end()) {
+      mergedByPid[pid] = {
+        bounds,
+        std::string([owner UTF8String]),
+        std::string([name UTF8String]),
+        pid,
+        area
+      };
+    } else {
+      // Merge: union of bounding rects
+      it->second.bounds = CGRectUnion(it->second.bounds, bounds);
+      // Keep the name from the largest sub-window (usually the main window title)
+      if (area > it->second.largestSubArea && [name length] > 0) {
+        it->second.name = std::string([name UTF8String]);
+        it->second.largestSubArea = area;
+      }
+    }
+  }
+
+  // Sort by area ascending so findWindowAt picks the smallest (most specific)
+  // window first when multiple merged rects overlap at the cursor position.
+  std::vector<WinInfo> sorted;
+  sorted.reserve(mergedByPid.size());
+  for (auto& kv : mergedByPid) {
+    sorted.push_back(kv.second);
+  }
+  std::sort(sorted.begin(), sorted.end(), [](const WinInfo& a, const WinInfo& b) {
+    double areaA = a.bounds.size.width * a.bounds.size.height;
+    double areaB = b.bounds.size.width * b.bounds.size.height;
+    return areaA < areaB;
+  });
+
+  Napi::Array result = Napi::Array::New(env);
+  uint32_t idx = 0;
+  for (auto& w : sorted) {
+    Napi::Object obj = Napi::Object::New(env);
+    obj.Set("x", Napi::Number::New(env, w.bounds.origin.x));
+    obj.Set("y", Napi::Number::New(env, w.bounds.origin.y));
+    obj.Set("width", Napi::Number::New(env, w.bounds.size.width));
+    obj.Set("height", Napi::Number::New(env, w.bounds.size.height));
+    obj.Set("owner", Napi::String::New(env, w.owner));
+    obj.Set("name", Napi::String::New(env, w.name));
+    obj.Set("layer", Napi::Number::New(env, 0));
     result.Set(idx++, obj);
   }
 
