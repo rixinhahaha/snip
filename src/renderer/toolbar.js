@@ -73,6 +73,39 @@ const Toolbar = (() => {
       });
     });
 
+    // Build dynamic shortcut-to-tool map
+    var toolShortcutMap = {
+      'v': TOOLS.SELECT, 'r': TOOLS.RECT, 't': TOOLS.TEXT,
+      'a': TOOLS.ARROW, 'g': TOOLS.TAG, 'b': TOOLS.BLUR_BRUSH, 's': TOOLS.SEGMENT
+    };
+
+    var shortcutToToolAction = {
+      'tool-select': TOOLS.SELECT, 'tool-rectangle': TOOLS.RECT, 'tool-text': TOOLS.TEXT,
+      'tool-arrow': TOOLS.ARROW, 'tool-tag': TOOLS.TAG, 'tool-blur': TOOLS.BLUR_BRUSH,
+      'tool-segment': TOOLS.SEGMENT
+    };
+
+    function updateToolShortcuts(shortcuts) {
+      toolShortcutMap = {};
+      for (var action in shortcutToToolAction) {
+        if (shortcuts[action]) {
+          toolShortcutMap[shortcuts[action].toLowerCase()] = shortcutToToolAction[action];
+        }
+      }
+    }
+
+    // Load custom shortcuts from config
+    if (window.snip && window.snip.getShortcuts) {
+      window.snip.getShortcuts().then(function(shortcuts) {
+        updateToolShortcuts(shortcuts);
+      });
+      if (window.snip.onShortcutsChanged) {
+        window.snip.onShortcutsChanged(function(shortcuts) {
+          updateToolShortcuts(shortcuts);
+        });
+      }
+    }
+
     document.addEventListener('keydown', (e) => {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
       const canvas = callbacks.getCanvas && callbacks.getCanvas();
@@ -80,15 +113,11 @@ const Toolbar = (() => {
         const active = canvas.getActiveObject();
         if (active && active.type === 'textbox' && active.isEditing) return;
       }
-      switch (e.key.toLowerCase()) {
-        case 'v': setTool(TOOLS.SELECT); break;
-        case 'r': setTool(TOOLS.RECT); break;
-        case 't': setTool(TOOLS.TEXT); break;
-        case 'a': setTool(TOOLS.ARROW); break;
-        case 'g': setTool(TOOLS.TAG); break;
-        case 'b': setTool(TOOLS.BLUR_BRUSH); break;
-        case 's': if (!e.metaKey && !e.ctrlKey) setTool(TOOLS.SEGMENT); break;
-      }
+      // Don't handle tool shortcuts when modifiers are pressed (except Shift)
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      var key = e.key.toLowerCase();
+      var tool = toolShortcutMap[key];
+      if (tool) setTool(tool);
     });
 
     document.getElementById('btn-done').addEventListener('click', () => callbacks.onDone());

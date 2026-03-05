@@ -305,32 +305,12 @@
 
         <div class="settings-section">
           <h3>Keyboard Shortcuts</h3>
-          <p>All available commands and their keyboard shortcuts.</p>
-          <table class="shortcuts-table">
-            <thead>
-              <tr><th>Action</th><th>Shortcut</th><th>Context</th></tr>
-            </thead>
-            <tbody>
-              <tr><td>Snip It</td><td><kbd>Cmd</kbd> + <kbd>Shift</kbd> + <kbd>2</kbd></td><td>Global</td></tr>
-              <tr><td>Search snips</td><td><kbd>Cmd</kbd> + <kbd>Shift</kbd> + <kbd>F</kbd></td><td>Global</td></tr>
-              <tr><td>Confirm selection / full screen</td><td><kbd>Enter</kbd></td><td>Selection mode</td></tr>
-              <tr><td>Clear selection / cancel</td><td><kbd>Esc</kbd></td><td>Selection mode</td></tr>
-              <tr><td>Select tool</td><td><kbd>V</kbd></td><td>Annotation</td></tr>
-              <tr><td>Rectangle tool</td><td><kbd>R</kbd></td><td>Annotation</td></tr>
-              <tr><td>Text tool</td><td><kbd>T</kbd></td><td>Annotation</td></tr>
-              <tr><td>Arrow tool</td><td><kbd>A</kbd></td><td>Annotation</td></tr>
-              <tr><td>Blur Brush tool</td><td><kbd>B</kbd></td><td>Annotation</td></tr>
-              <tr><td>Segment tool</td><td><kbd>S</kbd></td><td>Annotation</td></tr>
-              <tr><td>Undo</td><td><kbd>Cmd</kbd> + <kbd>Z</kbd></td><td>Annotation</td></tr>
-              <tr><td>Redo</td><td><kbd>Cmd</kbd> + <kbd>Shift</kbd> + <kbd>Z</kbd></td><td>Annotation</td></tr>
-              <tr><td>Delete selected</td><td><kbd>Delete</kbd> / <kbd>Backspace</kbd></td><td>Annotation</td></tr>
-              <tr><td>Save snip</td><td><kbd>Cmd</kbd> + <kbd>S</kbd></td><td>Annotation</td></tr>
-              <tr><td>Copy &amp; close</td><td><kbd>Esc</kbd></td><td>Annotation</td></tr>
-              <tr><td>Save GIF</td><td><kbd>Enter</kbd> / <kbd>Cmd</kbd> + <kbd>S</kbd></td><td>GIF Preview</td></tr>
-              <tr><td>Redo animation</td><td><kbd>R</kbd></td><td>GIF Preview</td></tr>
-              <tr><td>Discard animation</td><td><kbd>Esc</kbd></td><td>GIF Preview</td></tr>
-            </tbody>
-          </table>
+          <p>Global shortcuts can be customized using the edit button.</p>
+          <div id="shortcuts-list" class="shortcuts-list"></div>
+          <div class="shortcuts-actions">
+            <button id="shortcuts-reset-btn" class="shortcuts-reset-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg> Reset to Default</button>
+            <span id="shortcuts-status" class="shortcuts-status"></span>
+          </div>
         </div>
       </div>
     </div>

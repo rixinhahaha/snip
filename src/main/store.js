@@ -3,6 +3,18 @@ const fs = require('fs');
 
 const DEFAULT_CATEGORIES = ['code', 'chat', 'web', 'design', 'documents', 'terminal', 'personal', 'fun', 'other'];
 
+const DEFAULT_SHORTCUTS = {
+  'capture': 'CommandOrControl+Shift+2',
+  'search': 'CommandOrControl+Shift+F',
+  'tool-select': 'v',
+  'tool-rectangle': 'r',
+  'tool-text': 't',
+  'tool-arrow': 'a',
+  'tool-tag': 'g',
+  'tool-blur': 'b',
+  'tool-segment': 's'
+};
+
 const DEFAULT_TAG_DESCRIPTIONS = {
   code: 'Snips of code editors, IDEs, terminal output, programming-related content, and developer tools',
   chat: 'Snips of chat applications, messaging apps, conversation interfaces, and social media DMs',
@@ -292,6 +304,32 @@ function setFalApiKey(key) {
   saveConfig();
 }
 
+function getShortcuts() {
+  const cfg = loadConfig();
+  const merged = Object.assign({}, DEFAULT_SHORTCUTS);
+  if (cfg.shortcuts) {
+    Object.assign(merged, cfg.shortcuts);
+  }
+  return merged;
+}
+
+function getDefaultShortcuts() {
+  return Object.assign({}, DEFAULT_SHORTCUTS);
+}
+
+function setShortcut(action, accelerator) {
+  const cfg = loadConfig();
+  if (!cfg.shortcuts) cfg.shortcuts = {};
+  cfg.shortcuts[action] = accelerator;
+  saveConfig();
+}
+
+function resetShortcuts() {
+  const cfg = loadConfig();
+  delete cfg.shortcuts;
+  saveConfig();
+}
+
 module.exports = {
   initStore,
   reloadConfig,
@@ -319,4 +357,8 @@ module.exports = {
   setAiEnabled,
   getFalApiKey,
   setFalApiKey,
+  getShortcuts,
+  getDefaultShortcuts,
+  setShortcut,
+  resetShortcuts,
 };

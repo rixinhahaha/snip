@@ -1066,37 +1066,160 @@ input:focus { border-color: var(--accent); }
 }
 
 /* Shortcuts table */
-.shortcuts-table {
-  width: 100%;
+.shortcuts-list {
   max-width: 520px;
-  border-collapse: collapse;
-  font-size: 13px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border);
 }
 
-.shortcuts-table th {
-  text-align: left;
+.shortcut-row {
+  display: flex;
+  align-items: center;
   padding: 8px 12px;
-  color: var(--text-secondary);
-  font-weight: 500;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  border-bottom: 1px solid var(--border-card);
-}
-
-.shortcuts-table td {
-  padding: 8px 12px;
-  color: var(--text-dim);
   border-bottom: 1px solid var(--border);
+  gap: 8px;
 }
 
-.shortcuts-table tr:last-child td { border-bottom: none; }
+.shortcut-row:last-child { border-bottom: none; }
 
-.shortcuts-table td:nth-child(2) { white-space: nowrap; }
+.shortcut-row-name {
+  flex: 1;
+  font-size: 13px;
+  color: var(--text-primary);
+}
 
-.shortcuts-table td:nth-child(3) {
+.shortcut-row-context {
+  font-size: 11px;
   color: var(--text-secondary);
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--bg-tertiary);
+  white-space: nowrap;
+}
+
+.shortcut-row-key {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'SF Pro', sans-serif;
   font-size: 12px;
+  color: var(--kbd-text);
+  background: var(--kbd-bg);
+  border: 1.5px solid var(--kbd-border);
+  border-radius: 5px;
+  box-shadow: 0 1px 0 var(--kbd-shadow);
+  min-width: 40px;
+  justify-content: center;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+  white-space: nowrap;
+}
+
+.shortcut-row-key.recording {
+  border-color: var(--accent);
+  background: var(--accent-bg);
+  box-shadow: 0 0 0 2px var(--accent-bg);
+  animation: shortcut-pulse 1.2s ease-in-out infinite;
+  color: var(--accent);
+}
+
+@keyframes shortcut-pulse {
+  0%, 100% { box-shadow: 0 0 0 2px var(--accent-bg); }
+  50% { box-shadow: 0 0 0 4px var(--accent-bg); }
+}
+
+.shortcut-row-key.conflict {
+  border-color: var(--error);
+  background: var(--error-bg);
+  box-shadow: 0 0 0 2px var(--error-bg);
+  color: var(--error);
+  animation: none;
+}
+
+.shortcut-edit-btn {
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--border-card);
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+
+.shortcut-edit-btn:hover {
+  background: var(--bg-hover);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.shortcut-edit-btn.recording {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-bg);
+}
+
+.shortcut-row.readonly {
+  opacity: 0.6;
+}
+
+.shortcuts-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+  max-width: 520px;
+}
+
+.shortcuts-reset-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border: 2px solid var(--border-card);
+  border-radius: 10px;
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s;
+  box-shadow: var(--glass-inner-glow);
+}
+
+.shortcuts-reset-btn:hover {
+  border-color: var(--text-muted);
+  color: var(--text-primary);
+}
+
+/* Glass theme: match theme-btn overrides for consistency */
+[data-theme="glass"] .shortcuts-reset-btn {
+  border-color: rgba(255, 255, 255, 0.28);
+  color: rgba(255, 255, 255, 0.75);
+  background: rgba(255, 255, 255, 0.10);
+}
+
+[data-theme="glass"] .shortcuts-reset-btn:hover {
+  border-color: rgba(255, 255, 255, 0.42);
+  color: #fff;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.shortcuts-status {
+  font-size: 12px;
+  color: var(--success);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.shortcuts-status.visible {
+  opacity: 1;
 }
 
 kbd {

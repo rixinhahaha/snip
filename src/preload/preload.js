@@ -118,5 +118,16 @@ contextBridge.exposeInMainWorld('snip', {
   },
   onTagsChanged: (callback) => {
     ipcRenderer.on('tags-changed', () => callback());
+  },
+
+  // Shortcuts
+  getShortcuts: () => ipcRenderer.invoke('get-shortcuts'),
+  getDefaultShortcuts: () => ipcRenderer.invoke('get-default-shortcuts'),
+  setShortcut: (action, accelerator) => ipcRenderer.invoke('set-shortcut', { action, accelerator }),
+  resetShortcuts: () => ipcRenderer.invoke('reset-shortcuts'),
+  onShortcutsChanged: (callback) => {
+    var handler = (event, shortcuts) => callback(shortcuts);
+    ipcRenderer.on('shortcuts-changed', handler);
+    return () => ipcRenderer.removeListener('shortcuts-changed', handler);
   }
 });

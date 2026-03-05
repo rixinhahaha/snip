@@ -8,7 +8,8 @@ const {
   readIndex, removeFromIndex, removeFromIndexByDir, rebuildIndex,
   getTheme, setTheme,
   getAiEnabled, setAiEnabled,
-  getFalApiKey, setFalApiKey
+  getFalApiKey, setFalApiKey,
+  getShortcuts, getDefaultShortcuts, setShortcut, resetShortcuts
 } = require('./store');
 const { queueNewFile } = require('./organizer/watcher');
 const ollamaManager = require('./ollama-manager');
@@ -16,7 +17,7 @@ const ollamaManager = require('./ollama-manager');
 let pendingEditorData = null;
 let editorWindowRef = null;
 
-function registerIpcHandlers(getOverlayWindow, createEditorWindowFn) {
+function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterShortcutsFn, rebuildTrayMenuFn) {
   // Copy annotated image to clipboard
   ipcMain.handle('copy-to-clipboard', async (event, dataURL) => {
     const image = nativeImage.createFromDataURL(dataURL);
@@ -481,6 +482,41 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn) {
     console.log('[Snip] Saved animation: animations/%s (%s KB)', filename, (buf.length / 1024).toFixed(1));
 
     return filepath;
+  });
+
+  // Shortcuts
+  ipcMain.handle('get-shortcuts', async () => {
+    return getShortcuts();
+  });
+
+  ipcMain.handle('get-default-shortcuts', async () => {
+    return getDefaultShortcuts();
+  });
+
+  ipcMain.handle('set-shortcut', async (event, { action, accelerator }) => {
+    setShortcut(action, accelerator);
+    // Re-register global shortcuts if a global shortcut changed
+    if ((action === 'capture' || action === 'search') && reregisterShortcutsFn) {
+      reregisterShortcutsFn();
+    }
+    if (rebuildTrayMenuFn) rebuildTrayMenuFn();
+    // Broadcast to all windows
+    const shortcuts = getShortcuts();
+    for (const win of BrowserWindow.getAllWindows()) {
+      if (!win.isDestroyed()) win.webContents.send('shortcuts-changed', shortcuts);
+    }
+    return true;
+  });
+
+  ipcMain.handle('reset-shortcuts', async () => {
+    resetShortcuts();
+    if (reregisterShortcutsFn) reregisterShortcutsFn();
+    if (rebuildTrayMenuFn) rebuildTrayMenuFn();
+    const shortcuts = getShortcuts();
+    for (const win of BrowserWindow.getAllWindows()) {
+      if (!win.isDestroyed()) win.webContents.send('shortcuts-changed', shortcuts);
+    }
+    return true;
   });
 
   // Theme

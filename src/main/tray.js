@@ -1,36 +1,25 @@
 const { Tray, Menu, app, nativeImage, BrowserWindow } = require('electron');
 const path = require('path');
-const { getTheme, setTheme } = require('./store');
+const { getTheme, setTheme, getShortcuts } = require('./store');
 
 let tray = null;
+let trayCallbacks = { capture: null, search: null, home: null };
 
-function createTray(captureCallback, searchCallback, homeCallback) {
-  // Create a simple 16x16 tray icon programmatically
-  const iconPath = path.join(__dirname, '..', '..', 'assets', 'tray-iconTemplate.png');
-
-  let trayIcon;
-  try {
-    trayIcon = nativeImage.createFromPath(iconPath);
-    if (trayIcon.isEmpty()) throw new Error('Empty icon');
-  } catch (e) {
-    console.warn('[Snip] Tray icon not found at', iconPath, '— tray menu still accessible via menubar.');
-    trayIcon = nativeImage.createEmpty();
-  }
-
-  tray = new Tray(trayIcon);
-
+function buildTrayMenu() {
   const currentTheme = getTheme();
+  const shortcuts = getShortcuts();
 
-  const contextMenu = Menu.buildFromTemplate([
+  const captureAccel = (shortcuts['capture'] || '').replace('CommandOrControl', 'CmdOrCtrl');
+  const searchAccel = (shortcuts['search'] || '').replace('CommandOrControl', 'CmdOrCtrl');
+
+  const template = [
     {
       label: 'Snip It',
-      accelerator: 'CmdOrCtrl+Shift+2',
-      click: captureCallback
+      click: trayCallbacks.capture
     },
     {
       label: 'Search Snips',
-      accelerator: 'CmdOrCtrl+Shift+F',
-      click: searchCallback
+      click: trayCallbacks.search
     },
     { type: 'separator' },
     {
@@ -59,7 +48,7 @@ function createTray(captureCallback, searchCallback, homeCallback) {
     { type: 'separator' },
     {
       label: 'Open Snip',
-      click: homeCallback
+      click: trayCallbacks.home
     },
     { type: 'separator' },
     {
@@ -67,15 +56,53 @@ function createTray(captureCallback, searchCallback, homeCallback) {
       accelerator: 'CmdOrCtrl+Q',
       click: () => app.quit()
     }
-  ]);
+  ];
+
+  // Add accelerators only if valid (avoid crashing on malformed config)
+  if (captureAccel) template[0].accelerator = captureAccel;
+  if (searchAccel) template[1].accelerator = searchAccel;
+
+  try {
+    const contextMenu = Menu.buildFromTemplate(template);
+    tray.setContextMenu(contextMenu);
+  } catch (err) {
+    console.error('[Snip] Failed to build tray menu, retrying without accelerators:', err);
+    delete template[0].accelerator;
+    delete template[1].accelerator;
+    const contextMenu = Menu.buildFromTemplate(template);
+    tray.setContextMenu(contextMenu);
+  }
+}
+
+function createTray(captureCallback, searchCallback, homeCallback) {
+  const iconPath = path.join(__dirname, '..', '..', 'assets', 'tray-iconTemplate.png');
+
+  let trayIcon;
+  try {
+    trayIcon = nativeImage.createFromPath(iconPath);
+    if (trayIcon.isEmpty()) throw new Error('Empty icon');
+  } catch (e) {
+    console.warn('[Snip] Tray icon not found at', iconPath, '— tray menu still accessible via menubar.');
+    trayIcon = nativeImage.createEmpty();
+  }
+
+  tray = new Tray(trayIcon);
+  trayCallbacks.capture = captureCallback;
+  trayCallbacks.search = searchCallback;
+  trayCallbacks.home = homeCallback;
+
+  buildTrayMenu();
 
   tray.setToolTip('Snip');
-  tray.setContextMenu(contextMenu);
-
-  // Set title for menubar (shows text next to icon)
   tray.setTitle('');
 
   return tray;
+}
+
+function rebuildTrayMenu() {
+  if (tray && !tray.isDestroyed()) {
+    buildTrayMenu();
+  }
 }
 
 function broadcastTheme(theme) {
@@ -87,4 +114,4 @@ function broadcastTheme(theme) {
   }
 }
 
-module.exports = { createTray };
+module.exports = { createTray, rebuildTrayMenu };

@@ -205,6 +205,27 @@ The Settings page "Animation" section uses `animation-api-key-*` CSS classes:
 - **`.animation-api-key-status`**: 12px status text. `.saved` variant uses `--success` color. `.error` variant uses `--error` color.
 - **`.animation-api-key-help`**: 12px help text in `--text-dim`, contains "Get API Key" link.
 
+### Shortcut Key Display & Edit Button (home.css)
+
+The Settings page shows keyboard shortcuts with a key display span and, for configurable global shortcuts, a pencil edit button:
+
+**Key display (`.shortcut-row-key`):**
+
+| State | Border | Background | Text | Extra |
+|-------|--------|------------|------|-------|
+| **Default** | `--kbd-border` | `--kbd-bg` | `--kbd-text` | — |
+| **Recording** | `--accent` | `--accent-bg` | `--accent` | Pulsing border animation, text shows "Press key…" (global shortcuts only) |
+| **Conflict** | `--error` | `--error-bg` | `--error` | Error message replaces key text |
+| **Read-only** | `--kbd-border` | `--kbd-bg` | `--kbd-text` | `opacity: 0.6`, non-interactive (tool + OS shortcuts) |
+
+**Edit button (`.shortcut-edit-btn`):**
+
+| State | Border | Background | Color | Extra |
+|-------|--------|------------|-------|-------|
+| **Default** | `--border-card` | transparent | `--text-secondary` | Only shown on configurable rows |
+| **Hover** | `--accent` | `--bg-hover` | `--accent` | — |
+| **Recording** | `--accent` | `--accent-bg` | `--accent` | Matches key display recording state |
+
 ### Search Result Cards (home.css)
 Search results use overlay-style cards with hardcoded colors (intentional — overlays sit on top of image content, not app background):
 - **`.search-result-card`**: `position: relative`, `border-radius: 10px`, `overflow: hidden`. Fixed 220px row height.

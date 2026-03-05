@@ -32,9 +32,9 @@ src/
     main.js                  # App lifecycle, window creation, liquid glass init
     capturer.js              # Screen capture via desktopCapturer
     ipc-handlers.js          # All IPC channel handlers
-    tray.js                  # Menu-bar tray icon and context menu
-    shortcuts.js             # Global keyboard shortcuts (Cmd+Shift+2, Cmd+Shift+F)
-    store.js                 # Config persistence, index I/O, fal.ai API key storage, aiEnabled flag, reloadConfig()
+    tray.js                  # Menu-bar tray icon and context menu, rebuildTrayMenu() for live accelerator updates
+    shortcuts.js             # Global keyboard shortcuts (Cmd+Shift+2, Cmd+Shift+F), reregisterShortcuts() for dynamic rebinding
+    store.js                 # Config persistence, index I/O, fal.ai API key storage, aiEnabled flag, reloadConfig(), getShortcuts(), getDefaultShortcuts(), setShortcut(), resetShortcuts()
     constants.js             # Shared constants (BASE_WEB_PREFERENCES)
     ollama-manager.js        # Ollama process lifecycle (spawn/kill on dynamic port, ready/status/model pull)
     model-paths.js           # Bundled model path resolution (dev vs packaged)
@@ -284,6 +284,11 @@ The preload script (`preload.js`) exposes `window.snip` with these methods:
 | `onOllamaInstallProgress(cb)` | M -> R | Real-time install progress (downloading, extracting, installing, launching) |
 | `onOllamaStatusChanged(cb)` | M -> R | Ollama status broadcast (installed, running, modelReady) |
 | `onShowSetupOverlay(cb)` | M -> R | Main process triggers inline setup overlay in home window |
+| `getShortcuts()` | R -> M | Returns merged default+custom shortcuts |
+| `getDefaultShortcuts()` | R -> M | Returns default shortcuts |
+| `setShortcut(id, keys)` | R -> M | Saves a single shortcut override |
+| `resetShortcuts()` | R -> M | Deletes all custom shortcuts, restores defaults |
+| `onShortcutsChanged(cb)` | M -> R | Broadcast event when shortcuts change (re-registers global shortcuts) |
 
 *(R = Renderer, M = Main)*
 

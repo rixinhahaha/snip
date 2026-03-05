@@ -56,6 +56,7 @@
       window.snip.onTagsChanged(function() { loadTags(); });
     }
     initThemeToggle();
+    initShortcutsSettings();
     initSetupOverlay();
   }
 
@@ -632,6 +633,244 @@
   document.getElementById('new-tag-description').addEventListener('keydown', function(e) {
     if (e.key === 'Enter') document.getElementById('add-tag-btn').click();
   });
+
+  // ── Keyboard Shortcuts settings ──
+  var SHORTCUT_DEFINITIONS = [
+    { action: 'capture', name: 'Snip It', context: 'Global', configurable: true },
+    { action: 'search', name: 'Search snips', context: 'Global', configurable: true },
+    { action: null, name: 'Select tool', context: 'Annotation', configurable: false, display: 'V' },
+    { action: null, name: 'Rectangle tool', context: 'Annotation', configurable: false, display: 'R' },
+    { action: null, name: 'Text tool', context: 'Annotation', configurable: false, display: 'T' },
+    { action: null, name: 'Arrow tool', context: 'Annotation', configurable: false, display: 'A' },
+    { action: null, name: 'Tag tool', context: 'Annotation', configurable: false, display: 'G' },
+    { action: null, name: 'Blur Brush tool', context: 'Annotation', configurable: false, display: 'B' },
+    { action: null, name: 'Segment tool', context: 'Annotation', configurable: false, display: 'S' },
+    { action: null, name: 'Confirm / full screen', context: 'Selection', configurable: false, display: 'Enter' },
+    { action: null, name: 'Cancel selection', context: 'Selection', configurable: false, display: 'Esc' },
+    { action: null, name: 'Save snip', context: 'Annotation', configurable: false, display: 'Cmd + S' },
+    { action: null, name: 'Undo', context: 'Annotation', configurable: false, display: 'Cmd + Z' },
+    { action: null, name: 'Redo', context: 'Annotation', configurable: false, display: 'Cmd + Shift + Z' },
+    { action: null, name: 'Delete selected', context: 'Annotation', configurable: false, display: 'Delete' },
+    { action: null, name: 'Copy & close', context: 'Annotation', configurable: false, display: 'Esc' },
+    { action: null, name: 'Save GIF', context: 'GIF Preview', configurable: false, display: 'Enter / Cmd + S' },
+    { action: null, name: 'Redo animation', context: 'GIF Preview', configurable: false, display: 'R' },
+    { action: null, name: 'Discard animation', context: 'GIF Preview', configurable: false, display: 'Esc' }
+  ];
+
+  var recordingAction = null;
+  var recordingBtn = null;
+  var recordingEditBtn = null;
+  var recordingKeyHandler = null;
+  var recordingBlurHandler = null;
+
+  function acceleratorToDisplay(accel) {
+    if (!accel) return '';
+    return accel
+      .replace('CommandOrControl', 'Cmd')
+      .replace('CmdOrCtrl', 'Cmd')
+      .replace(/\+/g, ' + ');
+  }
+
+  async function initShortcutsSettings() {
+    var shortcuts = await window.snip.getShortcuts();
+    renderShortcuts(shortcuts);
+
+    document.getElementById('shortcuts-reset-btn').addEventListener('click', async function() {
+      stopRecording();
+      await window.snip.resetShortcuts();
+      // The broadcast from reset-shortcuts will trigger onShortcutsChanged which re-renders
+      var status = document.getElementById('shortcuts-status');
+      status.textContent = 'Restored defaults';
+      status.classList.add('visible');
+      setTimeout(function() { status.classList.remove('visible'); }, 2500);
+    });
+
+    if (window.snip.onShortcutsChanged) {
+      window.snip.onShortcutsChanged(function(updated) {
+        // Skip re-render if user is actively recording — avoid orphaning the keydown handler
+        if (recordingAction !== null) return;
+        renderShortcuts(updated);
+      });
+    }
+  }
+
+  function renderShortcuts(shortcuts) {
+    var list = document.getElementById('shortcuts-list');
+    list.innerHTML = '';
+
+    SHORTCUT_DEFINITIONS.forEach(function(def) {
+      var row = document.createElement('div');
+      row.className = 'shortcut-row' + (def.configurable ? '' : ' readonly');
+
+      var name = document.createElement('span');
+      name.className = 'shortcut-row-name';
+      name.textContent = def.name;
+
+      var context = document.createElement('span');
+      context.className = 'shortcut-row-context';
+      context.textContent = def.context;
+
+      var keySpan = document.createElement('span');
+      keySpan.className = 'shortcut-row-key';
+
+      if (def.configurable) {
+        var currentAccel = shortcuts[def.action] || '';
+        keySpan.textContent = acceleratorToDisplay(currentAccel);
+
+        var editBtn = document.createElement('button');
+        editBtn.className = 'shortcut-edit-btn';
+        editBtn.title = 'Edit shortcut';
+        editBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>';
+
+        (function(d, ks, eb, sc) {
+          eb.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            // Only allow one recording at a time — ignore if already recording
+            if (recordingAction !== null) return;
+            startRecording(d, ks, eb, sc);
+          });
+        })(def, keySpan, editBtn, shortcuts);
+
+        row.appendChild(name);
+        row.appendChild(context);
+        row.appendChild(keySpan);
+        row.appendChild(editBtn);
+      } else {
+        keySpan.textContent = def.display;
+        row.appendChild(name);
+        row.appendChild(context);
+        row.appendChild(keySpan);
+      }
+
+      list.appendChild(row);
+    });
+  }
+
+  function startRecording(def, keySpan, editBtn, shortcuts) {
+    // Stop any existing recording
+    stopRecording();
+
+    recordingAction = def.action;
+    recordingBtn = keySpan;
+    recordingEditBtn = editBtn;
+    keySpan.classList.add('recording');
+    keySpan.textContent = 'Press key\u2026';
+    editBtn.classList.add('recording');
+
+    recordingKeyHandler = function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+
+      // Esc cancels recording
+      if (e.key === 'Escape') {
+        stopRecording();
+        renderShortcutsFromStore();
+        return;
+      }
+
+      // Ignore lone modifier keys
+      if (['Meta', 'Control', 'Alt', 'Shift'].indexOf(e.key) !== -1) return;
+
+      // Global shortcuts require at least one modifier
+      if (!e.metaKey && !e.ctrlKey && !e.altKey) {
+        keySpan.classList.add('conflict');
+        keySpan.textContent = 'Needs modifier';
+        setTimeout(function() {
+          keySpan.classList.remove('conflict');
+          keySpan.textContent = 'Press key\u2026';
+        }, 1200);
+        return;
+      }
+
+      // Build Electron accelerator string
+      var parts = [];
+      if (e.metaKey || e.ctrlKey) parts.push('CommandOrControl');
+      if (e.altKey) parts.push('Alt');
+      if (e.shiftKey) parts.push('Shift');
+      parts.push(electronKeyName(e));
+      var accelerator = parts.join('+');
+
+      // Conflict detection
+      var conflict = null;
+      for (var i = 0; i < SHORTCUT_DEFINITIONS.length; i++) {
+        var sd = SHORTCUT_DEFINITIONS[i];
+        if (!sd.configurable || sd.action === def.action) continue;
+        var existing = shortcuts[sd.action] || '';
+        if (existing.toLowerCase() === accelerator.toLowerCase()) {
+          conflict = sd;
+          break;
+        }
+      }
+
+      if (conflict) {
+        keySpan.classList.add('conflict');
+        keySpan.textContent = 'Used by ' + conflict.name;
+        setTimeout(function() {
+          keySpan.classList.remove('conflict');
+          keySpan.textContent = 'Press key\u2026';
+        }, 1500);
+        return;
+      }
+
+      // Save
+      stopRecording();
+      shortcuts[def.action] = accelerator;
+      window.snip.setShortcut(def.action, accelerator);
+      keySpan.textContent = acceleratorToDisplay(accelerator);
+    };
+
+    document.addEventListener('keydown', recordingKeyHandler, true);
+
+    // Cancel recording if window loses focus
+    recordingBlurHandler = function() {
+      stopRecording();
+      renderShortcutsFromStore();
+    };
+    window.addEventListener('blur', recordingBlurHandler);
+  }
+
+  function electronKeyName(e) {
+    // Map DOM key names to Electron accelerator key names
+    var key = e.key;
+    var map = {
+      ' ': 'Space', 'ArrowUp': 'Up', 'ArrowDown': 'Down',
+      'ArrowLeft': 'Left', 'ArrowRight': 'Right',
+      'Backspace': 'Backspace', 'Delete': 'Delete',
+      'Enter': 'Return', 'Tab': 'Tab'
+    };
+    if (map[key]) return map[key];
+    // For letters/numbers, use uppercase
+    if (key.length === 1) return key.toUpperCase();
+    return key;
+  }
+
+  function stopRecording() {
+    if (recordingKeyHandler) {
+      document.removeEventListener('keydown', recordingKeyHandler, true);
+      recordingKeyHandler = null;
+    }
+    if (recordingBlurHandler) {
+      window.removeEventListener('blur', recordingBlurHandler);
+      recordingBlurHandler = null;
+    }
+    if (recordingBtn) {
+      recordingBtn.classList.remove('recording');
+      recordingBtn.classList.remove('conflict');
+      recordingBtn = null;
+    }
+    if (recordingEditBtn) {
+      recordingEditBtn.classList.remove('recording');
+      recordingEditBtn = null;
+    }
+    recordingAction = null;
+  }
+
+  async function renderShortcutsFromStore() {
+    var shortcuts = await window.snip.getShortcuts();
+    renderShortcuts(shortcuts);
+  }
 
   // ── Search page ──
   var searchDebounceTimer = null;

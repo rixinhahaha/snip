@@ -798,6 +798,70 @@ The setup wizard appears as a **full-window inline overlay** inside the home win
 | 2 | -- | Continuous table (no divider rows) |
 | 3 | -- | All shortcuts listed with descriptions |
 
+### 8.7 Custom Keybindings
+
+**Preconditions:** App running, Settings page visible.
+
+The Shortcuts section shows two groups: **configurable shortcuts** (2 global shortcuts with edit icons) and **read-only shortcuts** (tool shortcuts and OS shortcuts, non-interactive, 60% opacity).
+
+**Configurable shortcuts** (2 global):
+- Capture (Cmd+Shift+2), Search (Cmd+Shift+F)
+
+**Read-only shortcuts** (displayed for reference):
+- 7 editor tool shortcuts: Select (V), Rectangle (R), Text (T), Arrow (A), Tag (G), Blur Brush (B), Segment (S)
+- OS shortcuts: Enter, Esc, Cmd+S, Cmd+Z, Cmd+Shift+Z, Delete
+- GIF Preview shortcuts: Save GIF, Redo animation, Discard animation
+
+**Recording a global shortcut:**
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Click the edit (pencil) icon next to a global shortcut | Key display enters recording mode: purple pulsing border, edit icon highlights |
+| 2 | -- | Key display text changes to "Press key…" |
+| 3 | Press a modifier+key combo (e.g., Cmd+Shift+3) | Shortcut saves immediately, display shows new key combo |
+| 4 | -- | Global shortcut re-registers with the new binding via `reregisterShortcuts()` |
+| 5 | -- | Tray menu rebuilt with updated accelerator labels |
+| 6 | -- | `shortcuts-changed` event broadcast to all windows |
+
+**Cancel recording:**
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | While in recording mode, press Escape | Recording cancelled, original shortcut restored |
+
+**Conflict detection:**
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Record a key combo already assigned to the other global shortcut | Error state: red border, "Used by [name]" message |
+| 2 | -- | Conflicting shortcut is not saved |
+| 3 | Press a key without modifier | Error state: "Needs modifier" message |
+
+**Reset all shortcuts:**
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Click "Reset to Default" button | All custom shortcuts deleted, defaults restored |
+| 2 | -- | "Restored defaults" status message fades in briefly |
+| 3 | -- | Global shortcuts re-registered with default bindings |
+| 4 | -- | Tray menu rebuilt with default accelerator labels |
+| 5 | -- | `shortcuts-changed` event broadcast to all windows |
+
+**Persistence:**
+
+| Condition | Expected Behavior |
+|-----------|-------------------|
+| Custom shortcuts saved | Stored in `snip-config.json`, persist across app restarts |
+| Config missing shortcuts | Falls back to built-in defaults |
+
+**Edge cases:**
+
+| Condition | Expected Behavior |
+|-----------|-------------------|
+| Read-only shortcut rows | Displayed at 60% opacity, no edit icon, non-interactive |
+| Click edit icon while already recording another | Ignored — only one recording at a time |
+| Global shortcut registration fails (malformed accelerator) | Falls back to default shortcut, error logged |
+
 ---
 
 ## 9. Tray Menu
