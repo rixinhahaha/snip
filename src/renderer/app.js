@@ -13,10 +13,17 @@
   window.snip.onScreenshotCaptured(async (data) => {
     capturedDataURL = data.dataURL;
     displayOrigin = data.displayOrigin || { x: 0, y: 0 };
-    windowList = data.windowList || [];
     captureMode = data.mode || 'capture';
     const width = window.innerWidth;
     const height = window.innerHeight;
+
+    // Convert window list from display-relative to overlay-viewport-relative coords.
+    // macOS may push the overlay below the menu bar, creating an offset.
+    const winOffsetX = (window.screenX || 0) - displayOrigin.x;
+    const winOffsetY = (window.screenY || 0) - displayOrigin.y;
+    windowList = (data.windowList || []).map(function(w) {
+      return { x: w.x - winOffsetX, y: w.y - winOffsetY, width: w.width, height: w.height, owner: w.owner, name: w.name };
+    });
 
     // Reset previous selection
     if (selectionInstance) {
