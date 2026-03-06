@@ -116,10 +116,11 @@ const SegmentTool = (() => {
 
       // Notify animate module with cutout data before clearing
       if (onCutoutAccepted) {
+        var zoom = canvas.getZoom() || 1;
         onCutoutAccepted({
           cutoutDataURL: pendingCutoutURL,
-          width: canvas.width,
-          height: canvas.height
+          width: canvas.width / zoom,
+          height: canvas.height / zoom
         });
       }
 
@@ -170,8 +171,9 @@ const SegmentTool = (() => {
           // pendingMaskURL image dimensions may differ from canvas dimensions
           var maskImg = new Image();
           maskImg.onload = function() {
-            var imgToCanvasX = canvas.width / maskImg.width;
-            var imgToCanvasY = canvas.height / maskImg.height;
+            var tagZoom = canvas.getZoom() || 1;
+            var imgToCanvasX = (canvas.width / tagZoom) / maskImg.width;
+            var imgToCanvasY = (canvas.height / tagZoom) / maskImg.height;
 
             // Cropped overlay positioned at its bounding box location in canvas coords
             var overlayLeft = result.x * imgToCanvasX;
@@ -460,12 +462,13 @@ const SegmentTool = (() => {
       ToolUtils.showToast(toastMsg, 'processing');
 
       try {
+        var segZoom = canvas.getZoom() || 1;
         var result = await window.snip.segmentAtPoint({
           points: accumulatedPoints.map(function(p) {
             return { x: p.x, y: p.y, label: p.label };
           }),
-          cssWidth: canvas.width,
-          cssHeight: canvas.height
+          cssWidth: canvas.width / segZoom,
+          cssHeight: canvas.height / segZoom
         });
 
         if (!result || !result.maskDataURL) {
@@ -486,8 +489,8 @@ const SegmentTool = (() => {
               top: 0,
               originX: 'left',
               originY: 'top',
-              scaleX: canvas.width / imgEl.width,
-              scaleY: canvas.height / imgEl.height,
+              scaleX: (canvas.width / (canvas.getZoom() || 1)) / imgEl.width,
+              scaleY: (canvas.height / (canvas.getZoom() || 1)) / imgEl.height,
               selectable: false,
               evented: false,
               opacity: 1

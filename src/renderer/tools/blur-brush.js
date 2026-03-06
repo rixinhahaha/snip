@@ -10,10 +10,13 @@ const BlurBrushTool = (() => {
 
     function addMosaicTile(pt) {
       var size = getBrushSize();
+      var zoom = canvas.getZoom() || 1;
+      var logicalW = canvas.width / zoom;
+      var logicalH = canvas.height / zoom;
       var tileX = Math.max(0, pt.x - size / 2);
       var tileY = Math.max(0, pt.y - size / 2);
-      var tileW = Math.min(size, canvas.width - tileX);
-      var tileH = Math.min(size, canvas.height - tileY);
+      var tileW = Math.min(size, logicalW - tileX);
+      var tileH = Math.min(size, logicalH - tileY);
 
       if (tileW < 1 || tileH < 1) return;
 
@@ -54,11 +57,12 @@ const BlurBrushTool = (() => {
         if (points[i].y + size / 2 > maxY) maxY = points[i].y + size / 2;
       }
 
-      // Clamp to canvas bounds
+      // Clamp to logical canvas bounds
+      var zoom = canvas.getZoom() || 1;
       minX = Math.max(0, Math.floor(minX));
       minY = Math.max(0, Math.floor(minY));
-      maxX = Math.min(canvas.width, Math.ceil(maxX));
-      maxY = Math.min(canvas.height, Math.ceil(maxY));
+      maxX = Math.min(canvas.width / zoom, Math.ceil(maxX));
+      maxY = Math.min(canvas.height / zoom, Math.ceil(maxY));
 
       var bbW = maxX - minX;
       var bbH = maxY - minY;

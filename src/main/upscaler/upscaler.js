@@ -1,11 +1,10 @@
 /**
- * Segmentation module — spawns SAM inference in an isolated child process
+ * Upscaler module — spawns image upscaling in an isolated child process
  * using the system Node.js binary (not Electron's) because ONNX runtime
  * crashes (SIGTRAP) inside Electron's V8.
  */
 const child_process = require('child_process');
 const path = require('path');
-const os = require('os');
 const { getModelConfig } = require('../model-paths');
 const { findNodeBinary } = require('../node-binary');
 
@@ -16,15 +15,14 @@ const pendingRequests = new Map();
 function getWorker() {
   if (worker && worker.connected && !worker.killed) return worker;
 
-  let workerScript = path.join(__dirname, 'segmentation-worker.js');
-  // System Node.js can't read from inside an asar archive —
-  // use the unpacked path in the packaged app.
+  let workerScript = path.join(__dirname, 'upscaler-worker.js');
+  // System Node.js can't read from inside an asar archive
   if (workerScript.includes('app.asar')) {
     workerScript = workerScript.replace('app.asar', 'app.asar.unpacked');
   }
   const nodeBin = findNodeBinary();
 
-  // Pass model cache path to child process so it uses bundled models
+  // Pass model cache path to child process
   const modelConfig = getModelConfig();
   const childEnv = { ...process.env };
   if (modelConfig.cacheDir) {
@@ -33,7 +31,6 @@ function getWorker() {
   if (!modelConfig.allowRemote) {
     childEnv.SNIP_PACKAGED = '1';
   }
-  // Also pass resourcesPath for the child to resolve paths
   if (process.resourcesPath) {
     childEnv.SNIP_RESOURCES_PATH = process.resourcesPath;
   }
@@ -54,6 +51,13 @@ function getWorker() {
 
   worker.on('message', (msg) => {
     if (msg.type === 'ready') return;
+    if (msg.type === 'progress') {
+      // Forward progress to all pending request callbacks
+      for (const [, pending] of pendingRequests) {
+        if (pending.onProgress) pending.onProgress(msg);
+      }
+      return;
+    }
     const pending = pendingRequests.get(msg.id);
     if (pending) {
       pendingRequests.delete(msg.id);
@@ -67,62 +71,40 @@ function getWorker() {
 
   worker.on('exit', (code, signal) => {
     if (code !== 0 && code !== null) {
-      console.warn('[Segmentation] Worker exited unexpectedly, code:', code, 'signal:', signal);
+      console.warn('[Upscaler] Worker exited unexpectedly, code:', code, 'signal:', signal);
     }
     worker = null;
     for (const [id, { reject }] of pendingRequests) {
-      reject(new Error('Segmentation worker crashed (signal: ' + (signal || code) + ')'));
+      reject(new Error('Upscaler worker crashed (signal: ' + (signal || code) + ')'));
     }
     pendingRequests.clear();
   });
 
   worker.on('error', (err) => {
-    console.error('[Segmentation] Worker error:', err.message);
+    console.error('[Upscaler] Worker error:', err.message);
   });
 
   return worker;
 }
 
-function checkSupport() {
-  const totalMem = os.totalmem();
-  if (totalMem < 4 * 1024 * 1024 * 1024) {
-    return { supported: false, reason: 'Insufficient memory (need 4GB+)' };
-  }
-  const nodeBin = findNodeBinary();
-  if (!nodeBin) {
-    return { supported: false, reason: 'Node.js binary not found' };
-  }
-  return { supported: true };
-}
-
-function generateMask(rgbaPixels, imgWidth, imgHeight, points, cssWidth, cssHeight) {
+/**
+ * Upscale an image by 2x.
+ * @param {string} imageBase64 - Base64 data URL of the image
+ * @param {function} onProgress - Progress callback ({ stage, percent })
+ * @returns {Promise<{ dataURL, width, height }>}
+ */
+function upscaleImage(imageBase64, onProgress) {
   return new Promise((resolve, reject) => {
     const id = ++requestId;
     const w = getWorker();
-    pendingRequests.set(id, { resolve, reject });
+    pendingRequests.set(id, { resolve, reject, onProgress });
 
     w.send({
       id,
-      type: 'generate-mask',
-      rgbaBuffer: Buffer.from(rgbaPixels.buffer, rgbaPixels.byteOffset, rgbaPixels.byteLength),
-      imgWidth,
-      imgHeight,
-      points,
-      cssWidth,
-      cssHeight
+      type: 'upscale',
+      imageBase64
     });
   });
-}
-
-function warmUp() {
-  const support = checkSupport();
-  if (!support.supported) return;
-  try {
-    const w = getWorker();
-    w.send({ type: 'warm-up' });
-  } catch (err) {
-    console.warn('[Segmentation] Warm-up failed:', err.message);
-  }
 }
 
 function killWorker() {
@@ -132,4 +114,4 @@ function killWorker() {
   }
 }
 
-module.exports = { generateMask, checkSupport, warmUp, killWorker };
+module.exports = { upscaleImage, killWorker };

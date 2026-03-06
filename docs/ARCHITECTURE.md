@@ -13,6 +13,7 @@
 | AI categorization | Local vision LLM | Ollama (system install, managed process on dynamic port, model pulled on first launch) |
 | Semantic embeddings | HuggingFace Transformers.js | all-MiniLM-L6-v2 |
 | Image segmentation | SlimSAM | ONNX Runtime |
+| Image upscaling | Swin2SR (2x) | ONNX Runtime via Transformers.js |
 | Animation (fal.ai) | Wan 2.2 I2V via fal.ai cloud API | HTTPS queue API (requires API key) |
 | Video frame extraction | ffmpeg-static | Bundled ffmpeg binary |
 | GIF encoding | gifenc | ~9KB pure JS |
@@ -43,9 +44,13 @@ src/
       worker.js              # Background worker thread for AI processing
       watcher.js             # Chokidar file watcher + pendingFiles queue + setOllamaHost() + generateEmbeddingForEntry()
       embeddings.js          # HuggingFace transformer embedding generation
+    node-binary.js           # Shared findNodeBinary() utility for child processes
     segmentation/            # SAM image segmentation (isolated from organizer)
-      segmentation.js        # SAM model orchestration (spawns subprocess)
+      segmentation.js        # SAM model orchestration (spawns subprocess, uses node-binary.js)
       segmentation-worker.js # SAM inference in child process (not worker_threads)
+    upscaler/                # On-device image upscaling (2x)
+      upscaler.js            # Child process orchestrator (like segmentation.js)
+      upscaler-worker.js     # Transformers.js image-to-image pipeline in child process
     animation/               # 2GIF animation feature (fal.ai cloud API)
       animation.js           # fal.ai API integration (upload, queue, poll, MP4 download)
       gif-encoder-worker.js  # Child process: ffmpeg MP4→frames extraction + GIF/APNG encoding
@@ -90,7 +95,7 @@ site/                        # Marketing site (GitHub Pages, snipit.dev)
   CNAME                        # Custom domain config (snipit.dev)
   assets/                      # Hero video, screenshots, OG image
 scripts/                     # Build and generation scripts
-  download-models.js           # Download MiniLM + SlimSAM to vendor/models/
+  download-models.js           # Download MiniLM + SlimSAM + Swin2SR to vendor/models/
   download-node.js             # Download standalone Node.js binary to vendor/node/
   afterPack.js                 # electron-builder afterPack hook (strip unused native modules, pre-sign)
   build-signed.sh              # Production build: sign + notarize
@@ -110,7 +115,7 @@ vendor/                      # Downloaded at dev time, bundled at build time
 |--------|------|---------|-----------|
 | **Overlay** | `index.html` | Fullscreen transparent region selection | Pre-warmed hidden at startup; reused per capture, destroyed after crop, then re-pre-warmed |
 | **Home** | `home.html` | Gallery, search, settings | Persistent singleton, hidden during capture |
-| **Editor** | `editor.html` | Annotation canvas + toolbar | Created per edit, destroyed on close |
+| **Editor** | `editor.html` | Annotation canvas + toolbar | Pre-warmed hidden at startup; reused per capture (resized + shown), destroyed on close, then re-pre-warmed |
 
 All windows share:
 - `titleBarStyle: 'hiddenInset'` with custom traffic light positioning
@@ -146,15 +151,18 @@ Model pull uses `client.pull({ model, stream: true })` with per-digest progress 
 All AI runs locally — no cloud API calls (except fal.ai for animations).
 
 ### Bundled HuggingFace Models
-Both Transformers.js models are **pre-downloaded and bundled** — no runtime download needed. They live in `vendor/models/` (dev) or `Resources/models/` (packaged). The `model-paths.js` module resolves the correct cache directory and disables remote downloads in the packaged app:
+All Transformers.js models are **pre-downloaded and bundled** — no runtime download needed. They live in `vendor/models/` (dev) or `Resources/models/` (packaged). The `model-paths.js` module resolves the correct cache directory and disables remote downloads in the packaged app:
 - **Xenova/all-MiniLM-L6-v2** (~23 MB quantized) — semantic search embeddings
 - **Xenova/slimsam-77-uniform** (~50 MB) — SAM image segmentation
+- **Xenova/swin2SR-lightweight-x2-64** (~5.7 MB q4) — 2x image upscaling
 
 ### ONNX Runtime Threading
 ONNX Runtime (via Transformers.js) **crashes in worker_threads**. Embeddings must run on the main Electron thread. The worker thread handles Ollama API calls, then delegates embedding generation back to main via message passing.
 
-### SAM in Child Process
-The segmentation model (SlimSAM) runs in a **child process** (`child_process.fork`), not a worker thread, because ONNX Runtime also crashes in Electron's V8 worker context. The child process uses a standalone Node.js binary (not Electron's). A bundled Node.js binary is included in the packaged app (`Resources/node/node`) so the segment tool works without requiring users to install developer tools. In development, `vendor/node/{arch}/node` is checked first, then system Node.js installs (NVM, homebrew, PATH, FNM). The parent passes `SNIP_MODELS_PATH` and `SNIP_PACKAGED` env vars so the worker uses bundled models.
+### SAM and Upscaler in Child Processes
+The segmentation model (SlimSAM) and the upscaler model (Swin2SR 2x) both run in **child processes** (`child_process.fork`), not worker threads, because ONNX Runtime crashes in Electron's V8 worker context. Both use a standalone Node.js binary (not Electron's) located via the shared `findNodeBinary()` utility in `src/main/node-binary.js`. A bundled Node.js binary is included in the packaged app (`Resources/node/node`) so these features work without requiring users to install developer tools. In development, `vendor/node/{arch}/node` is checked first, then system Node.js installs (NVM, homebrew, PATH, FNM). The parent passes `SNIP_MODELS_PATH` and `SNIP_PACKAGED` env vars so the worker uses bundled models.
+
+The upscaler uses Transformers.js `image-to-image` pipeline with the Swin2SR quantized ONNX model (~5.7 MB). Input images are decoded from base64 data URLs to `RawImage` objects using sharp before being passed to the pipeline. Output is capped at 3840x2160 to prevent memory issues. The upscale button is disabled after use to prevent repeated upscaling.
 
 ### fal.ai Cloud Animation
 The Animate feature uses the **fal.ai Wan 2.2 A14B image-to-video API** instead of a local model. This requires an internet connection and a fal.ai API key (set in Settings). When the user clicks Animate, Ollama's minicpm-v vision model analyzes the cutout and generates 3 AI-tailored animation presets (e.g., "wag tail" for a dog). If Ollama is unavailable, it falls back to 6 static presets inlined in `animation.js`. Users can also enter a custom animation prompt. All animations are capped at **4 seconds maximum** (enforced via `MAX_DURATION_SECONDS` in `animation.js` and `maxDuration` in `gif-encoder-worker.js`). The pipeline:
@@ -179,8 +187,10 @@ Saved animations go to `~/Documents/snip/screenshots/animations/` subdirectory, 
 ### Single Index File
 All screenshot metadata lives in `~/Documents/snip/screenshots/.index.json`. Simple, atomic, easy to debug. No database.
 
-### Pre-warmed Overlay Window
-The capture overlay is **pre-warmed** at app startup: a hidden BrowserWindow is created off-screen (`x: -9999`, `show: false`) and loads `index.html`. When the user triggers a capture, the pre-warmed window is repositioned and shown instantly (~0ms) instead of creating and loading a fresh window (~120-350ms). After each capture completes (overlay destroyed), a new hidden window is pre-warmed for the next capture. If the pre-warmed window isn't ready (e.g., first capture fires before pre-warm completes), a fresh window is created as fallback.
+### Pre-warmed Windows (Overlay + Editor)
+Both the capture overlay and the annotation editor are **pre-warmed** at app startup: hidden BrowserWindows are created off-screen (`x: -9999`, `show: false`) and load their respective HTML files. When the user triggers a capture, the pre-warmed overlay is repositioned and shown instantly (~0ms) instead of creating and loading a fresh window (~120-350ms). Similarly, the editor window has Fabric.js (310KB) and all tool scripts pre-parsed, so opening the editor after capture only needs to push image data and show the window. After each window closes, a new hidden instance is pre-warmed for the next use. If a pre-warmed window isn't ready, a fresh window is created as fallback.
+
+The editor uses **push-based initialization**: the main process sends `editor-image-data` via `webContents.send()` to the pre-warmed renderer, which initializes the Fabric canvas on receipt. A pull fallback (`get-editor-image` IPC) exists for non-prewarmed windows.
 
 The screen capture (`desktopCapturer.getSources()`) runs **in parallel** with overlay window preparation via `Promise.all()`. The captured image is stored as a `NativeImage` reference — the expensive `toDataURL()` serialization is **deferred** until crop time when the renderer requests it via `getCaptureImage()` IPC.
 
@@ -255,7 +265,8 @@ The preload script (`preload.js`) exposes `window.snip` with these methods:
 | `onOllamaPullProgress(cb)` | M -> R | Real-time model pull progress push events |
 | `getTheme()` / `setTheme(t)` | R -> M | Theme persistence |
 | `onThemeChanged(cb)` | M -> R | Theme broadcast listener |
-| `getEditorImage()` | R -> M | Get cropped capture for editor |
+| `onEditorImageData(cb)` | M -> R | Push cropped capture to pre-warmed editor (primary path) |
+| `getEditorImage()` | R -> M | Get cropped capture for editor (fallback for non-prewarmed) |
 | `getCaptureImage()` | R -> M | Get captured screenshot as dataURL (deferred from capture time) |
 | `showNotification(body)` | R -> M | Show floating toast notification (auto-dismisses) |
 | `copyToClipboard(dataURL)` | R -> M | Write PNG to system clipboard |
@@ -290,6 +301,8 @@ The preload script (`preload.js`) exposes `window.snip` with these methods:
 | `onAnimateProgress(cb)` | M -> R | Animation progress (upload, queue, generate, encode) |
 | `saveAnimation(data)` | R -> M | Save GIF/APNG to disk |
 | `transcribeScreenshot()` | R -> M | Native macOS OCR via Vision framework — text extraction and language detection |
+| `upscaleImage(data)` | R -> M | Upscale image 2x via Swin2SR ONNX model in child process |
+| `onUpscaleProgress(cb)` | M -> R | Upscale progress push events |
 | `openExternalUrl(url)` | R -> M | Open URL in default browser |
 | `installOllama()` | R -> M | Download and install Ollama from ollama.com |
 | `pullOllamaModel()` | R -> M | Pull the configured model (minicpm-v) |
@@ -386,5 +399,5 @@ The native Liquid Glass layer is always present (macOS 26+). Dark and Light them
 
 | Ollama binary | `/usr/local/bin/ollama`, `/opt/homebrew/bin/ollama`, or `/Applications/Ollama.app/Contents/Resources/ollama` | same (user-installed) |
 | Ollama models | `~/.ollama/models/` | same (shared with system Ollama) |
-| HF models (MiniLM + SlimSAM) | `vendor/models/` | `Resources/models/` |
+| HF models (MiniLM + SlimSAM + Swin2SR) | `vendor/models/` | `Resources/models/` |
 | Animation presets | Inlined in `src/main/animation/animation.js` | same (bundled in asar) |

@@ -4,6 +4,7 @@
  *
  * 1. Xenova/all-MiniLM-L6-v2           — embedding model (~23 MB)
  * 2. Xenova/slimsam-77-uniform         — SAM segmentation model (~50 MB)
+ * 3. Xenova/swin2SR-lightweight-x2-64  — 2x image upscaling model (~5.7 MB)
  *
  * Usage:
  *   node scripts/download-models.js
@@ -47,7 +48,7 @@ function formatBytes(bytes) {
 async function main() {
   console.log('Snip Model Downloader');
   console.log('=====================');
-  console.log('  HuggingFace: MiniLM + SlimSAM');
+  console.log('  HuggingFace: MiniLM + SlimSAM + Swin2SR');
   console.log('');
 
   fs.mkdirSync(VENDOR_MODELS, { recursive: true });
@@ -61,7 +62,7 @@ async function main() {
   env.allowRemoteModels = true;
 
   // 1. MiniLM embedding model
-  console.log('==> [1/2] Downloading MiniLM embedding model (Xenova/all-MiniLM-L6-v2)...');
+  console.log('==> [1/3] Downloading MiniLM embedding model (Xenova/all-MiniLM-L6-v2)...');
   var pipe = await transformers.pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2', {
     quantized: true
   });
@@ -69,10 +70,15 @@ async function main() {
   console.log('==> MiniLM loaded — embedding dim: ' + testOutput.data.length);
 
   // 2. SlimSAM segmentation model
-  console.log('\n==> [2/2] Downloading SlimSAM model (Xenova/slimsam-77-uniform)...');
+  console.log('\n==> [2/3] Downloading SlimSAM model (Xenova/slimsam-77-uniform)...');
   await transformers.SamModel.from_pretrained('Xenova/slimsam-77-uniform');
   await transformers.AutoProcessor.from_pretrained('Xenova/slimsam-77-uniform');
   console.log('==> SlimSAM model + processor loaded');
+
+  // 3. Swin2SR 2x upscaling model
+  console.log('\n==> [3/3] Downloading Swin2SR 2x model (Xenova/swin2SR-lightweight-x2-64)...');
+  await transformers.pipeline('image-to-image', 'Xenova/swin2SR-lightweight-x2-64');
+  console.log('==> Swin2SR 2x model loaded');
 
   // Summary
   console.log('\n==> Done! HF models: ' + formatBytes(getDirSize(VENDOR_MODELS)));

@@ -5,6 +5,8 @@ const EditorCanvasManager = (() => {
   let canvas = null;
   let physImageEl = null;
   let originalDataURL = null;
+  let originalCssW = 0;
+  let originalCssH = 0;
   let cssW = 0;
   let cssH = 0;
   let redoStack = [];
@@ -46,7 +48,11 @@ const EditorCanvasManager = (() => {
     // Store original on first call only (for reset)
     if (!originalDataURL) {
       originalDataURL = dataURL;
+      originalCssW = cssWidth;
+      originalCssH = cssHeight;
     }
+    cssW = cssWidth;
+    cssH = cssHeight;
     applyBackground(dataURL, cssWidth, cssHeight);
   }
 
@@ -68,10 +74,13 @@ const EditorCanvasManager = (() => {
 
   function resetToOriginal() {
     if (originalDataURL) {
-      applyBackground(originalDataURL, cssW, cssH);
+      cssW = originalCssW;
+      cssH = originalCssH;
+      applyBackground(originalDataURL, originalCssW, originalCssH);
     }
     redoStack = [];
     clearAnnotations();
+    return { cssW: originalCssW, cssH: originalCssH };
   }
 
   function exportAsDataURL(format, quality) {

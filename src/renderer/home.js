@@ -646,6 +646,8 @@
     { action: null, name: 'Tag tool', context: 'Annotation', configurable: false, display: 'G' },
     { action: null, name: 'Blur Brush tool', context: 'Annotation', configurable: false, display: 'B' },
     { action: null, name: 'Segment tool', context: 'Annotation', configurable: false, display: 'S' },
+    { action: null, name: 'Upscale', context: 'Annotation', configurable: false, display: 'U' },
+    { action: null, name: 'Transcribe', context: 'Annotation', configurable: false, display: 'W' },
     { action: null, name: 'Confirm / full screen', context: 'Selection', configurable: false, display: 'Enter' },
     { action: null, name: 'Cancel selection', context: 'Selection', configurable: false, display: 'Esc' },
     { action: null, name: 'Save snip', context: 'Annotation', configurable: false, display: 'Cmd + S' },

@@ -13,7 +13,9 @@ const DEFAULT_SHORTCUTS = {
   'tool-arrow': 'a',
   'tool-tag': 'g',
   'tool-blur': 'b',
-  'tool-segment': 's'
+  'tool-segment': 's',
+  'tool-upscale': 'u',
+  'tool-transcribe': 'w'
 };
 
 const DEFAULT_TAG_DESCRIPTIONS = {

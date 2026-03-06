@@ -57,6 +57,7 @@ These are non-negotiable rules. Violating them causes crashes or broken UX:
 ### CSS
 - **Never hardcode colors.** All colors come from CSS variables in `src/renderer/theme.css`.
 - Three themes exist: `dark`, `light`, `glass`. Changes must work in all three + the solid fallback.
+- **All new UI must align with the Liquid Glass design language** documented in `docs/DESIGN.md`. Before writing CSS, read the design doc for the correct variables, component patterns, and glass effect specs. Reuse existing patterns (e.g. tutorial-modal, toast pill, toolbar button states) rather than inventing new ones.
 
 ### Renderer Code Style
 - **No ES modules** in renderer JS: prefer `var`, no `import`/`export`. All tools attach to `window` via IIFEs.
@@ -71,6 +72,11 @@ These are non-negotiable rules. Violating them causes crashes or broken UX:
 ### Liquid Glass
 - The native `NSGlassEffectView` layer is always active on macOS 26+. Dark/Light themes cover it with opaque backgrounds. The Glass theme reveals it.
 - `--glass-blur: 0px` in Glass theme because the native layer handles blur.
+
+### Marketing Site (`site/`)
+- **Maximize SEO on every change.** When editing `site/index.html`, always update structured data (`ld+json`), meta description, Open Graph tags, and `featureList` to reflect new or changed features.
+- Optimize all media assets for web (compress images to JPG, convert video to MP4 with `crf 28`, remove originals after conversion).
+- Use semantic HTML (`section`, `h2`/`h3`, `alt` text on images, `aria-label` on interactive elements).
 
 ### Releases
 - **Before creating a new release tag**, always bump the version in **both** `package.json` and `package-lock.json` (run `npm install --package-lock-only` to sync the lock file). Commit the version bump before tagging.

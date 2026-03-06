@@ -135,6 +135,34 @@ All toolbar buttons use a unified color system — no hardcoded colors.
 
 Action buttons (Save, Done, etc.) follow the same default/hover pattern. Tooltips appear below buttons with `top: calc(100% + 6px)`, white text on dark background.
 
+### Upscale Button (Editor)
+
+The **Upscale** button uses `.tool-btn` styling (same as all other toolbar buttons): transparent background, `--text-secondary` icon. Single click triggers 2x upscale directly (no dropdown).
+
+**Disabled state** (`.tool-btn.disabled`): `opacity: 0.4; pointer-events: none`. Applied after upscale completes to prevent double-upscale.
+
+**Progress overlay** (`.upscale-progress`): same pattern as animation progress — centered fixed panel, 260px wide, glass background, pulsing icon, text label, and accent-colored progress bar (4px track). Stages: "Loading model..." → "Upscaling (2x)..." → "Encoding result...".
+
+### Zoom Indicator
+
+**Zoom indicator** (`.zoom-indicator`): fixed bottom-right pill (right: 52px to avoid overlapping help button) showing current zoom percentage. Uses `--bg-elevated` background with glass blur, `--text-secondary` text, 11px font. Hidden when at default fit-to-viewport zoom with no pan offset; visible otherwise. `pointer-events: none` so it doesn't interfere with canvas interaction.
+
+### Canvas Controls Button
+
+**Controls button** (`.canvas-help-btn`): fixed bottom-right pill matching the image-dims / zoom-indicator style — `--bg-elevated` background, glass blur, `--glass-specular` border, `--text-secondary` color, 11px font. Contains a small `?` circle SVG icon + "Controls" label. Hover brightens to `--text-primary` with `--glass-specular-strong` border.
+
+Clicking opens a **Canvas Controls modal** (`#canvas-guide-backdrop`) using the standard `.tutorial-backdrop` + `.tutorial-modal` pattern. Contains two sections (Zoom / Pan) with `--accent` uppercase section headers and `.tutorial-kbd` + `.tutorial-step` rows for each shortcut. Dismissed via "Got it" button or backdrop click.
+
+### Transcript Panel (Editor)
+
+A slide-in side panel (`--bg-elevated` background, glass blur, `--glass-specular` left border) that shows OCR-extracted text. Slides in from the right with a 0.2s ease-out animation.
+
+**Header**: flex row with "Transcript" title (13px, 700 weight) and close button. Detected languages appear as inline rounded pills (`border-radius: 100px`) next to the title — `--accent` text on `--accent-bg` background, 9px uppercase, max 3 pills. Hidden when empty via `:empty { display: none }`.
+
+**Text area**: `<pre>` with monospace font (SF Mono/Menlo), `white-space: pre-wrap`, user-selectable. Excessive line breaks (3+) collapsed to double newlines.
+
+**Copy button**: full-width, `--bg-secondary` background, `--text-primary` text, 8px radius. Shows copy icon + "Copy Text" + `⏎` kbd badge. No top border separator.
+
 ### Fabric.js Selection Controls
 
 Fabric object selection handles (borders, corners) use the theme accent color at canvas init time:

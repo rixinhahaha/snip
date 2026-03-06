@@ -4,12 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Snip — macOS Screenshot Tool with Annotation & AI Organization</title>
-  <meta name="description" content="Free, open-source macOS screenshot tool. Capture your screen, annotate with arrows, text, and blur, then find any screenshot with on-device AI semantic search.">
+  <meta name="description" content="Free, open-source macOS screenshot tool. Capture, annotate, upscale, and transcribe text — all on device. AI-powered organization and semantic search find any screenshot instantly.">
   <meta name="theme-color" content="#8B5CF6">
 
   <!-- Open Graph -->
   <meta property="og:title" content="Snip — macOS Screenshot Tool with AI Organization">
-  <meta property="og:description" content="Capture, annotate, and find any screenshot instantly. On-device AI names, tags, and organizes every snip. Semantic search finds screenshots by description.">
+  <meta property="og:description" content="Capture, annotate, upscale, and transcribe screenshots — all on device. AI names, tags, and organizes every snip. Semantic search finds anything instantly.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://snipit.dev">
   <meta property="og:image" content="https://snipit.dev/assets/og-image.png">
@@ -22,7 +22,7 @@
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Snip — macOS Screenshot Tool with AI Organization">
-  <meta name="twitter:description" content="Capture, annotate, and find any screenshot instantly. On-device AI names, tags, and organizes every snip.">
+  <meta name="twitter:description" content="Capture, annotate, upscale, and transcribe screenshots — all on device. AI organizes every snip with semantic search.">
   <meta name="twitter:image" content="https://snipit.dev/assets/og-image.png">
   <meta name="twitter:image:alt" content="Snip screenshot tool for macOS">
 
@@ -45,7 +45,7 @@
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "Snip",
-    "description": "macOS screenshot tool with annotation and AI-powered organization. Capture, annotate, and find any screenshot instantly with semantic search.",
+    "description": "macOS screenshot tool with annotation, AI upscaling, OCR transcription, and AI-powered organization. Capture, annotate, upscale, and find any screenshot instantly.",
     "url": "https://snipit.dev",
     "applicationCategory": "UtilitiesApplication",
     "operatingSystem": "macOS 14+",
@@ -57,7 +57,7 @@
     "screenshot": "https://snipit.dev/assets/og-image.png",
     "softwareRequirements": "macOS 14+ with Apple M-series chip",
     "downloadUrl": "https://github.com/rixinhahaha/snip/releases",
-    "featureList": "Screen capture, Annotation tools, AI-powered organization, Semantic search, Object segmentation, Blur brush, Auto-tagging, Auto-categorization",
+    "featureList": "Screen capture, Annotation tools, AI-powered organization, Semantic search, Object segmentation, Blur brush, Auto-tagging, Auto-categorization, AI upscaling, Text transcription (OCR)",
     "softwareVersion": "1.0.15"
   }
   </script>
@@ -202,7 +202,7 @@
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
           </div>
           <h3>Powerful Annotation</h3>
-          <p>Rectangles, arrows, text, tags, blur brush, and AI-powered object segmentation. Everything you need to communicate visually.</p>
+          <p>Rectangles, arrows, text, tags, blur brush, and AI-powered object segmentation. Zoom and pan the canvas for pixel-perfect edits.</p>
         </div>
         <div class="feature-card">
           <div class="feature-icon">
@@ -227,10 +227,24 @@
         </div>
         <div class="feature-card">
           <div class="feature-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L9.5 9.5L2 12l7.5 2.5L12 22l2.5-7.5L22 12l-7.5-2.5L12 2z"/></svg>
           </div>
           <h3>Animate</h3>
           <p>Segment any object from your screenshot, then animate it into a GIF with AI-generated motion presets. Bring your screenshots to life.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+          </div>
+          <h3>Upscale <span class="badge-new">New</span></h3>
+          <p>Enhance resolution with on-device AI. Powered by Swin2SR — runs locally, no API keys needed.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>
+          </div>
+          <h3>Transcribe <span class="badge-new">New</span></h3>
+          <p>Extract text from any screenshot with macOS Vision OCR. One click, instantly copyable.</p>
         </div>
       </div>
     </div>
@@ -256,7 +270,7 @@
           <div class="step-number">2</div>
           <div class="step-content">
             <h3>Annotate</h3>
-            <p>Add rectangles, arrows, text, blur, or use AI segmentation to isolate objects. All with keyboard shortcuts.</p>
+            <p>Add rectangles, arrows, text, blur, or use AI segmentation to isolate objects. Zoom in for precision. All with keyboard shortcuts.</p>
           </div>
         </div>
         <div class="step">
@@ -341,6 +355,16 @@
           <h3>Segment</h3>
           <p>AI-powered object selection with tagging</p>
         </div>
+        <div class="tool-card">
+          <div class="tool-key">U</div>
+          <h3>Upscale</h3>
+          <p>Enhance resolution with on-device AI</p>
+        </div>
+        <div class="tool-card">
+          <div class="tool-key">W</div>
+          <h3>Transcribe</h3>
+          <p>Extract text from screenshots via OCR</p>
+        </div>
         <div class="tool-card tool-card-accent">
           <div class="tool-key">&#10024;</div>
           <h3>Animate</h3>
@@ -376,6 +400,38 @@
           <div class="segment-tag-step">
             <div class="segment-tag-step-num">3</div>
             <div><strong>Customize</strong><span>Drag tags, edit labels, adjust colors and thickness</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Upscale Demo -->
+  <section class="upscale-demo" id="upscale">
+    <div class="section-inner">
+      <div class="section-header">
+        <div class="section-badge">Upscale <span class="badge-new">New</span></div>
+        <h2>Enhance resolution.<br>On device.</h2>
+        <p>Enhance any screenshot with AI super-resolution. Runs entirely on your Mac.</p>
+      </div>
+      <div class="upscale-demo-visual">
+        <div class="upscale-demo-video-wrapper">
+          <video class="upscale-demo-video" autoplay loop muted playsinline>
+            <source src="assets/upscale-demo.mp4" type="video/mp4">
+          </video>
+        </div>
+        <div class="upscale-demo-steps">
+          <div class="upscale-step">
+            <div class="upscale-step-num">1</div>
+            <div><strong>Capture</strong><span>Take a screenshot as usual</span></div>
+          </div>
+          <div class="upscale-step">
+            <div class="upscale-step-num">2</div>
+            <div><strong>Upscale</strong><span>Press <kbd>U</kbd> to enhance resolution with AI</span></div>
+          </div>
+          <div class="upscale-step">
+            <div class="upscale-step-num">3</div>
+            <div><strong>Save</strong><span>Copy or save the high-res result</span></div>
           </div>
         </div>
       </div>
@@ -520,6 +576,10 @@
         <div class="tech-item">
           <strong>SlimSAM</strong>
           <span>Object segmentation</span>
+        </div>
+        <div class="tech-item">
+          <strong>Swin2SR</strong>
+          <span>AI image upscaling</span>
         </div>
         <div class="tech-item">
           <strong>Liquid Glass</strong>

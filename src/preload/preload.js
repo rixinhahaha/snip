@@ -15,6 +15,9 @@ contextBridge.exposeInMainWorld('snip', {
   // Editor window
   openEditor: (data) => ipcRenderer.invoke('open-editor', data),
   getEditorImage: () => ipcRenderer.invoke('get-editor-image'),
+  onEditorImageData: (callback) => {
+    ipcRenderer.on('editor-image-data', (event, data) => callback(data));
+  },
   closeEditor: () => ipcRenderer.send('close-editor'),
 
   // Screen recording permission
@@ -73,6 +76,15 @@ contextBridge.exposeInMainWorld('snip', {
   // Navigation
   onNavigateToSearch: (callback) => {
     ipcRenderer.on('navigate-to-search', () => callback());
+  },
+
+  // Upscaling
+  upscaleImage: ({ imageBase64 }) =>
+    ipcRenderer.invoke('upscale-image', { imageBase64 }),
+  onUpscaleProgress: (callback) => {
+    var handler = (event, progress) => callback(progress);
+    ipcRenderer.on('upscale-progress', handler);
+    return () => ipcRenderer.removeListener('upscale-progress', handler);
   },
 
   // Segmentation (SAM)

@@ -11,9 +11,10 @@ const ToolUtils = (() => {
    */
   function clampedScenePoint(canvas, e) {
     const pt = canvas.getScenePoint(e);
+    const zoom = canvas.getZoom() || 1;
     return {
-      x: clamp(pt.x, 0, canvas.width),
-      y: clamp(pt.y, 0, canvas.height)
+      x: clamp(pt.x, 0, canvas.width / zoom),
+      y: clamp(pt.y, 0, canvas.height / zoom)
     };
   }
 
@@ -34,8 +35,9 @@ const ToolUtils = (() => {
 
     pixelSize = pixelSize || 10;
 
-    var scaleX = origImg.naturalWidth / canvas.width;
-    var scaleY = origImg.naturalHeight / canvas.height;
+    var zoom = canvas.getZoom() || 1;
+    var scaleX = origImg.naturalWidth / (canvas.width / zoom);
+    var scaleY = origImg.naturalHeight / (canvas.height / zoom);
 
     var srcX = x * scaleX;
     var srcY = y * scaleY;

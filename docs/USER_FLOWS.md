@@ -424,12 +424,12 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 
 | Step | Action | Expected Result |
 |------|--------|-----------------|
-| 1 | Click "Transcribe Text" button in editor toolbar | Side panel opens to the right of the canvas |
+| 1 | Click "Transcribe" button (or press W) in editor toolbar | Side panel opens to the right of the canvas |
 | 2 | -- | Loading spinner shown briefly while native OCR processes |
 | 3 | -- | Screenshot sent via `transcribe-screenshot` IPC channel to native macOS Vision framework (VNRecognizeTextRequest) |
 | 4 | -- | Vision framework returns extracted text; Unicode script analysis detects languages |
 | 5 | -- | Panel displays: language badges at top, extracted text below |
-| 6 | Click "Copy" button in panel | Extracted text copied to system clipboard |
+| 6 | Click "Copy" button or press Enter | Extracted text copied to system clipboard; Enter also closes the panel |
 | 7 | Click panel close button (or press Escape) | Panel closes, editor returns to normal layout |
 | 8 | Click "Transcribe Text" button again | Panel reopens instantly with cached results (no OCR call) |
 
@@ -440,6 +440,53 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 | No text detected in screenshot | Panel shows message indicating no text was found |
 | Swift helper compilation fails | Error state shown in panel |
 | Cache invalidation | Cache is per editor session; opening a new editor starts fresh |
+
+### 3.13 Upscale (2x)
+
+**Preconditions:** Editor open with a captured image.
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Click the Upscale button in the toolbar | Progress overlay appears ("Loading model...") |
+| 2 | -- | Child process spawns with bundled Node.js binary, loads Swin2SR ONNX model |
+| 3 | -- | Progress updates to "Upscaling (2x)..." |
+| 4 | -- | Upscaled image replaces the canvas background directly |
+| 5 | -- | Upscale button becomes disabled (prevents re-upscaling) |
+| 6 | Annotate and save/copy as normal | Upscaled image exported at new resolution |
+| 7 | ⌘Z or Undo button | Reverts to pre-upscale state (image, dimensions, annotations) |
+| 8 | Reset All button | Also reverts upscale along with all annotations, re-enables upscale button |
+
+**Edge cases:**
+
+| Condition | Expected Behavior |
+|-----------|-------------------|
+| Image would exceed 3840x2160 after 2x upscaling | Notification shown, upscale blocked |
+| No bundled Node.js binary available | Upscale not available (same as SAM fallback) |
+| Child process crashes during upscaling | Error shown, canvas unchanged |
+| Upscale already applied | Button disabled, cannot upscale again |
+
+### 3.14 Canvas Zoom & Pan
+
+**Preconditions:** Editor open with a captured image.
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Pinch-to-zoom on trackpad | Canvas zooms toward cursor; zoom indicator appears in bottom-right |
+| 2 | ⌘+scroll wheel | Canvas zooms in/out |
+| 3 | ⌘+ / ⌘- | Zoom in/out by 25% steps |
+| 4 | ⌘0 | Reset to fit-to-viewport zoom with no pan offset |
+| 5 | Two-finger scroll (trackpad) or scroll wheel | Pan canvas in any direction |
+| 6 | Space + drag | Pan canvas (cursor shows grab hand) |
+| 7 | Middle-click drag | Pan canvas |
+
+**Edge cases:**
+
+| Condition | Expected Behavior |
+|-----------|-------------------|
+| Zoom exceeds 800% or below 25% | Clamped to min/max bounds |
+| Space pressed while editing a textbox | Space types a character (pan disabled) |
+| Export while zoomed in | Exported at full resolution regardless of view zoom |
+| Zoom indicator at 100% fit | Indicator hidden |
 
 ---
 

@@ -187,6 +187,19 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
     const win = createEditorWindowFn(data.cssWidth, data.cssHeight);
     editorWindowRef = win;
 
+    // Push image data to the editor once its content is ready
+    const pushData = () => {
+      if (win && !win.isDestroyed()) {
+        win.webContents.send('editor-image-data', data);
+        win.show();
+      }
+    };
+    if (win.webContents.isLoading()) {
+      win.webContents.once('did-finish-load', pushData);
+    } else {
+      pushData();
+    }
+
     // Clear references when editor closes to free memory (base64 image data)
     win.on('closed', () => {
       pendingEditorData = null;
@@ -196,7 +209,7 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
     return true;
   });
 
-  // Editor requests image data on load
+  // Editor requests image data on load (fallback for non-prewarmed windows)
   ipcMain.handle('get-editor-image', async () => {
     return pendingEditorData;
   });
@@ -490,6 +503,16 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
     }
     console.log('[Snip] Refresh: generated %d embeddings', generated);
     return { pruned, embeddings: generated };
+  });
+
+  // Upscaling: upscale image via ONNX model in child process
+  ipcMain.handle('upscale-image', async (event, { imageBase64 }) => {
+    const { upscaleImage } = require('./upscaler/upscaler');
+    return upscaleImage(imageBase64, function(progress) {
+      if (event.sender && !event.sender.isDestroyed()) {
+        event.sender.send('upscale-progress', progress);
+      }
+    });
   });
 
   // Segmentation: check device support

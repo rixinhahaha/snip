@@ -49,6 +49,15 @@ Power users on macOS who take 5-50 screenshots per day: developers, designers, P
 | Blur Brush | B | Paint to pixelate sensitive info |
 | Segment | S | AI-powered object selection (SlimSAM) — Apply Cutout or Tag Segment (4-color palette: Red/Yellow/Green/Blue) |
 | Animate | — | Animate a segment cutout into GIF/APNG via fal.ai cloud API |
+| Upscale | — | On-device 2x image upscaling via ONNX model (Swin2SR) |
+
+### Canvas Navigation
+- **Pinch-to-zoom** on trackpad or **⌘+scroll** to zoom toward cursor
+- **⌘+** / **⌘-** to zoom in/out, **⌘0** to reset to fit
+- **Two-finger scroll** or scroll wheel to pan
+- **Space+drag** or middle-click drag to pan
+- Zoom indicator shown in bottom-right corner when zoomed/panned
+- **?** help button (bottom-right) opens a canvas navigation guide modal
 
 ### Save & Export
 - **Esc/Enter/Done**: Copy annotated PNG to clipboard, close editor
@@ -79,6 +88,15 @@ Power users on macOS who take 5-50 screenshots per day: developers, designers, P
 - Output formats: GIF (256 colors, 1-bit transparency) and APNG (full color, 8-bit alpha)
 - Result panel keyboard shortcuts: Enter or Cmd+S saves GIF, R redoes with another preset, Esc discards
 - Animations saved to `~/Documents/snip/screenshots/animations/` (not processed by AI organizer)
+
+### Upscale (2x)
+- On-device 2x image upscaling using Swin2SR ONNX model (~5.7 MB) — no cloud API needed
+- Single-click toolbar button — applies result directly (no preview step)
+- Output capped at 3840x2160 to prevent memory issues
+- Progress overlay shown during processing ("Upscaling (2x)...")
+- Upscale button disabled after use (prevents repeated upscaling)
+- Undoable via ⌘Z (restores pre-upscale image, dimensions, and annotations)
+- Runs in a child process (same pattern as SAM segmentation) using bundled Node.js binary
 
 ### Search
 - **Cmd+Shift+S**: Semantic search using local embeddings (no API calls)

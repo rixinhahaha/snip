@@ -50,6 +50,8 @@ Screenshots saved to `~/Documents/snip/screenshots/`. AI renames, categorizes, a
 | Cmd+S | Save to disk (in editor) |
 | Esc / Enter | Copy to clipboard & close (in editor) |
 | V / R / T / A / G / B / S | Select / Rectangle / Text / Arrow / Tag / Blur / Segment tools |
+| U | Upscale image |
+| W | Transcribe text |
 
 ## Documentation
 

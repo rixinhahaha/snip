@@ -17,12 +17,13 @@
     document.documentElement.dataset.theme = theme;
   });
 
-  document.addEventListener('DOMContentLoaded', async () => {
-    const imageData = await window.snip.getEditorImage();
-    if (!imageData) {
-      console.error('[Snip] No image data received');
-      return;
-    }
+  let _editorReady = false; // DOM + tools initialized
+  let _editorInitialized = false; // image data loaded
+
+  // Initialize editor with image data (called from push or pull path)
+  async function initEditorWithData(imageData) {
+    if (_editorInitialized) return; // prevent double init
+    _editorInitialized = true;
 
     const { croppedDataURL, cssWidth, cssHeight } = imageData;
 
@@ -40,27 +41,51 @@
     // Scale image area to fit viewport if image is larger than available space
     scaleImageToFit(canvasW, canvasH);
 
-    // Load fonts
-    const fonts = await window.snip.getSystemFonts();
-    var fontSelect = document.getElementById('font-select');
-    fontSelect.innerHTML = '';
-    fonts.forEach(function(font) {
-      var opt = document.createElement('option');
-      opt.value = font;
-      opt.textContent = font;
-      opt.style.fontFamily = font;
-      if (font === 'Plus Jakarta Sans') opt.selected = true;
-      fontSelect.appendChild(opt);
-    });
+    // Setup annotation tools (only once)
+    if (!_editorReady) {
+      // Load fonts
+      const fonts = await window.snip.getSystemFonts();
+      var fontSelect = document.getElementById('font-select');
+      fontSelect.innerHTML = '';
+      fonts.forEach(function(font) {
+        var opt = document.createElement('option');
+        opt.value = font;
+        opt.textContent = font;
+        opt.style.fontFamily = font;
+        if (font === 'Plus Jakarta Sans') opt.selected = true;
+        fontSelect.appendChild(opt);
+      });
 
-    // Setup annotation tools
-    setupTools();
+      setupTools();
+      await checkSegmentSupport();
+      _editorReady = true;
+    }
 
-    // Check SAM support and show segment tool if compatible
-    await checkSegmentSupport();
+    // Setup upscale button
+    setupUpscale(canvasW, canvasH);
+
+    // Setup canvas zoom (pinch, scroll, keyboard)
+    setupZoom();
 
     // Ensure window is wide enough for full toolbar
     await ensureToolbarFits();
+  }
+
+  // Listen for pushed image data (pre-warmed window path — fast)
+  window.snip.onEditorImageData(function(imageData) {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => initEditorWithData(imageData));
+    } else {
+      initEditorWithData(imageData);
+    }
+  });
+
+  // Fallback: pull image data on DOMContentLoaded (fresh window path)
+  document.addEventListener('DOMContentLoaded', async () => {
+    if (_editorInitialized) return;
+    const imageData = await window.snip.getEditorImage();
+    if (!imageData) return;
+    initEditorWithData(imageData);
   });
 
   async function checkSegmentSupport() {
@@ -76,29 +101,462 @@
     }
   }
 
+  let upscaleCleanup = null;
+  var _preUpscaleState = null; // saved state for undo
+
+  function undoUpscale() {
+    if (!_preUpscaleState) return false;
+    var state = _preUpscaleState;
+    _preUpscaleState = null;
+
+    console.log('[Upscale] Undoing: restoring %dx%d (annotations: %s)',
+      state.cssW, state.cssH, state.canvasJSON ? 'yes' : 'no');
+
+    // Restore background
+    EditorCanvasManager.setBackgroundImage(state.bgDataURL, state.cssW, state.cssH);
+
+    // Resize canvas
+    if (canvas) {
+      canvas.setDimensions({ width: state.cssW, height: state.cssH });
+      canvas.setZoom(1);
+    }
+
+    // Restore image area
+    var imageArea = document.getElementById('image-area');
+    imageArea.style.width = state.cssW + 'px';
+    imageArea.style.height = state.cssH + 'px';
+
+    // Restore annotations
+    EditorCanvasManager.clearAnnotations();
+    if (state.canvasJSON) {
+      canvas.loadFromJSON(state.canvasJSON).then(function() {
+        canvas.renderAll();
+      });
+    }
+
+    // Re-fit (this updates _zoomState.imgW/imgH so re-upscale size check works)
+    scaleImageToFit(state.cssW, state.cssH);
+
+    // Re-enable upscale button
+    var upscaleBtn = document.getElementById('btn-upscale');
+    if (upscaleBtn) {
+      upscaleBtn.classList.remove('disabled');
+      upscaleBtn.setAttribute('data-tooltip', 'Upscale (U)');
+    }
+
+    console.log('[Upscale] Undo complete, zoom state imgW/H: %d x %d',
+      _zoomState.imgW, _zoomState.imgH);
+    window.snip.showNotification('Upscale undone');
+    return true;
+  }
+
+  function setupUpscale(canvasW, canvasH) {
+    var upscaleBtn = document.getElementById('btn-upscale');
+    var progressEl = document.getElementById('upscale-progress');
+    var progressText = document.getElementById('upscale-progress-text');
+    var progressFill = document.getElementById('upscale-progress-fill');
+
+    if (!upscaleBtn) return;
+
+    // Click directly triggers 2x upscale
+    upscaleBtn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      if (upscaleBtn.classList.contains('disabled')) return;
+      performUpscale();
+    });
+
+    // Listen for progress events
+    if (window.snip.onUpscaleProgress) {
+      upscaleCleanup = window.snip.onUpscaleProgress(function(progress) {
+        var pct = Math.round(progress.percent || 0);
+        if (progress.stage === 'loading') {
+          progressText.textContent = 'Loading model... ' + pct + '%';
+          progressFill.classList.remove('inferencing');
+          progressFill.style.width = pct + '%';
+        } else if (progress.stage === 'inferencing') {
+          progressText.textContent = 'Upscaling (2x)... ' + pct + '%';
+          // Smooth fill: slowly crawl toward 75% over ~60s
+          progressFill.classList.add('inferencing');
+          progressFill.style.width = '75%';
+        } else if (progress.stage === 'encoding') {
+          progressText.textContent = 'Encoding result... ' + pct + '%';
+          progressFill.classList.remove('inferencing');
+          progressFill.style.width = pct + '%';
+        } else if (progress.stage === 'done') {
+          progressText.textContent = 'Done! 100%';
+          progressFill.classList.remove('inferencing');
+          progressFill.style.width = '100%';
+        }
+      });
+    }
+
+    function showUpscaleError(currentDims, targetDims) {
+      var dialog = document.getElementById('upscale-error');
+      document.getElementById('upscale-error-current').textContent = currentDims;
+      document.getElementById('upscale-error-target').textContent = targetDims;
+      dialog.classList.remove('hidden');
+
+      var dismissBtn = document.getElementById('upscale-error-dismiss');
+      function onDismiss() {
+        dialog.classList.add('hidden');
+        dismissBtn.removeEventListener('click', onDismiss);
+      }
+      dismissBtn.addEventListener('click', onDismiss);
+    }
+
+    function showUpscaleConfirm() {
+      return new Promise(function(resolve) {
+        var dialog = document.getElementById('upscale-confirm');
+        var okBtn = document.getElementById('upscale-confirm-ok');
+        var cancelBtn = document.getElementById('upscale-confirm-cancel');
+        dialog.classList.remove('hidden');
+
+        function cleanup(result) {
+          dialog.classList.add('hidden');
+          okBtn.removeEventListener('click', onOk);
+          cancelBtn.removeEventListener('click', onCancel);
+          resolve(result);
+        }
+        function onOk() { cleanup(true); }
+        function onCancel() { cleanup(false); }
+
+        okBtn.addEventListener('click', onOk);
+        cancelBtn.addEventListener('click', onCancel);
+      });
+    }
+
+    async function performUpscale() {
+      // Use current image dimensions from zoom state (stays in sync after undo)
+      var currentW = _zoomState.imgW;
+      var currentH = _zoomState.imgH;
+      var dpr = window.devicePixelRatio || 1;
+      var physW = Math.round(currentW * dpr);
+      var physH = Math.round(currentH * dpr);
+      var outW = physW * 2;
+      var outH = physH * 2;
+
+      // Cap output at the user's screen resolution
+      var maxW = window.screen.width * dpr;
+      var maxH = window.screen.height * dpr;
+
+      console.log('[Upscale] Current CSS dims:', currentW, 'x', currentH,
+        '| Physical:', physW, 'x', physH,
+        '| Target 2x:', outW, 'x', outH,
+        '| Screen limit:', maxW, 'x', maxH);
+
+      if (outW > maxW || outH > maxH) {
+        console.log('[Upscale] Blocked: %dx%d exceeds screen %dx%d', outW, outH, maxW, maxH);
+        showUpscaleError(physW + '×' + physH, outW + '×' + outH);
+        return;
+      }
+
+      // Warn if there are annotations — upscale only affects the background image
+      var hasAnnotations = canvas && canvas.getObjects().length > 0;
+      if (hasAnnotations) {
+        console.log('[Upscale] Annotations present (%d objects), showing confirmation', canvas.getObjects().length);
+        var confirmed = await showUpscaleConfirm();
+        if (!confirmed) {
+          console.log('[Upscale] User cancelled');
+          return;
+        }
+      }
+
+      // Save pre-upscale state for undo
+      _preUpscaleState = {
+        bgDataURL: EditorCanvasManager.getBackgroundDataURL(),
+        cssW: currentW,
+        cssH: currentH,
+        canvasJSON: hasAnnotations && canvas ? canvas.toJSON() : null
+      };
+      console.log('[Upscale] Saved pre-upscale state (%dx%d, annotations: %s)',
+        currentW, currentH, hasAnnotations ? 'yes' : 'no');
+
+      // Show progress overlay
+      progressFill.classList.remove('inferencing');
+      progressFill.style.width = '0%';
+      progressText.textContent = 'Loading model...';
+      progressEl.classList.remove('hidden');
+
+      try {
+        // Upscale the background image only (not annotations)
+        var dataURL = EditorCanvasManager.getBackgroundDataURL();
+        console.log('[Upscale] Sending background image to worker (dataURL length: %d)', dataURL.length);
+
+        var result = await window.snip.upscaleImage({ imageBase64: dataURL });
+
+        progressEl.classList.add('hidden');
+
+        console.log('[Upscale] Result received: %dx%d (dataURL length: %d)',
+          result.width, result.height, result.dataURL.length);
+
+        // Apply result directly
+        var newCssW = result.width / dpr;
+        var newCssH = result.height / dpr;
+
+        EditorCanvasManager.clearAnnotations();
+        EditorCanvasManager.setBackgroundImage(result.dataURL, newCssW, newCssH);
+
+        if (canvas) {
+          canvas.setDimensions({ width: newCssW, height: newCssH });
+          canvas.setZoom(1);
+        }
+
+        var imageArea = document.getElementById('image-area');
+        imageArea.style.width = newCssW + 'px';
+        imageArea.style.height = newCssH + 'px';
+
+        canvasW = newCssW;
+        canvasH = newCssH;
+        scaleImageToFit(newCssW, newCssH);
+
+        upscaleBtn.classList.add('disabled');
+        upscaleBtn.setAttribute('data-tooltip', 'Already upscaled');
+
+        console.log('[Upscale] Applied: %dx%d CSS, fitted to viewport', newCssW, newCssH);
+        window.snip.showNotification('Upscaled to ' + result.width + 'x' + result.height);
+      } catch (err) {
+        console.error('[Upscale] Failed:', err);
+        progressEl.classList.add('hidden');
+
+        _preUpscaleState = null;
+        window.snip.showNotification('Upscale failed: ' + err.message);
+      }
+    }
+  }
+
+  // --- Zoom state ---
+  var _zoomState = {
+    baseScale: 1,    // initial fit-to-viewport scale
+    viewZoom: 1,     // user-controlled zoom multiplier (1 = fit, >1 = zoomed in)
+    imgW: 0,
+    imgH: 0,
+    panX: 0,
+    panY: 0,
+    isPanning: false,
+    lastPanX: 0,
+    lastPanY: 0
+  };
+
+  var MIN_ZOOM = 0.25;
+  var MAX_ZOOM = 8;
+
   function scaleImageToFit(imgW, imgH) {
     var container = document.getElementById('editor-container');
-    var imageArea = document.getElementById('image-area');
-    var bgImg = document.getElementById('background-image');
-    // Available space: viewport minus some breathing room (24px each side)
-    // padding-top on container already accounts for toolbar
     var availW = container.clientWidth - 48;
     var availH = container.clientHeight - 48;
-    if (imgW <= availW && imgH <= availH) return; // fits fine
 
-    var scale = Math.min(availW / imgW, availH / imgH);
+    var fitScale = Math.min(1, Math.min(availW / imgW, availH / imgH));
 
-    // Scale the visual container (img + canvas overlay)
-    var scaledW = Math.round(imgW * scale);
-    var scaledH = Math.round(imgH * scale);
+    _zoomState.baseScale = fitScale;
+    _zoomState.viewZoom = 1;
+    _zoomState.imgW = imgW;
+    _zoomState.imgH = imgH;
+    _zoomState.panX = 0;
+    _zoomState.panY = 0;
+
+    applyZoom();
+  }
+
+  function applyZoom() {
+    var imageArea = document.getElementById('image-area');
+    var bgImg = document.getElementById('background-image');
+    var effectiveScale = _zoomState.baseScale * _zoomState.viewZoom;
+
+    var scaledW = Math.round(_zoomState.imgW * effectiveScale);
+    var scaledH = Math.round(_zoomState.imgH * effectiveScale);
+
     imageArea.style.width = scaledW + 'px';
     imageArea.style.height = scaledH + 'px';
     bgImg.style.width = scaledW + 'px';
     bgImg.style.height = scaledH + 'px';
 
-    // Use Fabric's zoom to scale canvas content + fix pointer mapping
-    canvas.setDimensions({ width: scaledW, height: scaledH });
-    canvas.setZoom(scale);
+    // Apply pan offset via transform
+    imageArea.style.transform = 'translate(' + _zoomState.panX + 'px, ' + _zoomState.panY + 'px)';
+
+    // Fabric zoom keeps pointer mapping correct
+    if (canvas) {
+      canvas.setDimensions({ width: scaledW, height: scaledH });
+      canvas.setZoom(effectiveScale);
+    }
+
+    updateZoomIndicator();
+    updateDimsLabel();
+  }
+
+  function updateDimsLabel() {
+    var el = document.getElementById('image-dims');
+    if (!el) return;
+    var dpr = window.devicePixelRatio || 1;
+    var physW = Math.round(_zoomState.imgW * dpr);
+    var physH = Math.round(_zoomState.imgH * dpr);
+    el.textContent = physW + ' × ' + physH;
+  }
+
+  function updateZoomIndicator() {
+    var el = document.getElementById('zoom-indicator');
+    if (!el) return;
+    var pct = Math.round(_zoomState.viewZoom * _zoomState.baseScale * 100);
+    el.textContent = pct + '%';
+    // Show indicator when not at default fit
+    if (Math.abs(_zoomState.viewZoom - 1) < 0.01 && _zoomState.panX === 0 && _zoomState.panY === 0) {
+      el.classList.add('hidden');
+    } else {
+      el.classList.remove('hidden');
+    }
+  }
+
+  function setupCanvasGuide() {
+    var btn = document.getElementById('canvas-help-btn');
+    var backdrop = document.getElementById('canvas-guide-backdrop');
+    var dismiss = document.getElementById('canvas-guide-dismiss');
+    if (!btn || !backdrop) return;
+
+    btn.addEventListener('click', function() {
+      backdrop.classList.remove('hidden');
+    });
+    dismiss.addEventListener('click', function() {
+      backdrop.classList.add('hidden');
+    });
+    backdrop.addEventListener('click', function(e) {
+      if (e.target === backdrop) backdrop.classList.add('hidden');
+    });
+  }
+
+  function setupZoom() {
+    var container = document.getElementById('editor-container');
+
+    // Canvas navigation guide
+    setupCanvasGuide();
+
+    // Wheel zoom (pinch-to-zoom on trackpad sends wheel events with ctrlKey)
+    container.addEventListener('wheel', function(e) {
+      // Pinch-to-zoom on trackpad: ctrlKey is set, deltaY is the zoom delta
+      // Cmd+scroll: metaKey is set
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        var zoomFactor = e.ctrlKey ? 0.01 : 0.002; // trackpad pinch is more sensitive
+        var delta = -e.deltaY * zoomFactor;
+        var newZoom = _zoomState.viewZoom * (1 + delta);
+        var effectiveZoom = _zoomState.baseScale * newZoom;
+
+        if (effectiveZoom < MIN_ZOOM) newZoom = MIN_ZOOM / _zoomState.baseScale;
+        if (effectiveZoom > MAX_ZOOM) newZoom = MAX_ZOOM / _zoomState.baseScale;
+
+        // Zoom toward cursor position
+        var rect = container.getBoundingClientRect();
+        var cursorX = e.clientX - rect.left;
+        var cursorY = e.clientY - rect.top - 48; // subtract toolbar height
+
+        var containerCenterX = (rect.width) / 2;
+        var containerCenterY = (rect.height - 48) / 2;
+
+        // Point relative to image center (accounting for current pan)
+        var imgCenterX = containerCenterX + _zoomState.panX;
+        var imgCenterY = containerCenterY + _zoomState.panY;
+        var relX = cursorX - imgCenterX;
+        var relY = cursorY - imgCenterY;
+
+        var scaleChange = newZoom / _zoomState.viewZoom;
+        _zoomState.panX -= relX * (scaleChange - 1);
+        _zoomState.panY -= relY * (scaleChange - 1);
+
+        _zoomState.viewZoom = newZoom;
+        applyZoom();
+      } else {
+        // Regular scroll → pan
+        e.preventDefault();
+        _zoomState.panX -= e.deltaX;
+        _zoomState.panY -= e.deltaY;
+        applyZoom();
+      }
+    }, { passive: false });
+
+    // Middle-click drag to pan
+    container.addEventListener('mousedown', function(e) {
+      if (e.button === 1) { // middle mouse
+        e.preventDefault();
+        _zoomState.isPanning = true;
+        _zoomState.lastPanX = e.clientX;
+        _zoomState.lastPanY = e.clientY;
+        container.style.cursor = 'grabbing';
+      }
+    });
+
+    window.addEventListener('mousemove', function(e) {
+      if (!_zoomState.isPanning) return;
+      _zoomState.panX += e.clientX - _zoomState.lastPanX;
+      _zoomState.panY += e.clientY - _zoomState.lastPanY;
+      _zoomState.lastPanX = e.clientX;
+      _zoomState.lastPanY = e.clientY;
+      applyZoom();
+    });
+
+    // Space+drag to pan
+    var spaceDown = false;
+    document.addEventListener('keydown', function(e) {
+      if (e.key === ' ' && !e.repeat && !e.target.closest('input, textarea, select')) {
+        // Don't activate space-pan if a textbox is being edited on canvas
+        if (canvas) {
+          var active = canvas.getActiveObject();
+          if (active && active.type === 'textbox' && active.isEditing) return;
+        }
+        spaceDown = true;
+        container.style.cursor = 'grab';
+        e.preventDefault();
+      }
+    });
+    document.addEventListener('keyup', function(e) {
+      if (e.key === ' ' && !e.target.closest('input, textarea, select')) {
+        spaceDown = false;
+        if (!_zoomState.isPanning) container.style.cursor = '';
+        // Prevent space keyup from clicking the focused toolbar button
+        e.preventDefault();
+      }
+    });
+
+    container.addEventListener('mousedown', function(e) {
+      if (spaceDown && e.button === 0) {
+        e.preventDefault();
+        e.stopPropagation();
+        _zoomState.isPanning = true;
+        _zoomState.lastPanX = e.clientX;
+        _zoomState.lastPanY = e.clientY;
+        container.style.cursor = 'grabbing';
+      }
+    }, true);
+
+    window.addEventListener('mouseup', function(e) {
+      if (_zoomState.isPanning && (e.button === 0 || e.button === 1)) {
+        _zoomState.isPanning = false;
+        container.style.cursor = spaceDown ? 'grab' : '';
+      }
+    });
+
+    // Keyboard shortcuts: Cmd+0 = reset zoom, Cmd+= zoom in, Cmd+- zoom out
+    document.addEventListener('keydown', function(e) {
+      if (!(e.metaKey || e.ctrlKey)) return;
+      if (e.key === '0') {
+        e.preventDefault();
+        _zoomState.viewZoom = 1;
+        _zoomState.panX = 0;
+        _zoomState.panY = 0;
+        applyZoom();
+      } else if (e.key === '=' || e.key === '+') {
+        e.preventDefault();
+        var newZoom = _zoomState.viewZoom * 1.25;
+        if (_zoomState.baseScale * newZoom <= MAX_ZOOM) {
+          _zoomState.viewZoom = newZoom;
+          applyZoom();
+        }
+      } else if (e.key === '-') {
+        e.preventDefault();
+        var newZoom = _zoomState.viewZoom / 1.25;
+        if (_zoomState.baseScale * newZoom >= MIN_ZOOM) {
+          _zoomState.viewZoom = newZoom;
+          applyZoom();
+        }
+      }
+    });
   }
 
   async function ensureToolbarFits() {
@@ -127,8 +585,9 @@
       overlayImg.onload = function() {
         var maskImg = new Image();
         maskImg.onload = function() {
-          var imgToCanvasX = canvas.width / maskImg.width;
-          var imgToCanvasY = canvas.height / maskImg.height;
+          var recolorZoom = canvas.getZoom() || 1;
+          var imgToCanvasX = (canvas.width / recolorZoom) / maskImg.width;
+          var imgToCanvasY = (canvas.height / recolorZoom) / maskImg.height;
 
           var overlayLeft = result.x * imgToCanvasX;
           var overlayTop = result.y * imgToCanvasY;
@@ -364,10 +823,15 @@
         window.snip.closeEditor();
       },
       onUndo: function() {
-        // Try segment undo first, fall back to removing last object
+        // Undo annotations first, then segment, then upscale (only when canvas is empty)
+        if (canvas && canvas.getObjects().length > 0) {
+          EditorCanvasManager.removeLastObject();
+          return;
+        }
         if (tools[TOOLS.SEGMENT] && tools[TOOLS.SEGMENT].undoCutout && tools[TOOLS.SEGMENT].undoCutout()) {
           return;
         }
+        if (undoUpscale()) return;
         EditorCanvasManager.removeLastObject();
       },
       onRedo: function() {
@@ -378,7 +842,18 @@
           currentToolHandler.deactivate();
           currentToolHandler = null;
         }
-        EditorCanvasManager.resetToOriginal();
+
+        // If upscaled, fully revert to pre-upscale state (same as undoUpscale but also clears annotations)
+        if (_preUpscaleState) {
+          // Revert upscale: use the same logic as undoUpscale()
+          undoUpscale();
+          // Also clear any remaining annotations
+          EditorCanvasManager.clearAnnotations();
+        } else {
+          var origDims = EditorCanvasManager.resetToOriginal();
+          scaleImageToFit(origDims.cssW, origDims.cssH);
+        }
+
         Toolbar.setTool(TOOLS.SELECT);
       }
     });
@@ -616,10 +1091,14 @@
       }
     }
 
-    // Close transcript panel if open
+    // Transcript panel shortcuts
     if (typeof TranscribeTool !== 'undefined' && TranscribeTool.isActive()) {
       if (e.key === 'Escape') {
         e.preventDefault();
+        TranscribeTool.dismiss();
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        TranscribeTool.copyText();
         TranscribeTool.dismiss();
       }
       return;
@@ -665,9 +1144,14 @@
 
     if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
       e.preventDefault();
+      if (canvas && canvas.getObjects().length > 0) {
+        EditorCanvasManager.removeLastObject();
+        return;
+      }
       if (tools[TOOLS.SEGMENT] && tools[TOOLS.SEGMENT].undoCutout && tools[TOOLS.SEGMENT].undoCutout()) {
         return;
       }
+      if (undoUpscale()) return;
       EditorCanvasManager.removeLastObject();
     }
 

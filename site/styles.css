@@ -633,7 +633,7 @@ kbd {
 
 .tools-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 16px;
 }
 
@@ -685,6 +685,31 @@ kbd {
 .tool-card-accent:hover {
   border-color: var(--accent);
   box-shadow: 0 0 30px rgba(139, 92, 246, 0.15);
+}
+
+/* --- New Badge --- */
+.badge-new {
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, #8B5CF6, #7C3AED);
+  border-radius: 100px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-left: 8px;
+  vertical-align: baseline;
+  line-height: 1.4;
+  position: relative;
+  top: -1px;
+  box-shadow: 0 0 12px rgba(139, 92, 246, 0.4);
+  animation: new-badge-pulse 2s ease-in-out infinite;
+}
+
+@keyframes new-badge-pulse {
+  0%, 100% { box-shadow: 0 0 12px rgba(139, 92, 246, 0.4); }
+  50% { box-shadow: 0 0 20px rgba(139, 92, 246, 0.6); }
 }
 
 /* --- Badge Sparkles --- */
@@ -898,6 +923,114 @@ kbd {
   }
 
   .segment-tag-step.visible {
+    transform: translateY(0);
+  }
+}
+
+/* --- Upscale Demo --- */
+.upscale-demo {
+  padding: 120px 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.upscale-demo-visual {
+  display: flex;
+  align-items: center;
+  gap: 48px;
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.upscale-demo-video-wrapper {
+  flex: 1;
+  min-width: 0;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 40px rgba(139, 92, 246, 0.1);
+  background: #000;
+}
+
+.upscale-demo-video {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.upscale-demo-steps {
+  flex: 0 0 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.upscale-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  opacity: 0;
+  transform: translateX(20px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.upscale-step.visible {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.upscale-step-num {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent-dim);
+  border: 1px solid rgba(139, 92, 246, 0.25);
+  border-radius: 50%;
+  color: var(--accent);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.upscale-step strong {
+  display: block;
+  color: #fff;
+  font-size: 0.95rem;
+  margin-bottom: 2px;
+}
+
+.upscale-step span {
+  display: block;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+@media (max-width: 768px) {
+  .upscale-demo-visual {
+    flex-direction: column;
+    gap: 32px;
+  }
+
+  .upscale-demo-steps {
+    flex: none;
+    flex-direction: row;
+    gap: 16px;
+    width: 100%;
+  }
+
+  .upscale-step {
+    flex: 1;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 8px;
+    transform: translateY(20px);
+  }
+
+  .upscale-step.visible {
     transform: translateY(0);
   }
 }
@@ -1571,7 +1704,8 @@ kbd {
 .steps .step,
 .showcase-grid .showcase-item,
 .animate-demo-video-wrapper,
-.segment-tag-video-wrapper {
+.segment-tag-video-wrapper,
+.upscale-demo-video-wrapper {
   opacity: 0;
   transform: translateY(20px);
   transition: opacity 0.5s ease, transform 0.5s ease;
@@ -1584,7 +1718,8 @@ kbd {
 .steps .step.visible,
 .showcase-grid .showcase-item.visible,
 .animate-demo-video-wrapper.visible,
-.segment-tag-video-wrapper.visible {
+.segment-tag-video-wrapper.visible,
+.upscale-demo-video-wrapper.visible {
   opacity: 1;
   transform: translateY(0);
 }
@@ -1596,7 +1731,7 @@ kbd {
   }
 
   .tools-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(3, 1fr);
   }
 
   .tech-grid {
@@ -1616,7 +1751,7 @@ kbd {
     padding: 100px 0;
   }
 
-  .segment-tag-demo, .animate-demo {
+  .segment-tag-demo, .animate-demo, .upscale-demo {
     padding: 100px 0;
   }
 }
@@ -1629,7 +1764,8 @@ kbd {
   }
 
   .segment-tag-visual,
-  .animate-demo-visual {
+  .animate-demo-visual,
+  .upscale-demo-visual {
     gap: 32px;
   }
 }
@@ -1807,7 +1943,7 @@ kbd {
     padding: 80px 0;
   }
 
-  .segment-tag-demo, .animate-demo {
+  .segment-tag-demo, .animate-demo, .upscale-demo {
     padding: 80px 0;
   }
 }

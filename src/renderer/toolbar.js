@@ -79,10 +79,21 @@ const Toolbar = (() => {
       'a': TOOLS.ARROW, 'g': TOOLS.TAG, 'b': TOOLS.BLUR_BRUSH, 's': TOOLS.SEGMENT
     };
 
+    // Action shortcuts trigger button clicks (not tool mode switches)
+    var actionShortcutMap = {
+      'u': 'btn-upscale',
+      'w': 'tool-transcribe'
+    };
+
     var shortcutToToolAction = {
       'tool-select': TOOLS.SELECT, 'tool-rectangle': TOOLS.RECT, 'tool-text': TOOLS.TEXT,
       'tool-arrow': TOOLS.ARROW, 'tool-tag': TOOLS.TAG, 'tool-blur': TOOLS.BLUR_BRUSH,
       'tool-segment': TOOLS.SEGMENT
+    };
+
+    var shortcutToActionBtn = {
+      'tool-upscale': 'btn-upscale',
+      'tool-transcribe': 'tool-transcribe'
     };
 
     function updateToolShortcuts(shortcuts) {
@@ -90,6 +101,12 @@ const Toolbar = (() => {
       for (var action in shortcutToToolAction) {
         if (shortcuts[action]) {
           toolShortcutMap[shortcuts[action].toLowerCase()] = shortcutToToolAction[action];
+        }
+      }
+      actionShortcutMap = {};
+      for (var action in shortcutToActionBtn) {
+        if (shortcuts[action]) {
+          actionShortcutMap[shortcuts[action].toLowerCase()] = shortcutToActionBtn[action];
         }
       }
     }
@@ -117,7 +134,12 @@ const Toolbar = (() => {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       var key = e.key.toLowerCase();
       var tool = toolShortcutMap[key];
-      if (tool) setTool(tool);
+      if (tool) { setTool(tool); return; }
+      var actionBtnId = actionShortcutMap[key];
+      if (actionBtnId) {
+        var btn = document.getElementById(actionBtnId);
+        if (btn) btn.click();
+      }
     });
 
     document.getElementById('btn-done').addEventListener('click', () => callbacks.onDone());
