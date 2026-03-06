@@ -57,6 +57,7 @@ These are non-negotiable rules. Violating them causes crashes or broken UX:
 ### CSS
 - **Never hardcode colors.** All colors come from CSS variables in `src/renderer/theme.css`.
 - Three themes exist: `dark`, `light`, `glass`. Changes must work in all three + the solid fallback.
+- **All new UI must align with the Liquid Glass design language** documented in `docs/DESIGN.md`. Before writing CSS, read the design doc for the correct variables, component patterns, and glass effect specs. Reuse existing patterns (e.g. tutorial-modal, toast pill, toolbar button states) rather than inventing new ones.
 
 ### Renderer Code Style
 - **No ES modules** in renderer JS: prefer `var`, no `import`/`export`. All tools attach to `window` via IIFEs.

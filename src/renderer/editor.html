@@ -66,6 +66,23 @@
           <path d="M18 9a9 9 0 01-9 9"/>
         </svg>
       </button>
+      <button id="tool-transcribe" class="tool-btn" data-tooltip="Transcribe Text">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="16" y1="13" x2="8" y2="13"/>
+          <line x1="16" y1="17" x2="8" y2="17"/>
+          <line x1="10" y1="9" x2="8" y2="9"/>
+        </svg>
+      </button>
+      <button id="btn-upscale" class="action-btn upscale" data-tooltip="Upscale (2x)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15 3 21 3 21 9"/>
+          <polyline points="9 21 3 21 3 15"/>
+          <line x1="21" y1="3" x2="14" y2="10"/>
+          <line x1="3" y1="21" x2="10" y2="14"/>
+        </svg>
+      </button>
       <div class="toolbar-separator"></div>
       <input type="color" id="color-picker" value="#ff3b30" title="Color">
       <div id="rect-mode-group" class="toolbar-group hidden">
@@ -124,15 +141,6 @@
         </select>
       </div>
       <div class="toolbar-separator"></div>
-      <button id="tool-transcribe" class="tool-btn" data-tooltip="Transcribe Text">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
-          <polyline points="14 2 14 8 20 8"/>
-          <line x1="16" y1="13" x2="8" y2="13"/>
-          <line x1="16" y1="17" x2="8" y2="17"/>
-          <line x1="10" y1="9" x2="8" y2="9"/>
-        </svg>
-      </button>
       <button id="btn-undo" class="tool-btn" data-tooltip="Undo (⌘Z)">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <polyline points="1 4 1 10 7 10"/>
@@ -152,20 +160,6 @@
           <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
         </svg>
       </button>
-      <div id="upscale-group" class="upscale-group">
-        <button id="btn-upscale" class="action-btn upscale" data-tooltip="Upscale">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="15 3 21 3 21 9"/>
-            <polyline points="9 21 3 21 3 15"/>
-            <line x1="21" y1="3" x2="14" y2="10"/>
-            <line x1="3" y1="21" x2="10" y2="14"/>
-          </svg>
-        </button>
-        <div id="upscale-dropdown" class="upscale-dropdown hidden">
-          <button class="upscale-option" data-scale="2">2x</button>
-          <button class="upscale-option" data-scale="4">4x</button>
-        </div>
-      </div>
       <button id="btn-save" class="action-btn save" data-tooltip="Save (⌘S)">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/>
@@ -287,6 +281,48 @@
       </div>
     </div>
 
+    <!-- Upscale error dialog -->
+    <div id="upscale-error" class="upscale-confirm hidden">
+      <div class="upscale-confirm-modal">
+        <div class="upscale-error-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--error)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+        </div>
+        <div class="upscale-confirm-title">Can't Upscale</div>
+        <div class="upscale-confirm-text">
+          This image is already <strong id="upscale-error-current"></strong> pixels.
+          Upscaling 2× would produce a <strong id="upscale-error-target"></strong> image,
+          which exceeds your display resolution. Try a smaller snip.
+        </div>
+        <div class="upscale-confirm-actions">
+          <button id="upscale-error-dismiss" class="upscale-confirm-btn ok">Got it</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Upscale confirmation dialog -->
+    <div id="upscale-confirm" class="upscale-confirm hidden">
+      <div class="upscale-confirm-modal">
+        <div class="upscale-confirm-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 3 21 3 21 9"/>
+            <polyline points="9 21 3 21 3 15"/>
+            <line x1="21" y1="3" x2="14" y2="10"/>
+            <line x1="3" y1="21" x2="10" y2="14"/>
+          </svg>
+        </div>
+        <div class="upscale-confirm-title">Upscale Image</div>
+        <div class="upscale-confirm-text">Annotations will be removed before upscaling. You can undo with <kbd class="upscale-confirm-kbd">⌘Z</kbd> to restore them.</div>
+        <div class="upscale-confirm-actions">
+          <button id="upscale-confirm-cancel" class="upscale-confirm-btn cancel">Cancel</button>
+          <button id="upscale-confirm-ok" class="upscale-confirm-btn ok">Upscale</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Upscale progress overlay -->
     <div id="upscale-progress" class="upscale-progress hidden">
       <div class="upscale-progress-content">
@@ -380,6 +416,62 @@
       <div class="transcript-error hidden" id="transcript-error">
         <span class="transcript-error-text" id="transcript-error-text"></span>
       </div>
+    </div>
+  </div>
+
+  <!-- Fixed bottom indicators — outside #editor-container to avoid stacking context issues -->
+  <div class="bottom-left-bar">
+    <div id="image-dims" class="image-dims"></div>
+    <button id="canvas-help-btn" class="canvas-help-btn">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/>
+        <line x1="12" y1="17" x2="12.01" y2="17"/>
+      </svg>
+      <span>Controls</span>
+    </button>
+  </div>
+  <div id="zoom-indicator" class="zoom-indicator hidden"></div>
+  <div id="canvas-guide-backdrop" class="tutorial-backdrop hidden">
+    <div class="tutorial-modal canvas-guide-modal">
+      <div class="tutorial-header-icon">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15 3 21 3 21 9"/>
+          <polyline points="9 21 3 21 3 15"/>
+          <line x1="21" y1="3" x2="14" y2="10"/>
+          <line x1="3" y1="21" x2="10" y2="14"/>
+        </svg>
+      </div>
+      <div class="tutorial-title">Canvas Controls</div>
+      <div class="tutorial-steps">
+        <div class="canvas-guide-section">Zoom</div>
+        <div class="tutorial-step">
+          <kbd class="tutorial-kbd">Pinch</kbd>
+          <span>Trackpad pinch to zoom</span>
+        </div>
+        <div class="tutorial-step">
+          <kbd class="tutorial-kbd">⌘ Scroll</kbd>
+          <span>Scroll wheel zoom</span>
+        </div>
+        <div class="tutorial-step">
+          <kbd class="tutorial-kbd">⌘ +</kbd> <kbd class="tutorial-kbd">⌘ −</kbd>
+          <span>Zoom in / out</span>
+        </div>
+        <div class="tutorial-step">
+          <kbd class="tutorial-kbd">⌘ 0</kbd>
+          <span>Reset to fit</span>
+        </div>
+        <div class="canvas-guide-section">Pan</div>
+        <div class="tutorial-step">
+          <kbd class="tutorial-kbd">Scroll</kbd>
+          <span>Two-finger scroll</span>
+        </div>
+        <div class="tutorial-step">
+          <kbd class="tutorial-kbd">Space + Drag</kbd>
+          <span>Hold space and drag</span>
+        </div>
+      </div>
+      <button id="canvas-guide-dismiss" class="tutorial-dismiss-btn">Got it</button>
     </div>
   </div>
 

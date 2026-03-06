@@ -1,7 +1,6 @@
 /**
- * Upscaler worker — runs image upscaling in an isolated child process
- * using Transformers.js pipeline('image-to-image') with Swin2SR (2x)
- * or APISR (4x) models.
+ * Upscaler worker — runs 2x image upscaling in an isolated child process
+ * using Transformers.js pipeline('image-to-image') with Swin2SR.
  *
  * Spawned with system Node.js binary (not Electron's) because ONNX
  * runtime crashes inside Electron's V8.
@@ -9,11 +8,9 @@
 const zlib = require('zlib');
 
 let pipeline2x = null;
-let pipeline4x = null;
 let envConfigured = false;
 
 const MODEL_2X = 'Xenova/swin2SR-lightweight-x2-64';
-const MODEL_4X = 'Xenova/4x_APISR_GRL_GAN_generator-onnx';
 
 /**
  * Configure Transformers.js env for bundled models.
@@ -32,25 +29,16 @@ async function configureEnv() {
   }
 }
 
-async function getPipeline(scale) {
+async function getPipeline() {
   await configureEnv();
   const { pipeline } = await import('@huggingface/transformers');
 
-  if (scale === 4) {
-    if (!pipeline4x) {
-      console.log('[Upscaler Worker] Loading 4x model...');
-      pipeline4x = await pipeline('image-to-image', MODEL_4X);
-      console.log('[Upscaler Worker] 4x model loaded');
-    }
-    return pipeline4x;
-  } else {
-    if (!pipeline2x) {
-      console.log('[Upscaler Worker] Loading 2x model...');
-      pipeline2x = await pipeline('image-to-image', MODEL_2X);
-      console.log('[Upscaler Worker] 2x model loaded');
-    }
-    return pipeline2x;
+  if (!pipeline2x) {
+    console.log('[Upscaler Worker] Loading 2x model...');
+    pipeline2x = await pipeline('image-to-image', MODEL_2X);
+    console.log('[Upscaler Worker] 2x model loaded');
   }
+  return pipeline2x;
 }
 
 /**
@@ -95,25 +83,44 @@ function encodeRGBAtoPNG(rgbaData, width, height) {
   return Buffer.concat([signature, makeChunk('IHDR', ihdrData), makeChunk('IDAT', deflated), makeChunk('IEND', Buffer.alloc(0))]);
 }
 
-async function upscaleImage(imageBase64, scale) {
-  const pipe = await getPipeline(scale);
+/**
+ * Decode a base64 PNG data URL into a Transformers.js RawImage.
+ * Uses sharp (available via @img/sharp) to decode PNG → raw pixel buffer.
+ */
+async function decodeDataURLToRawImage(dataURL, RawImage) {
+  // Strip data URL prefix to get raw base64
+  const base64Data = dataURL.replace(/^data:image\/\w+;base64,/, '');
+  const buffer = Buffer.from(base64Data, 'base64');
+
+  // Use sharp to decode image to raw RGBA pixels
+  const sharp = require('sharp');
+  const { data, info } = await sharp(buffer)
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+
+  return new RawImage(new Uint8ClampedArray(data), info.width, info.height, info.channels);
+}
+
+async function upscaleImage(imageBase64) {
+  const pipe = await getPipeline();
+  const { RawImage } = await import('@huggingface/transformers');
 
   // Send progress: model loaded, starting inference
   process.send({ type: 'progress', stage: 'inferencing', percent: 30 });
 
-  const result = await pipe(imageBase64);
+  // Decode base64 data URL to RawImage — Transformers.js v3 can't handle data URLs directly
+  const inputImage = await decodeDataURLToRawImage(imageBase64, RawImage);
+  console.log('[Upscaler Worker] Input image:', inputImage.width, 'x', inputImage.height, 'channels:', inputImage.channels);
+
+  const result = await pipe(inputImage);
 
   process.send({ type: 'progress', stage: 'encoding', percent: 80 });
 
-  // result is a RawImage — extract pixel data
-  const { RawImage } = await import('@huggingface/transformers');
-  let outputImage;
-  if (result instanceof RawImage) {
-    outputImage = result;
-  } else if (result.image) {
-    outputImage = result.image;
-  } else {
-    outputImage = result;
+  // result is a RawImage (or array of RawImage)
+  let outputImage = Array.isArray(result) ? result[0] : result;
+  if (!(outputImage instanceof RawImage) && outputImage.image) {
+    outputImage = outputImage.image;
   }
 
   // Convert RawImage pixel data to PNG via manual encoding (Node.js has no DOM Blob)
@@ -135,6 +142,8 @@ async function upscaleImage(imageBase64, scale) {
     rgba = new Uint8ClampedArray(outputImage.data);
   }
 
+  console.log('[Upscaler Worker] Output image:', w, 'x', h, 'channels:', channels);
+
   const pngBuf = encodeRGBAtoPNG(rgba, w, h);
   const dataURL = 'data:image/png;base64,' + pngBuf.toString('base64');
 
@@ -146,7 +155,7 @@ process.on('message', async (msg) => {
     try {
       process.send({ type: 'progress', stage: 'loading', percent: 10 });
 
-      const result = await upscaleImage(msg.imageBase64, msg.scale);
+      const result = await upscaleImage(msg.imageBase64);
 
       process.send({ type: 'progress', stage: 'done', percent: 100 });
       process.send({ id: msg.id, type: 'result', data: result });

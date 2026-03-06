@@ -19,6 +19,7 @@ body {
   justify-content: center;
   align-items: center;
   padding-top: 48px; /* toolbar height */
+  overflow: hidden;
 }
 
 #image-area {
@@ -549,12 +550,209 @@ select:hover {
   background: var(--accent-hover);
 }
 
-/* Upscale button + dropdown */
-.upscale-group {
-  position: relative;
-  flex-shrink: 0;
+/* Image dimensions label */
+.bottom-left-bar {
+  position: fixed;
+  bottom: 16px;
+  left: 16px;
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
+.image-dims {
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: var(--bg-toast);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-specular);
+  box-shadow: var(--shadow-toast);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+/* Zoom indicator */
+.zoom-indicator {
+  position: fixed;
+  bottom: 16px;
+  right: 16px;
+  z-index: 999;
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: var(--bg-toast);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-specular);
+  box-shadow: var(--shadow-toast);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+
+.zoom-indicator.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Canvas help button — pill next to image-dims in bottom-left bar */
+.canvas-help-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border: 1px solid var(--glass-specular);
+  border-radius: 8px;
+  background: var(--bg-toast);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  box-shadow: var(--shadow-toast);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+
+.canvas-help-btn:hover {
+  color: var(--text-primary);
+  border-color: var(--glass-specular-strong);
+}
+
+/* Canvas guide modal — reuses tutorial-modal pattern */
+.canvas-guide-modal {
+  max-width: 340px;
+  padding: 24px 28px;
+}
+
+.canvas-guide-section {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+  margin-top: 4px;
+  padding-bottom: 2px;
+}
+
+.canvas-guide-section:first-child {
+  margin-top: 0;
+}
+
+/* Upscale confirmation dialog */
+.upscale-confirm {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  background: var(--bg-overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.upscale-confirm.hidden {
+  display: none !important;
+}
+
+.upscale-confirm-modal {
+  max-width: 320px;
+  padding: 28px 32px;
+  border-radius: 16px;
+  background: var(--bg-toast);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-specular-strong);
+  box-shadow: var(--shadow-modal);
+  text-align: center;
+}
+
+.upscale-confirm-icon,
+.upscale-error-icon {
+  margin-bottom: 12px;
+  opacity: 0.9;
+}
+
+.upscale-confirm-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 10px;
+}
+
+.upscale-confirm-text {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: 22px;
+}
+
+.upscale-confirm-text strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.upscale-confirm-kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 20px;
+  padding: 0 6px;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--text-primary);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-card);
+  border-radius: 4px;
+  vertical-align: middle;
+}
+
+.upscale-confirm-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.upscale-confirm-btn {
+  padding: 8px 24px;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.upscale-confirm-btn.cancel {
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-card);
+}
+
+.upscale-confirm-btn.cancel:hover {
+  background: var(--bg-hover-strong);
+  color: var(--text-primary);
+}
+
+.upscale-confirm-btn.ok {
+  background: var(--accent);
+  color: white;
+}
+
+.upscale-confirm-btn.ok:hover {
+  background: var(--accent-hover);
+}
+
+/* Upscale button */
 .action-btn.upscale {
   background: var(--bg-hover);
   color: var(--text-secondary);
@@ -569,50 +767,6 @@ select:hover {
 .action-btn.upscale.disabled {
   opacity: 0.4;
   pointer-events: none;
-}
-
-.upscale-dropdown {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 1002;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 4px;
-  border-radius: 10px;
-  background: var(--bg-toast);
-  backdrop-filter: blur(var(--glass-blur));
-  -webkit-backdrop-filter: blur(var(--glass-blur));
-  border: 1px solid var(--glass-specular);
-  box-shadow: var(--shadow-toast);
-  min-width: 64px;
-}
-
-.upscale-dropdown.hidden {
-  display: none !important;
-}
-
-.upscale-option {
-  display: block;
-  width: 100%;
-  padding: 6px 12px;
-  border: none;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--text-primary);
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s;
-  text-align: center;
-  white-space: nowrap;
-}
-
-.upscale-option:hover {
-  background: var(--accent-bg);
-  color: var(--accent);
 }
 
 /* Upscale progress overlay */
@@ -667,10 +821,13 @@ select:hover {
   border-radius: 2px;
   background: var(--accent);
   transition: width 0.3s ease;
-  box-shadow: 0 0 8px var(--accent);
 }
 
-/* 2GIF animate button */
+.upscale-progress-bar-fill.inferencing {
+  transition: width 60s linear;
+}
+
+
 /* ── 2GIF Sparkle Button ── */
 .animate-btn {
   position: fixed;

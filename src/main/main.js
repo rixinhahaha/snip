@@ -30,6 +30,7 @@ let overlayWindow = null;
 let prewarmedOverlay = null;
 let homeWindow = null;
 let editorWindow = null;
+let prewarmedEditor = null;
 
 const OVERLAY_WINDOW_OPTIONS = {
   width: 1,
@@ -63,6 +64,37 @@ function prewarmOverlay() {
   } catch (e) {
     // App may be shutting down
     prewarmedOverlay = null;
+  }
+}
+
+const EDITOR_HTML = path.join(__dirname, '..', 'renderer', 'editor.html');
+
+/**
+ * Pre-warm a hidden editor window so HTML + JS (Fabric.js, tools) are
+ * already parsed and ready when the user captures a screenshot.
+ */
+function prewarmEditor() {
+  if (prewarmedEditor && !prewarmedEditor.isDestroyed()) return;
+
+  try {
+    prewarmedEditor = new BrowserWindow({
+      width: 1,
+      height: 1,
+      x: -9999,
+      y: -9999,
+      show: false,
+      frame: true,
+      transparent: true,
+      backgroundColor: '#00000000',
+      resizable: false,
+      titleBarStyle: 'hiddenInset',
+      trafficLightPosition: { x: 12, y: 14 },
+      webPreferences: { ...BASE_WEB_PREFERENCES }
+    });
+    prewarmedEditor.loadFile(EDITOR_HTML);
+    prewarmedEditor.on('closed', () => { prewarmedEditor = null; });
+  } catch (e) {
+    prewarmedEditor = null;
   }
 }
 
@@ -152,6 +184,20 @@ function createHomeWindow() {
   });
 }
 
+function computeEditorBounds(cssWidth, cssHeight) {
+  const TOOLBAR_HEIGHT = 48;
+  const MARGIN = 48;
+  const TOOLBAR_MIN_WIDTH = 1100;
+  const primaryDisplay = screen.getPrimaryDisplay();
+  const { width: screenW, height: screenH } = primaryDisplay.workAreaSize;
+  const PANEL_CLEARANCE = 260;
+  const winWidth = Math.min(Math.max(cssWidth + MARGIN, TOOLBAR_MIN_WIDTH), screenW);
+  const winHeight = Math.min(Math.max(cssHeight + TOOLBAR_HEIGHT + MARGIN, cssHeight + TOOLBAR_HEIGHT + PANEL_CLEARANCE, 500), screenH);
+  const x = Math.round((screenW - winWidth) / 2);
+  const y = Math.round((screenH - winHeight) / 2);
+  return { winWidth, winHeight, x, y };
+}
+
 function createEditorWindow(cssWidth, cssHeight) {
   // Close existing editor if open
   if (editorWindow && !editorWindow.isDestroyed()) {
@@ -159,44 +205,49 @@ function createEditorWindow(cssWidth, cssHeight) {
     editorWindow = null;
   }
 
-  const TOOLBAR_HEIGHT = 48;
-  const MARGIN = 48; // breathing room around image
-  const TOOLBAR_MIN_WIDTH = 1100; // wide enough for all toolbar controls + tag swatches + outline controls
+  const { winWidth, winHeight, x, y } = computeEditorBounds(cssWidth, cssHeight);
 
-  const primaryDisplay = screen.getPrimaryDisplay();
-  const { width: screenW, height: screenH } = primaryDisplay.workAreaSize;
+  // Reuse pre-warmed editor if available (HTML + JS already loaded)
+  if (prewarmedEditor && !prewarmedEditor.isDestroyed()) {
+    editorWindow = prewarmedEditor;
+    prewarmedEditor = null;
 
-  const PANEL_CLEARANCE = 260; // space below image for animate preset panel
-  const winWidth = Math.min(Math.max(cssWidth + MARGIN, TOOLBAR_MIN_WIDTH), screenW);
-  const winHeight = Math.min(Math.max(cssHeight + TOOLBAR_HEIGHT + MARGIN, cssHeight + TOOLBAR_HEIGHT + PANEL_CLEARANCE, 500), screenH);
-  const x = Math.round((screenW - winWidth) / 2);
-  const y = Math.round((screenH - winHeight) / 2);
+    editorWindow.setContentSize(winWidth, winHeight);
+    editorWindow.setPosition(x, y);
 
-  const editorOpts = {
-    width: winWidth,
-    height: winHeight,
-    x,
-    y,
-    frame: true,
-    transparent: true,
-    backgroundColor: '#00000000',
-    resizable: false,
-    titleBarStyle: 'hiddenInset',
-    trafficLightPosition: { x: 12, y: 14 },
-    webPreferences: { ...BASE_WEB_PREFERENCES }
-  };
+    if (!liquidGlass) {
+      editorWindow.setVibrancy('under-window');
+    }
+  } else {
+    // Fallback: create fresh window (show: false — IPC handler will show after data push)
+    const editorOpts = {
+      width: winWidth,
+      height: winHeight,
+      x,
+      y,
+      show: false,
+      frame: true,
+      transparent: true,
+      backgroundColor: '#00000000',
+      resizable: false,
+      titleBarStyle: 'hiddenInset',
+      trafficLightPosition: { x: 12, y: 14 },
+      webPreferences: { ...BASE_WEB_PREFERENCES }
+    };
 
-  if (!liquidGlass) {
-    editorOpts.vibrancy = 'under-window';
+    if (!liquidGlass) {
+      editorOpts.vibrancy = 'under-window';
+    }
+
+    editorWindow = new BrowserWindow(editorOpts);
+    editorWindow.loadFile(EDITOR_HTML);
   }
-
-  editorWindow = new BrowserWindow(editorOpts);
-  editorWindow.loadFile(path.join(__dirname, '..', 'renderer', 'editor.html'));
 
   // Apply native liquid glass if available, with vibrancy fallback
   if (liquidGlass) {
     editorWindow.setWindowButtonVisibility(true);
-    editorWindow.webContents.once('did-finish-load', () => {
+    // Apply glass when content is ready (may already be loaded for pre-warmed)
+    const applyGlass = () => {
       try {
         var glassId = liquidGlass.addView(editorWindow.getNativeWindowHandle(), {
           cornerRadius: 12,
@@ -208,7 +259,12 @@ function createEditorWindow(cssWidth, cssHeight) {
         console.warn('[Snip] Liquid glass failed for editor window, falling back to vibrancy:', e.message);
         editorWindow.setVibrancy('under-window');
       }
-    });
+    };
+    if (editorWindow.webContents.isLoading()) {
+      editorWindow.webContents.once('did-finish-load', applyGlass);
+    } else {
+      applyGlass();
+    }
   }
 
   // Destroy overlay (will be recreated fresh next capture)
@@ -219,6 +275,8 @@ function createEditorWindow(cssWidth, cssHeight) {
 
   editorWindow.on('closed', () => {
     editorWindow = null;
+    // Re-prewarm for next capture
+    prewarmEditor();
   });
 
   return editorWindow;
@@ -301,6 +359,9 @@ app.whenReady().then(() => {
   createTray(triggerCapture, showSearchPage, showHomeWindow, triggerQuickSnip);
   registerShortcuts(triggerCapture, showSearchPage, triggerQuickSnip);
   registerIpcHandlers(getOverlayWindow, createEditorWindow, reregisterShortcuts, rebuildTrayMenu);
+
+  // Pre-warm editor window (load HTML + Fabric.js + tools in background)
+  prewarmEditor();
 
   // Start background organizer
   startWatcher();

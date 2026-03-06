@@ -88,13 +88,12 @@ function getWorker() {
 }
 
 /**
- * Upscale an image by 2x or 4x.
+ * Upscale an image by 2x.
  * @param {string} imageBase64 - Base64 data URL of the image
- * @param {number} scale - 2 or 4
  * @param {function} onProgress - Progress callback ({ stage, percent })
  * @returns {Promise<{ dataURL, width, height }>}
  */
-function upscaleImage(imageBase64, scale, onProgress) {
+function upscaleImage(imageBase64, onProgress) {
   return new Promise((resolve, reject) => {
     const id = ++requestId;
     const w = getWorker();
@@ -103,8 +102,7 @@ function upscaleImage(imageBase64, scale, onProgress) {
     w.send({
       id,
       type: 'upscale',
-      imageBase64,
-      scale
+      imageBase64
     });
   });
 }

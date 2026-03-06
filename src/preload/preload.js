@@ -15,6 +15,9 @@ contextBridge.exposeInMainWorld('snip', {
   // Editor window
   openEditor: (data) => ipcRenderer.invoke('open-editor', data),
   getEditorImage: () => ipcRenderer.invoke('get-editor-image'),
+  onEditorImageData: (callback) => {
+    ipcRenderer.on('editor-image-data', (event, data) => callback(data));
+  },
   closeEditor: () => ipcRenderer.send('close-editor'),
 
   // Screen recording permission
@@ -76,8 +79,8 @@ contextBridge.exposeInMainWorld('snip', {
   },
 
   // Upscaling
-  upscaleImage: ({ imageBase64, scale }) =>
-    ipcRenderer.invoke('upscale-image', { imageBase64, scale }),
+  upscaleImage: ({ imageBase64 }) =>
+    ipcRenderer.invoke('upscale-image', { imageBase64 }),
   onUpscaleProgress: (callback) => {
     var handler = (event, progress) => callback(progress);
     ipcRenderer.on('upscale-progress', handler);
