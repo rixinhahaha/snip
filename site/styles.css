@@ -505,7 +505,9 @@ kbd {
 }
 
 .section-badge {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   padding: 4px 14px;
   font-size: 0.75rem;
   font-weight: 600;
@@ -699,10 +701,8 @@ kbd {
   letter-spacing: 0.06em;
   text-transform: uppercase;
   margin-left: 8px;
-  vertical-align: baseline;
-  line-height: 1.4;
-  position: relative;
-  top: -1px;
+  vertical-align: middle;
+  line-height: 1;
   box-shadow: 0 0 12px rgba(139, 92, 246, 0.4);
   animation: new-badge-pulse 2s ease-in-out infinite;
 }
@@ -1031,6 +1031,120 @@ kbd {
   }
 
   .upscale-step.visible {
+    transform: translateY(0);
+  }
+}
+
+/* --- Transcribe Demo --- */
+.transcribe-demo {
+  padding: 120px 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.transcribe-demo-visual {
+  display: flex;
+  align-items: center;
+  gap: 48px;
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.transcribe-demo-video-wrapper {
+  flex: 1;
+  min-width: 0;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.transcribe-demo-video-wrapper.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.transcribe-demo-video {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.transcribe-demo-steps {
+  flex: 0 0 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.transcribe-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  opacity: 0;
+  transform: translateX(20px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.transcribe-step.visible {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.transcribe-step-num {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent-dim);
+  border: 1px solid rgba(139, 92, 246, 0.25);
+  border-radius: 50%;
+  color: var(--accent);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.transcribe-step strong {
+  display: block;
+  color: #fff;
+  font-size: 0.95rem;
+  margin-bottom: 2px;
+}
+
+.transcribe-step span {
+  display: block;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+@media (max-width: 768px) {
+  .transcribe-demo-visual {
+    flex-direction: column;
+    gap: 32px;
+  }
+
+  .transcribe-demo-steps {
+    flex: none;
+    flex-direction: row;
+    gap: 16px;
+    width: 100%;
+  }
+
+  .transcribe-step {
+    flex: 1;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 8px;
+    transform: translateY(20px);
+  }
+
+  .transcribe-step.visible {
     transform: translateY(0);
   }
 }
@@ -1751,7 +1865,7 @@ kbd {
     padding: 100px 0;
   }
 
-  .segment-tag-demo, .animate-demo, .upscale-demo {
+  .segment-tag-demo, .animate-demo, .upscale-demo, .transcribe-demo {
     padding: 100px 0;
   }
 }
@@ -1765,7 +1879,8 @@ kbd {
 
   .segment-tag-visual,
   .animate-demo-visual,
-  .upscale-demo-visual {
+  .upscale-demo-visual,
+  .transcribe-demo-visual {
     gap: 32px;
   }
 }
@@ -1943,7 +2058,7 @@ kbd {
     padding: 80px 0;
   }
 
-  .segment-tag-demo, .animate-demo, .upscale-demo {
+  .segment-tag-demo, .animate-demo, .upscale-demo, .transcribe-demo {
     padding: 80px 0;
   }
 }

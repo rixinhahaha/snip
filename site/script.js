@@ -52,7 +52,7 @@
   // --- Scroll-triggered animations ---
   function animateOnScroll() {
     var elements = document.querySelectorAll(
-      '.feature-card, .tool-card, .ai-card, .tech-item, .step, .section-header, .ai-privacy, .hero-video-wrapper, .showcase-item, .ai-screenshot, .animate-step, .animate-demo-video-wrapper, .segment-tag-step, .segment-tag-video-wrapper, .upscale-step, .upscale-demo-video-wrapper'
+      '.feature-card, .tool-card, .ai-card, .tech-item, .step, .section-header, .ai-privacy, .hero-video-wrapper, .showcase-item, .ai-screenshot, .animate-step, .animate-demo-video-wrapper, .segment-tag-step, .segment-tag-video-wrapper, .upscale-step, .upscale-demo-video-wrapper, .transcribe-step, .transcribe-demo-video-wrapper'
     );
 
     var observer = new IntersectionObserver(
@@ -63,7 +63,7 @@
             var parent = entry.target.parentElement;
             if (parent) {
               var siblings = parent.querySelectorAll(
-                '.feature-card, .tool-card, .ai-card, .tech-item, .step, .showcase-item, .animate-step, .segment-tag-step, .upscale-step'
+                '.feature-card, .tool-card, .ai-card, .tech-item, .step, .showcase-item, .animate-step, .segment-tag-step, .upscale-step, .transcribe-step'
               );
               var index = Array.prototype.indexOf.call(siblings, entry.target);
               if (index >= 0) {
