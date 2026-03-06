@@ -5,6 +5,7 @@ contextBridge.exposeInMainWorld('snip', {
   onScreenshotCaptured: (callback) => {
     ipcRenderer.on('screenshot-captured', (event, data) => callback(data));
   },
+  getCaptureImage: () => ipcRenderer.invoke('get-capture-image'),
   copyToClipboard: (dataURL) => ipcRenderer.invoke('copy-to-clipboard', dataURL),
   saveScreenshot: (dataURL, timestamp) => ipcRenderer.invoke('save-screenshot', { dataURL, timestamp }),
   closeOverlay: () => ipcRenderer.send('close-overlay'),

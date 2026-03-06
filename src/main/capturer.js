@@ -13,6 +13,9 @@ try {
   console.warn('[Snip] Native window_utils addon not found — overlay may appear on wrong Space.', e.message);
 }
 
+// Stored NativeImage from the last capture — converted to dataURL on demand (deferred)
+let storedNativeImage = null;
+
 /**
  * Show a dialog directing the user to grant Screen Recording permission.
  */
@@ -31,11 +34,39 @@ function showPermissionDialog(detail) {
   });
 }
 
-async function captureScreen(createOverlayFn, getOverlayFn, opts) {
-  var mode = (opts && opts.mode) || 'capture';
-  // 1. Capture screenshot FIRST (before overlay appears)
-  // Use whichever display the cursor is currently on
-  const cursorDisplay = screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
+/**
+ * Get the window list for the given display (sync, must run before overlay appears).
+ */
+function getWindowList(cursorDisplay) {
+  let windowList = [];
+  if (windowUtils && windowUtils.getWindowList) {
+    try {
+      const { width, height } = cursorDisplay.size;
+      const bounds = cursorDisplay.bounds;
+      windowList = windowUtils.getWindowList(bounds.x, bounds.y, width, height);
+      // Convert macOS global coords to display-relative coords
+      windowList = windowList.map(function (w) {
+        return {
+          x: w.x - bounds.x,
+          y: w.y - bounds.y,
+          width: w.width,
+          height: w.height,
+          owner: w.owner,
+          name: w.name
+        };
+      });
+    } catch (e) {
+      console.warn('[Snip] Failed to get window list:', e.message);
+    }
+  }
+  return windowList;
+}
+
+/**
+ * Capture screen image via desktopCapturer. Stores the NativeImage for deferred
+ * serialization — toDataURL() is only called when the renderer requests it at crop time.
+ */
+async function captureScreenImage(cursorDisplay) {
   const { width, height } = cursorDisplay.size;
   const scaleFactor = cursorDisplay.scaleFactor;
 
@@ -63,41 +94,32 @@ async function captureScreen(createOverlayFn, getOverlayFn, opts) {
   // Match source to the cursor's display; fall back to first source
   const targetId = String(cursorDisplay.id);
   const matchedSource = sources.find(function (s) { return s.display_id === targetId; }) || sources[0];
-  const dataURL = matchedSource.thumbnail.toDataURL();
+  storedNativeImage = matchedSource.thumbnail;
 
   // Guard against blank thumbnails (macOS 15+ returns these without permission)
-  if (!dataURL || dataURL.length < 100) {
+  if (storedNativeImage.isEmpty() || storedNativeImage.toPNG().length < 100) {
     console.error('[Snip] Screen capture returned a blank image — permission likely not granted.');
     showPermissionDialog('Snip captured a blank screen. Grant Screen Recording permission in System Settings > Privacy & Security > Screen Recording, then restart Snip.');
+    storedNativeImage = null;
     throw new Error('Screen capture returned blank — permission likely not granted');
   }
+}
 
-  // 2. Get window list BEFORE creating overlay (so overlay isn't in the list)
-  let windowList = [];
-  if (windowUtils && windowUtils.getWindowList) {
-    try {
-      const bounds = cursorDisplay.bounds;
-      windowList = windowUtils.getWindowList(bounds.x, bounds.y, width, height);
-      // Convert macOS global coords to display-relative coords
-      windowList = windowList.map(function (w) {
-        return {
-          x: w.x - bounds.x,
-          y: w.y - bounds.y,
-          width: w.width,
-          height: w.height,
-          owner: w.owner,
-          name: w.name
-        };
-      });
-    } catch (e) {
-      console.warn('[Snip] Failed to get window list:', e.message);
-    }
-  }
+async function captureScreen(createOverlayFn, getOverlayFn, opts) {
+  var mode = (opts && opts.mode) || 'capture';
+  const cursorDisplay = screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
+  const { width, height } = cursorDisplay.size;
 
-  // 3. Create fresh overlay on the current Space
-  const overlayWindow = createOverlayFn();
+  // 1. Get window list BEFORE overlay appears (sync, so overlay isn't in the list)
+  const windowList = getWindowList(cursorDisplay);
 
-  // 4. Set native macOS behavior: move window to whichever Space is active
+  // 2. Parallel: capture screen image + prepare overlay window
+  const [, overlayWindow] = await Promise.all([
+    captureScreenImage(cursorDisplay),
+    createOverlayFn()
+  ]);
+
+  // 3. Set native macOS behavior: move window to whichever Space is active
   if (windowUtils) {
     try {
       const handle = overlayWindow.getNativeWindowHandle();
@@ -107,30 +129,37 @@ async function captureScreen(createOverlayFn, getOverlayFn, opts) {
     }
   }
 
-  // 5. Wait for HTML to finish loading, then show and send screenshot data
-  overlayWindow.webContents.once('did-finish-load', () => {
-    // In the packaged app LSUIElement:true makes this a background agent —
-    // explicitly activate so the overlay can receive keyboard events.
-    // Skip in dev mode: app.dock.hide() already handles it and
-    // app.focus() would cause unwanted Space switching.
-    if (app.isPackaged) {
-      app.focus({ steal: true });
-    }
+  // 4. Show overlay and send metadata (image data is deferred until crop time)
+  // In the packaged app LSUIElement:true makes this a background agent —
+  // explicitly activate so the overlay can receive keyboard events.
+  // Skip in dev mode: app.dock.hide() already handles it and
+  // app.focus() would cause unwanted Space switching.
+  if (app.isPackaged) {
+    app.focus({ steal: true });
+  }
 
-    overlayWindow.setAlwaysOnTop(true, 'screen-saver');
-    overlayWindow.show();
-    overlayWindow.focus();
-    // If the user switches away (Cmd+Tab, click another app), cancel the capture.
-    // The stale screenshot would be confusing; they can re-trigger the shortcut.
-    overlayWindow.on('blur', () => {
-      if (!overlayWindow.isDestroyed()) overlayWindow.destroy();
-    });
-    // Force position to cover full screen including menu bar
-    // (macOS may push the window below menu bar on show)
-    const bounds = cursorDisplay.bounds;
-    overlayWindow.setBounds({ x: bounds.x, y: bounds.y, width, height });
-    overlayWindow.webContents.send('screenshot-captured', { dataURL, displayOrigin: { x: bounds.x, y: bounds.y }, windowList, mode });
+  overlayWindow.setAlwaysOnTop(true, 'screen-saver');
+  overlayWindow.show();
+  overlayWindow.focus();
+  // If the user switches away (Cmd+Tab, click another app), cancel the capture.
+  // The stale screenshot would be confusing; they can re-trigger the shortcut.
+  overlayWindow.on('blur', () => {
+    if (!overlayWindow.isDestroyed()) overlayWindow.destroy();
   });
+  // Force position to cover full screen including menu bar
+  // (macOS may push the window below menu bar on show)
+  const bounds = cursorDisplay.bounds;
+  overlayWindow.setBounds({ x: bounds.x, y: bounds.y, width, height });
+  overlayWindow.webContents.send('screenshot-captured', { displayOrigin: { x: bounds.x, y: bounds.y }, windowList, mode });
 }
 
-module.exports = { captureScreen };
+/**
+ * Return the captured screenshot as a data URL. Called on demand by the renderer
+ * at crop time, deferring the expensive toDataURL() off the critical show path.
+ */
+function getCapturedImage() {
+  if (!storedNativeImage) return null;
+  return storedNativeImage.toDataURL();
+}
+
+module.exports = { captureScreen, getCapturedImage };

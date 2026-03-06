@@ -13,6 +13,7 @@ const {
 } = require('./store');
 const { queueNewFile } = require('./organizer/watcher');
 const ollamaManager = require('./ollama-manager');
+const { getCapturedImage } = require('./capturer');
 
 let pendingEditorData = null;
 let editorWindowRef = null;
@@ -42,6 +43,11 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
     queueNewFile(filepath);
 
     return filepath;
+  });
+
+  // Return the captured screenshot as a data URL (deferred from capture time)
+  ipcMain.handle('get-capture-image', async () => {
+    return getCapturedImage();
   });
 
   // Close/destroy the overlay (will be recreated fresh next capture)

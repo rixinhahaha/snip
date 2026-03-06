@@ -104,7 +104,7 @@ vendor/                      # Downloaded at dev time, bundled at build time
 
 | Window | File | Purpose | Lifecycle |
 |--------|------|---------|-----------|
-| **Overlay** | `index.html` | Fullscreen transparent region selection | Created per capture, destroyed after crop |
+| **Overlay** | `index.html` | Fullscreen transparent region selection | Pre-warmed hidden at startup; reused per capture, destroyed after crop, then re-pre-warmed |
 | **Home** | `home.html` | Gallery, search, settings | Persistent singleton, hidden during capture |
 | **Editor** | `editor.html` | Annotation canvas + toolbar | Created per edit, destroyed on close |
 
@@ -174,6 +174,11 @@ Saved animations go to `~/Documents/snip/screenshots/animations/` subdirectory, 
 
 ### Single Index File
 All screenshot metadata lives in `~/Documents/snip/screenshots/.index.json`. Simple, atomic, easy to debug. No database.
+
+### Pre-warmed Overlay Window
+The capture overlay is **pre-warmed** at app startup: a hidden BrowserWindow is created off-screen (`x: -9999`, `show: false`) and loads `index.html`. When the user triggers a capture, the pre-warmed window is repositioned and shown instantly (~0ms) instead of creating and loading a fresh window (~120-350ms). After each capture completes (overlay destroyed), a new hidden window is pre-warmed for the next capture. If the pre-warmed window isn't ready (e.g., first capture fires before pre-warm completes), a fresh window is created as fallback.
+
+The screen capture (`desktopCapturer.getSources()`) runs **in parallel** with overlay window preparation via `Promise.all()`. The captured image is stored as a `NativeImage` reference — the expensive `toDataURL()` serialization is **deferred** until crop time when the renderer requests it via `getCaptureImage()` IPC.
 
 ### Dock Hidden
 `app.dock.hide()` in dev mode (and `LSUIElement: true` in production) prevents macOS from switching Spaces when the app's windows activate. The native module sets `NSWindowCollectionBehaviorMoveToActiveSpace` on the overlay.
@@ -247,6 +252,7 @@ The preload script (`preload.js`) exposes `window.snip` with these methods:
 | `getTheme()` / `setTheme(t)` | R -> M | Theme persistence |
 | `onThemeChanged(cb)` | M -> R | Theme broadcast listener |
 | `getEditorImage()` | R -> M | Get cropped capture for editor |
+| `getCaptureImage()` | R -> M | Get captured screenshot as dataURL (deferred from capture time) |
 | `copyToClipboard(dataURL)` | R -> M | Write PNG to system clipboard |
 | `saveScreenshot(dataURL, ts)` | R -> M | Save JPEG + queue for AI |
 | `closeEditor()` | R -> M | Close editor window |
@@ -298,9 +304,10 @@ The preload script (`preload.js`) exposes `window.snip` with these methods:
 
 ```
 [User presses Cmd+Shift+2]
-  -> capturer.js captures screen via desktopCapturer
-  -> overlay window shows fullscreen for region selection
+  -> capturer.js runs desktopCapturer + overlay prep in parallel
+  -> NativeImage stored (dataURL deferred), pre-warmed overlay repositioned + shown
   -> user drags + presses Enter
+  -> renderer calls getCaptureImage() to get dataURL on demand
   -> cropped image sent to editor via IPC
 
 [User annotates + presses Cmd+S]

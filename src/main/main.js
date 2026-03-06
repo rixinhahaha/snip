@@ -27,38 +27,75 @@ if (!gotTheLock) {
 }
 
 let overlayWindow = null;
+let prewarmedOverlay = null;
 let homeWindow = null;
 let editorWindow = null;
 
-function createOverlayWindow() {
-  // Destroy old overlay if it exists
+const OVERLAY_WINDOW_OPTIONS = {
+  width: 1,
+  height: 1,
+  x: -9999,
+  y: -9999,
+  frame: false,
+  transparent: true,
+  alwaysOnTop: false,
+  fullscreenable: false,
+  skipTaskbar: true,
+  hasShadow: false,
+  resizable: false,
+  show: false,
+  webPreferences: { ...BASE_WEB_PREFERENCES }
+};
+
+const OVERLAY_HTML = path.join(__dirname, '..', 'renderer', 'index.html');
+
+/**
+ * Pre-warm a hidden overlay window so it's ready instantly on next capture.
+ * The window is created off-screen with show:false and loads index.html.
+ */
+function prewarmOverlay() {
+  if (prewarmedOverlay && !prewarmedOverlay.isDestroyed()) return;
+
+  try {
+    prewarmedOverlay = new BrowserWindow(OVERLAY_WINDOW_OPTIONS);
+    prewarmedOverlay.loadFile(OVERLAY_HTML);
+    prewarmedOverlay.on('closed', () => { prewarmedOverlay = null; });
+  } catch (e) {
+    // App may be shutting down
+    prewarmedOverlay = null;
+  }
+}
+
+/**
+ * Get or create an overlay window for capture.
+ * Reuses the pre-warmed window if available (instant), otherwise creates fresh (slower).
+ * Returns a Promise that resolves to the ready BrowserWindow.
+ */
+async function createOverlayWindow() {
+  // Destroy old active overlay if it exists
   if (overlayWindow && !overlayWindow.isDestroyed()) {
     overlayWindow.destroy();
     overlayWindow = null;
   }
 
-  const cursorDisplay = screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
-  const { width, height } = cursorDisplay.size;
-  const { x, y } = cursorDisplay.bounds;
+  if (prewarmedOverlay && !prewarmedOverlay.isDestroyed()) {
+    // Reuse pre-warmed window (already loaded — no wait needed)
+    overlayWindow = prewarmedOverlay;
+    prewarmedOverlay = null;
+  } else {
+    // Fallback: create fresh and wait for load
+    overlayWindow = new BrowserWindow(OVERLAY_WINDOW_OPTIONS);
+    overlayWindow.loadFile(OVERLAY_HTML);
+    await new Promise(resolve => {
+      overlayWindow.webContents.once('did-finish-load', resolve);
+    });
+  }
 
-  overlayWindow = new BrowserWindow({
-    width,
-    height,
-    x,
-    y,
-    frame: false,
-    transparent: true,
-    alwaysOnTop: true,
-    fullscreenable: false,
-    skipTaskbar: true,
-    hasShadow: false,
-    resizable: false,
-    show: false,
-    webPreferences: { ...BASE_WEB_PREFERENCES }
+  // Re-prewarm after this overlay closes
+  overlayWindow.on('closed', () => {
+    overlayWindow = null;
+    prewarmOverlay();
   });
-
-  overlayWindow.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
-  overlayWindow.setAlwaysOnTop(true, 'screen-saver');
 
   return overlayWindow;
 }
@@ -289,6 +326,9 @@ app.whenReady().then(() => {
   // Pre-warm SAM segmentation model
   const { warmUp } = require('./segmentation/segmentation');
   warmUp();
+
+  // Pre-warm overlay window for fast first capture
+  prewarmOverlay();
 
   // Open home window on startup
   showHomeWindow();

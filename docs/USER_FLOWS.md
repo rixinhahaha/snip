@@ -75,7 +75,7 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 | Step | Action | Expected Result |
 |------|--------|-----------------|
 | 1 | Press Cmd+Shift+2 | Home window hides |
-| 2 | -- | Display under the cursor is captured via `desktopCapturer.getSources()` |
+| 2 | -- | Screen capture (`desktopCapturer.getSources()`) and overlay window prep run in parallel; pre-warmed overlay is reused if available |
 | 3 | -- | Fullscreen transparent overlay appears on that display |
 | 4 | -- | Overlay covers entire display including menu bar |
 | 5 | -- | Cursor becomes crosshair, hint text visible: "Click to screenshot the selected window · Drag to capture an area · Esc to cancel" |

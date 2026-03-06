@@ -3,7 +3,6 @@
 (function() {
   'use strict';
 
-  let capturedDataURL = null;
   let displayOrigin = { x: 0, y: 0 };
   let selectionInstance = null;
   let captureMode = 'capture';
@@ -11,7 +10,7 @@
   let windowList = [];
 
   window.snip.onScreenshotCaptured(async (data) => {
-    capturedDataURL = data.dataURL;
+    // Image data is deferred — fetched on demand at crop time via getCaptureImage()
     displayOrigin = data.displayOrigin || { x: 0, y: 0 };
     captureMode = data.mode || 'capture';
     const width = window.innerWidth;
@@ -71,8 +70,8 @@
     selectionInstance.activate();
   }
 
-  function cropRegion(fullImg, region) {
-    if (!region) return capturedDataURL;
+  function cropRegion(fullImg, region, fullDataURL) {
+    if (!region) return fullDataURL;
 
     const imgW = fullImg.naturalWidth;
     const imgH = fullImg.naturalHeight;
@@ -107,19 +106,21 @@
     window.snip.closeOverlay();
   }
 
-  function cropAndCopyToClipboard(region) {
+  async function cropAndCopyToClipboard(region) {
+    const dataURL = await window.snip.getCaptureImage();
     const fullImg = new Image();
     fullImg.onload = () => {
-      window.snip.copyToClipboard(cropRegion(fullImg, region));
+      window.snip.copyToClipboard(cropRegion(fullImg, region, dataURL));
       finishAndClose();
     };
-    fullImg.src = capturedDataURL;
+    fullImg.src = dataURL;
   }
 
-  function cropAndOpenEditor(region) {
+  async function cropAndOpenEditor(region) {
+    const dataURL = await window.snip.getCaptureImage();
     const fullImg = new Image();
     fullImg.onload = () => {
-      const croppedDataURL = cropRegion(fullImg, region);
+      const croppedDataURL = cropRegion(fullImg, region, dataURL);
       const cssWidth = region ? region.width : window.innerWidth;
       const cssHeight = region ? region.height : window.innerHeight;
 
@@ -131,6 +132,6 @@
       });
       finishAndClose();
     };
-    fullImg.src = capturedDataURL;
+    fullImg.src = dataURL;
   }
 })();
