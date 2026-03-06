@@ -45,6 +45,7 @@ files:
 asarUnpack:
   - "src/main/segmentation/segmentation-worker.js"
   - "src/main/upscaler/upscaler-worker.js"
+  - "src/main/transcription/transcribe.swift"
   - "src/main/animation/gif-encoder-worker.js"
   - "node_modules/@huggingface/transformers/**"
   - "node_modules/sharp/**"
