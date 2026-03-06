@@ -135,6 +135,16 @@ All toolbar buttons use a unified color system — no hardcoded colors.
 
 Action buttons (Save, Done, etc.) follow the same default/hover pattern. Tooltips appear below buttons with `top: calc(100% + 6px)`, white text on dark background.
 
+### Upscale Button + Dropdown (Editor)
+
+The **Upscale** button sits in the action area (between Reset and Save). It uses `.action-btn.upscale` styling: `--bg-hover` background, `--text-secondary` icon. Click toggles a dropdown below with 2x/4x options.
+
+**Dropdown** (`.upscale-dropdown`): glass panel with `--bg-toast` background, `--glass-specular` border, 10px radius. Options are full-width buttons; hover shows `--accent-bg` with `--accent` text.
+
+**Disabled state** (`.upscale.disabled`): `opacity: 0.4; pointer-events: none`. Applied after upscale completes to prevent double-upscale.
+
+**Progress overlay** (`.upscale-progress`): same pattern as animation progress — centered fixed panel, 260px wide, glass background, pulsing icon, text label, and accent-colored progress bar (4px track). Stages: "Loading model..." → "Upscaling..." → "Encoding result...".
+
 ### Fabric.js Selection Controls
 
 Fabric object selection handles (borders, corners) use the theme accent color at canvas init time:

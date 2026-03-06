@@ -549,6 +549,127 @@ select:hover {
   background: var(--accent-hover);
 }
 
+/* Upscale button + dropdown */
+.upscale-group {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.action-btn.upscale {
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+}
+
+.action-btn.upscale:hover {
+  background: var(--bg-hover-strong);
+  color: var(--text-primary);
+  box-shadow: var(--glass-inner-glow);
+}
+
+.action-btn.upscale.disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.upscale-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1002;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px;
+  border-radius: 10px;
+  background: var(--bg-toast);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-specular);
+  box-shadow: var(--shadow-toast);
+  min-width: 64px;
+}
+
+.upscale-dropdown.hidden {
+  display: none !important;
+}
+
+.upscale-option {
+  display: block;
+  width: 100%;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.upscale-option:hover {
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+
+/* Upscale progress overlay */
+.upscale-progress {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2002;
+  width: 260px;
+  border-radius: 16px;
+  background: var(--bg-toast);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-specular);
+  box-shadow: var(--shadow-modal);
+}
+
+.upscale-progress.hidden {
+  display: none !important;
+}
+
+.upscale-progress-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 20px 20px;
+  gap: 10px;
+}
+
+.upscale-progress-icon {
+  animation: animate-wand-pulse 1.2s ease-in-out infinite;
+}
+
+.upscale-progress-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.upscale-progress-bar-track {
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border-input);
+  overflow: hidden;
+}
+
+.upscale-progress-bar-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 2px;
+  background: var(--accent);
+  transition: width 0.3s ease;
+  box-shadow: 0 0 8px var(--accent);
+}
+
 /* 2GIF animate button */
 /* ── 2GIF Sparkle Button ── */
 .animate-btn {

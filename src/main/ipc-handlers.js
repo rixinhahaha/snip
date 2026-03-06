@@ -492,6 +492,16 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
     return { pruned, embeddings: generated };
   });
 
+  // Upscaling: upscale image via ONNX model in child process
+  ipcMain.handle('upscale-image', async (event, { imageBase64, scale }) => {
+    const { upscaleImage } = require('./upscaler/upscaler');
+    return upscaleImage(imageBase64, scale, function(progress) {
+      if (event.sender && !event.sender.isDestroyed()) {
+        event.sender.send('upscale-progress', progress);
+      }
+    });
+  });
+
   // Segmentation: check device support
   ipcMain.handle('check-segment-support', async () => {
     const { checkSupport } = require('./segmentation/segmentation');

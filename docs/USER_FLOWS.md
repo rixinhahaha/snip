@@ -441,6 +441,30 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 | Swift helper compilation fails | Error state shown in panel |
 | Cache invalidation | Cache is per editor session; opening a new editor starts fresh |
 
+### 3.13 Upscale (2x/4x)
+
+**Preconditions:** Editor open with a captured image.
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Click the Upscale dropdown button in the toolbar | Dropdown shows 2x and 4x options |
+| 2 | Select "2x" or "4x" | Progress overlay appears on the canvas |
+| 3 | -- | Child process spawns with bundled Node.js binary, loads ONNX model |
+| 4 | -- | `upscale-progress` events pushed to renderer (loading model, processing) |
+| 5 | -- | Upscaled image replaces the canvas background image |
+| 6 | -- | Progress overlay dismissed |
+| 7 | -- | Upscale button becomes disabled (prevents re-upscaling) |
+| 8 | Annotate and save/copy as normal | Upscaled image exported at new resolution |
+
+**Edge cases:**
+
+| Condition | Expected Behavior |
+|-----------|-------------------|
+| Image would exceed 3840x2160 after upscaling | Upscale option disabled or capped |
+| No bundled Node.js binary available | Upscale not available (same as SAM fallback) |
+| Child process crashes during upscaling | Error shown, canvas unchanged |
+| Upscale already applied | Button disabled, cannot upscale again |
+
 ---
 
 ## 4. Save and Export

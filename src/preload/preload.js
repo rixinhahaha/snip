@@ -75,6 +75,15 @@ contextBridge.exposeInMainWorld('snip', {
     ipcRenderer.on('navigate-to-search', () => callback());
   },
 
+  // Upscaling
+  upscaleImage: ({ imageBase64, scale }) =>
+    ipcRenderer.invoke('upscale-image', { imageBase64, scale }),
+  onUpscaleProgress: (callback) => {
+    var handler = (event, progress) => callback(progress);
+    ipcRenderer.on('upscale-progress', handler);
+    return () => ipcRenderer.removeListener('upscale-progress', handler);
+  },
+
   // Segmentation (SAM)
   transcribeScreenshot: () => ipcRenderer.invoke('transcribe-screenshot'),
   segmentAtPoint: ({ points, cssWidth, cssHeight }) =>

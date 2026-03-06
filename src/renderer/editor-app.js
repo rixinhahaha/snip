@@ -59,6 +59,9 @@
     // Check SAM support and show segment tool if compatible
     await checkSegmentSupport();
 
+    // Setup upscale button + dropdown
+    setupUpscale(canvasW, canvasH);
+
     // Ensure window is wide enough for full toolbar
     await ensureToolbarFits();
   });
@@ -73,6 +76,130 @@
       }
     } catch (err) {
       console.warn('[Snip] Failed to check segment support:', err.message);
+    }
+  }
+
+  let upscaleCleanup = null;
+
+  function setupUpscale(canvasW, canvasH) {
+    var upscaleBtn = document.getElementById('btn-upscale');
+    var dropdown = document.getElementById('upscale-dropdown');
+    var progressEl = document.getElementById('upscale-progress');
+    var progressText = document.getElementById('upscale-progress-text');
+    var progressFill = document.getElementById('upscale-progress-fill');
+
+    if (!upscaleBtn) return;
+
+    // Toggle dropdown on button click
+    upscaleBtn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      if (upscaleBtn.classList.contains('disabled')) return;
+      dropdown.classList.toggle('hidden');
+    });
+
+    // Close dropdown on outside click
+    document.addEventListener('click', function() {
+      dropdown.classList.add('hidden');
+    });
+    dropdown.addEventListener('click', function(e) {
+      e.stopPropagation();
+    });
+
+    // Handle scale option clicks
+    document.querySelectorAll('.upscale-option').forEach(function(btn) {
+      btn.addEventListener('click', async function() {
+        var scale = parseInt(btn.dataset.scale);
+        dropdown.classList.add('hidden');
+        await performUpscale(scale);
+      });
+    });
+
+    // Listen for progress events
+    if (window.snip.onUpscaleProgress) {
+      upscaleCleanup = window.snip.onUpscaleProgress(function(progress) {
+        if (progress.stage === 'loading') {
+          progressText.textContent = 'Loading model...';
+          progressFill.style.width = progress.percent + '%';
+        } else if (progress.stage === 'inferencing') {
+          progressText.textContent = 'Upscaling...';
+          progressFill.style.width = progress.percent + '%';
+        } else if (progress.stage === 'encoding') {
+          progressText.textContent = 'Encoding result...';
+          progressFill.style.width = progress.percent + '%';
+        } else if (progress.stage === 'done') {
+          progressFill.style.width = '100%';
+        }
+      });
+    }
+
+    async function performUpscale(scale) {
+      // Size cap check: output must not exceed 4K (3840x2160)
+      var dpr = window.devicePixelRatio || 1;
+      var physW = Math.round(canvasW * dpr);
+      var physH = Math.round(canvasH * dpr);
+      var outW = physW * scale;
+      var outH = physH * scale;
+
+      if (outW > 3840 || outH > 2160) {
+        window.snip.showNotification('Image too large for ' + scale + 'x upscale (max output 3840x2160)');
+        return;
+      }
+
+      // Show progress overlay
+      progressFill.style.width = '0%';
+      progressText.textContent = 'Loading model...';
+      progressEl.classList.remove('hidden');
+
+      try {
+        // Export composited image (background + annotations)
+        if (canvas) {
+          canvas.discardActiveObject();
+          canvas.renderAll();
+        }
+        var dataURL = EditorCanvasManager.exportAsDataURL('png', 1.0);
+
+        var result = await window.snip.upscaleImage({ imageBase64: dataURL, scale: scale });
+
+        // Replace canvas content with upscaled image
+        // Update CSS dimensions to match upscaled size
+        var newCssW = result.width / dpr;
+        var newCssH = result.height / dpr;
+
+        // Clear all annotations (they're baked into the composited image)
+        EditorCanvasManager.clearAnnotations();
+
+        // Replace background with upscaled result
+        EditorCanvasManager.setBackgroundImage(result.dataURL, newCssW, newCssH);
+
+        // Resize canvas to match new dimensions
+        if (canvas) {
+          canvas.setDimensions({ width: newCssW, height: newCssH });
+          canvas.setZoom(1);
+        }
+
+        // Update image area dimensions
+        var imageArea = document.getElementById('image-area');
+        imageArea.style.width = newCssW + 'px';
+        imageArea.style.height = newCssH + 'px';
+
+        // Update internal canvas dimensions for export
+        canvasW = newCssW;
+        canvasH = newCssH;
+
+        // Re-fit to viewport
+        scaleImageToFit(newCssW, newCssH);
+
+        // Disable upscale button (prevent double-upscale)
+        upscaleBtn.classList.add('disabled');
+        upscaleBtn.setAttribute('data-tooltip', 'Already upscaled');
+
+        window.snip.showNotification('Upscaled to ' + result.width + 'x' + result.height);
+      } catch (err) {
+        console.error('[Snip] Upscale failed:', err);
+        window.snip.showNotification('Upscale failed: ' + err.message);
+      } finally {
+        progressEl.classList.add('hidden');
+      }
     }
   }
 

@@ -49,6 +49,7 @@ Power users on macOS who take 5-50 screenshots per day: developers, designers, P
 | Blur Brush | B | Paint to pixelate sensitive info |
 | Segment | S | AI-powered object selection (SlimSAM) — Apply Cutout or Tag Segment (4-color palette: Red/Yellow/Green/Blue) |
 | Animate | — | Animate a segment cutout into GIF/APNG via fal.ai cloud API |
+| Upscale | — | On-device 2x/4x image upscaling via ONNX models (toolbar dropdown) |
 
 ### Save & Export
 - **Esc/Enter/Done**: Copy annotated PNG to clipboard, close editor
@@ -79,6 +80,15 @@ Power users on macOS who take 5-50 screenshots per day: developers, designers, P
 - Output formats: GIF (256 colors, 1-bit transparency) and APNG (full color, 8-bit alpha)
 - Result panel keyboard shortcuts: Enter or Cmd+S saves GIF, R redoes with another preset, Esc discards
 - Animations saved to `~/Documents/snip/screenshots/animations/` (not processed by AI organizer)
+
+### Upscale (2x/4x)
+- On-device image upscaling using ONNX models — no cloud API needed
+- Two options: 2x (Swin2SR, ~5.7 MB) and 4x (APISR, ~4.8 MB), both quantized
+- Accessed via toolbar dropdown button in the editor
+- Output capped at 3840x2160 to prevent memory issues
+- Progress overlay shown during processing
+- Upscale button disabled after use (prevents repeated upscaling of already-upscaled images)
+- Runs in a child process (same pattern as SAM segmentation) using bundled Node.js binary
 
 ### Search
 - **Cmd+Shift+S**: Semantic search using local embeddings (no API calls)

@@ -152,6 +152,20 @@
           <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
         </svg>
       </button>
+      <div id="upscale-group" class="upscale-group">
+        <button id="btn-upscale" class="action-btn upscale" data-tooltip="Upscale">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 3 21 3 21 9"/>
+            <polyline points="9 21 3 21 3 15"/>
+            <line x1="21" y1="3" x2="14" y2="10"/>
+            <line x1="3" y1="21" x2="10" y2="14"/>
+          </svg>
+        </button>
+        <div id="upscale-dropdown" class="upscale-dropdown hidden">
+          <button class="upscale-option" data-scale="2">2x</button>
+          <button class="upscale-option" data-scale="4">4x</button>
+        </div>
+      </div>
       <button id="btn-save" class="action-btn save" data-tooltip="Save (⌘S)">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/>
@@ -270,6 +284,24 @@
           <div class="animate-progress-bar-fill" id="animate-progress-fill"></div>
         </div>
         <div class="animate-progress-count" id="animate-progress-count"></div>
+      </div>
+    </div>
+
+    <!-- Upscale progress overlay -->
+    <div id="upscale-progress" class="upscale-progress hidden">
+      <div class="upscale-progress-content">
+        <div class="upscale-progress-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 3 21 3 21 9"/>
+            <polyline points="9 21 3 21 3 15"/>
+            <line x1="21" y1="3" x2="14" y2="10"/>
+            <line x1="3" y1="21" x2="10" y2="14"/>
+          </svg>
+        </div>
+        <div class="upscale-progress-text" id="upscale-progress-text">Upscaling...</div>
+        <div class="upscale-progress-bar-track">
+          <div class="upscale-progress-bar-fill" id="upscale-progress-fill"></div>
+        </div>
       </div>
     </div>
 
