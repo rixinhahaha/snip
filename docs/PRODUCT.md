@@ -32,9 +32,9 @@ Power users on macOS who take 5-50 screenshots per day: developers, designers, P
 ## Feature Set
 
 ### Capture
-- **Global shortcut** (Cmd+Shift+2): Fullscreen overlay, click a window to snap-select it, or drag to select a custom region, Enter to crop
+- **Global shortcut** (Cmd+Shift+2): Fullscreen overlay, click a window to snap-select it, or drag to select a custom region — completes immediately on mouse-up
 - **Quick Snip** (Cmd+Shift+1): Same overlay with window/region selection, copies result directly to clipboard without opening the annotation editor
-- **Full-screen capture**: Press Enter without dragging
+- **Full-screen capture**: Press Enter without selecting
 - Works across macOS Spaces without switching desktops
 - Home window hides during capture to stay out of the way
 
@@ -96,7 +96,7 @@ Power users on macOS who take 5-50 screenshots per day: developers, designers, P
 - Full keyboard shortcuts reference table
 
 ### Tray Menu
-- Snip It, Quick Snip, Search Snips, Open Snip, Theme submenu (Dark / Light / Glass), Quit Snip
+- Quick Snip, Snip and Annotate, Search Snips, Open Snip, Theme submenu (Dark / Light / Glass), Quit Snip
 
 ---
 
@@ -105,7 +105,7 @@ Power users on macOS who take 5-50 screenshots per day: developers, designers, P
 | Term | Meaning |
 |------|---------|
 | **Snip** | A screenshot (never say "screenshot" in the UI) |
-| **Snip It** | The capture action (menu item and tray label) |
+| **Snip and Annotate** | The capture action that opens the annotation editor (menu item and tray label) |
 | **Category** | AI-assigned folder: code, chat, web, design, documents, terminal, personal, fun, other |
 | **Tag** | AI-assigned keyword for search/filtering |
 | **Glass** | The translucent Liquid Glass theme on macOS 26+ |

@@ -203,7 +203,7 @@ Only app-saved files trigger AI processing. The `pendingFiles` Set in `watcher.j
 
 ### Naming
 - UI text says "snip" not "screenshot"
-- The capture action is "Snip It"
+- The capture action is "Snip and Annotate"
 - Variables use camelCase
 - CSS classes use kebab-case
 

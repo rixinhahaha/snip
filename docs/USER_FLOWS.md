@@ -78,12 +78,10 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 | 2 | -- | Display under the cursor is captured via `desktopCapturer.getSources()` |
 | 3 | -- | Fullscreen transparent overlay appears on that display |
 | 4 | -- | Overlay covers entire display including menu bar |
-| 5 | -- | Cursor becomes crosshair, hint text visible: "Click a window to select it, or drag to select an area" |
-| 5a | Move cursor over a window | Window highlighted with accent border and owner/title label |
-| 6a | Click on a highlighted window | Window bounds become the selection (snap-select) |
-| 6b | Drag to select a rectangular region | Selection box appears with dashed border |
-| 7 | (Optional) Drag inside selection to reposition | Selection moves without resizing |
-| 8 | Press Enter | Overlay closes, editor window opens with cropped image |
+| 5 | -- | Cursor becomes crosshair, hint text visible: "Click to screenshot the selected window · Drag to capture an area · Esc to cancel" |
+| 5a | Move cursor over a window | Window highlighted with accent border and owner/title label (only windows with ≥50×50 visible area shown) |
+| 6a | Click on a highlighted window | Window captured immediately, overlay closes, editor opens with cropped image |
+| 6b | Drag to select a rectangular region | On mouse-up, overlay closes and editor opens with cropped image |
 | 9 | -- | Editor window is centered on screen, min width 900px |
 | 10 | -- | Toolbar visible at top with all tools |
 
@@ -92,7 +90,7 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 | Step | Action | Expected Result |
 |------|--------|-----------------|
 | 1 | Press Cmd+Shift+2 | Overlay appears |
-| 2 | Press Enter immediately (no drag) | Editor opens with full-screen capture |
+| 2 | Press Enter (no drag) | Editor opens with full-screen capture |
 
 ### 2.3 Cancel Capture
 
@@ -100,6 +98,7 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 |------|--------|-----------------|
 | 1 | Press Cmd+Shift+2 | Overlay appears |
 | 2 | Press Escape | Overlay closes, home window re-shows |
+| 2a | (Alt) Switch away (Cmd+Tab, click another app) | Overlay auto-dismisses — stale screenshot is discarded |
 
 ### 2.4 Capture While Editor Is Open
 
@@ -148,8 +147,7 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 | Step | Action | Expected Result |
 |------|--------|-----------------|
 | 1 | Press Cmd+Shift+1 (default) | Same capture overlay appears with window highlight and region selection |
-| 2 | Click a window or drag a region | Selection made (same as regular capture flow §2.1) |
-| 3 | Press Enter | Cropped image copied directly to clipboard — no annotation editor opens |
+| 2 | Click a window or drag a region | Cropped image copied directly to clipboard on mouse-up — no annotation editor opens |
 
 **Edge cases:**
 - Esc cancels the selection and closes the overlay (same as regular capture)
@@ -889,7 +887,7 @@ The Shortcuts section shows two groups: **configurable shortcuts** (2 global sho
 | Action | Expected Result |
 |--------|-----------------|
 | Click tray icon | Tray menu appears |
-| "Snip It" menu item | Triggers capture (same as Cmd+Shift+2) |
+| "Snip and Annotate" menu item | Triggers capture (same as Cmd+Shift+2) |
 | "Quick Snip" menu item | Opens capture overlay in quick-snip mode — select & copy to clipboard (same as Cmd+Shift+1) |
 | "Search Snips" menu item | Opens search page (same as Cmd+Shift+S) |
 | "Open Snip" menu item | Opens/focuses home window |

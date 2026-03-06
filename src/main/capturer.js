@@ -120,6 +120,11 @@ async function captureScreen(createOverlayFn, getOverlayFn, opts) {
     overlayWindow.setAlwaysOnTop(true, 'screen-saver');
     overlayWindow.show();
     overlayWindow.focus();
+    // If the user switches away (Cmd+Tab, click another app), cancel the capture.
+    // The stale screenshot would be confusing; they can re-trigger the shortcut.
+    overlayWindow.on('blur', () => {
+      if (!overlayWindow.isDestroyed()) overlayWindow.destroy();
+    });
     // Force position to cover full screen including menu bar
     // (macOS may push the window below menu bar on show)
     const bounds = cursorDisplay.bounds;

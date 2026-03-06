@@ -63,7 +63,7 @@ These are non-negotiable rules. Violating them causes crashes or broken UX:
 - Main process uses standard CommonJS `require()`.
 
 ### Naming
-- UI text says **"snip"** not "screenshot". The capture action is **"Snip It"**.
+- UI text says **"snip"** not "screenshot". The capture action is **"Snip and Annotate"**.
 
 ### Purple Brand
 - Accent color is **purple/violet**. Never blue. See `docs/DESIGN.md` for exact values per theme.

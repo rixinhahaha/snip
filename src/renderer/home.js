@@ -636,8 +636,8 @@
 
   // ── Keyboard Shortcuts settings ──
   var SHORTCUT_DEFINITIONS = [
-    { action: 'capture', name: 'Snip It', context: 'Global', configurable: true },
     { action: 'quick-snip', name: 'Quick Snip', context: 'Global', configurable: true },
+    { action: 'capture', name: 'Snip and Annotate', context: 'Global', configurable: true },
     { action: 'search', name: 'Search snips', context: 'Global', configurable: true },
     { action: null, name: 'Select tool', context: 'Annotation', configurable: false, display: 'V' },
     { action: null, name: 'Rectangle tool', context: 'Annotation', configurable: false, display: 'R' },

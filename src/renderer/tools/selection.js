@@ -5,7 +5,7 @@ const SelectionTool = (() => {
     return getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#8B5CF6';
   }
 
-  // States: 'idle' | 'drawing' | 'selected' | 'moving'
+  // States: 'idle' | 'drawing'
   function attach(canvasEl, fullWidth, fullHeight, onComplete, onCancel, windowList) {
     const overlay = document.getElementById('selection-overlay');
     const ctx = overlay.getContext('2d');
@@ -26,8 +26,6 @@ const SelectionTool = (() => {
     var drawCurrentX = 0, drawCurrentY = 0;
     // Selection rect (finalized)
     var selX = 0, selY = 0, selW = 0, selH = 0;
-    // Moving state
-    var moveOffsetX = 0, moveOffsetY = 0;
     // Window snap state
     var hoveredWindow = null;
     var pendingClick = false;
@@ -57,8 +55,6 @@ const SelectionTool = (() => {
         y = Math.min(drawStartY, drawCurrentY);
         w = Math.abs(drawCurrentX - drawStartX);
         h = Math.abs(drawCurrentY - drawStartY);
-      } else if (state === 'selected' || state === 'moving') {
-        x = selX; y = selY; w = selW; h = selH;
       } else if (state === 'idle' && hoveredWindow) {
         // Highlight the window under cursor
         x = hoveredWindow.x; y = hoveredWindow.y;
@@ -124,34 +120,22 @@ const SelectionTool = (() => {
       }
     }
 
-    function isInsideSelection(mx, my) {
-      return mx >= selX && mx <= selX + selW && my >= selY && my <= selY + selH;
-    }
-
     function onMouseDown(e) {
       var mx = e.clientX, my = e.clientY;
 
-      if (state === 'selected' && isInsideSelection(mx, my)) {
-        // Start moving existing selection
-        state = 'moving';
-        moveOffsetX = mx - selX;
-        moveOffsetY = my - selY;
-        overlay.style.cursor = 'grabbing';
-      } else {
-        // If there's a hovered window, start pending click detection
-        if (state === 'idle' && hoveredWindow) {
-          pendingClick = true;
-          pendingClickX = mx;
-          pendingClickY = my;
-        }
-        // Start new drawing (from idle or replacing existing selection)
-        state = 'drawing';
-        drawStartX = mx;
-        drawStartY = my;
-        drawCurrentX = mx;
-        drawCurrentY = my;
-        overlay.style.cursor = 'crosshair';
+      // If there's a hovered window, start pending click detection
+      if (state === 'idle' && hoveredWindow) {
+        pendingClick = true;
+        pendingClickX = mx;
+        pendingClickY = my;
       }
+      // Start new drawing
+      state = 'drawing';
+      drawStartX = mx;
+      drawStartY = my;
+      drawCurrentX = mx;
+      drawCurrentY = my;
+      overlay.style.cursor = 'crosshair';
       draw();
     }
 
@@ -171,13 +155,6 @@ const SelectionTool = (() => {
         drawCurrentX = mx;
         drawCurrentY = my;
         draw();
-      } else if (state === 'moving') {
-        selX = Math.max(0, Math.min(mx - moveOffsetX, fullWidth - selW));
-        selY = Math.max(0, Math.min(my - moveOffsetY, fullHeight - selH));
-        draw();
-      } else if (state === 'selected') {
-        // Update cursor based on hover
-        overlay.style.cursor = isInsideSelection(mx, my) ? 'grab' : 'crosshair';
       } else if (state === 'idle' && windows.length > 0) {
         // Highlight window under cursor
         var win = findWindowAt(mx, my);
@@ -191,81 +168,57 @@ const SelectionTool = (() => {
     function onMouseUp(e) {
       var mx = e.clientX, my = e.clientY;
 
-      if (state === 'drawing') {
-        // Check for window snap click (small drag = click on window)
-        if (pendingClick && hoveredWindow) {
-          var dx = mx - pendingClickX;
-          var dy = my - pendingClickY;
-          if (Math.sqrt(dx * dx + dy * dy) <= DRAG_THRESHOLD) {
-            // Snap to window bounds
-            selX = hoveredWindow.x;
-            selY = hoveredWindow.y;
-            selW = hoveredWindow.width;
-            selH = hoveredWindow.height;
-            // Clamp to overlay bounds
-            selX = Math.max(0, selX);
-            selY = Math.max(0, selY);
-            selW = Math.min(selW, fullWidth - selX);
-            selH = Math.min(selH, fullHeight - selY);
-            state = 'selected';
-            pendingClick = false;
-            hoveredWindow = null;
-            overlay.style.cursor = isInsideSelection(mx, my) ? 'grab' : 'crosshair';
-            draw();
-            return;
-          }
-        }
-        pendingClick = false;
+      if (state !== 'drawing') return;
 
-        var x = Math.min(drawStartX, drawCurrentX);
-        var y = Math.min(drawStartY, drawCurrentY);
-        var w = Math.abs(drawCurrentX - drawStartX);
-        var h = Math.abs(drawCurrentY - drawStartY);
-
-        if (w > 10 && h > 10) {
-          // Valid selection — enter selected state
-          selX = x; selY = y; selW = w; selH = h;
-          state = 'selected';
+      // Check for window snap click (small drag = click on window)
+      if (pendingClick && hoveredWindow) {
+        var dx = mx - pendingClickX;
+        var dy = my - pendingClickY;
+        if (Math.sqrt(dx * dx + dy * dy) <= DRAG_THRESHOLD) {
+          // Snap to window bounds
+          selX = Math.max(0, hoveredWindow.x);
+          selY = Math.max(0, hoveredWindow.y);
+          selW = Math.min(hoveredWindow.width, fullWidth - selX);
+          selH = Math.min(hoveredWindow.height, fullHeight - selY);
+          pendingClick = false;
           hoveredWindow = null;
-          overlay.style.cursor = isInsideSelection(mx, my) ? 'grab' : 'crosshair';
-        } else {
-          // Too small, reset to idle
-          state = 'idle';
-          overlay.style.cursor = 'crosshair';
+          removeListeners();
+          onComplete({ x: selX, y: selY, width: selW, height: selH });
+          return;
         }
-        draw();
-      } else if (state === 'moving') {
-        state = 'selected';
-        overlay.style.cursor = isInsideSelection(mx, my) ? 'grab' : 'crosshair';
-        draw();
       }
+      pendingClick = false;
+
+      var x = Math.min(drawStartX, drawCurrentX);
+      var y = Math.min(drawStartY, drawCurrentY);
+      var w = Math.abs(drawCurrentX - drawStartX);
+      var h = Math.abs(drawCurrentY - drawStartY);
+
+      if (w > 10 && h > 10) {
+        // Valid selection — complete immediately
+        selX = x; selY = y; selW = w; selH = h;
+        hoveredWindow = null;
+        removeListeners();
+        onComplete({ x: selX, y: selY, width: selW, height: selH });
+        return;
+      } else {
+        // Too small, reset to idle
+        state = 'idle';
+        overlay.style.cursor = 'crosshair';
+      }
+      draw();
     }
 
     function onKeyDown(e) {
       if (e.key === 'Enter') {
         e.preventDefault();
-        if (state === 'selected') {
-          // Confirm the selection
-          removeListeners();
-          onComplete({ x: selX, y: selY, width: selW, height: selH });
-        } else {
-          // No selection — full screen
-          cleanup();
-          onComplete(null);
-        }
+        // No selection — full screen capture
+        cleanup();
+        onComplete(null);
       } else if (e.key === 'Escape') {
         e.preventDefault();
-        if (state === 'selected') {
-          // Clear selection, go back to idle
-          state = 'idle';
-          selX = selY = selW = selH = 0;
-          overlay.style.cursor = 'crosshair';
-          draw();
-        } else {
-          // Cancel entirely
-          cleanup();
-          onCancel();
-        }
+        cleanup();
+        onCancel();
       }
     }
 

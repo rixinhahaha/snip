@@ -22,7 +22,19 @@
     const winOffsetX = (window.screenX || 0) - displayOrigin.x;
     const winOffsetY = (window.screenY || 0) - displayOrigin.y;
     windowList = (data.windowList || []).map(function(w) {
-      return { x: w.x - winOffsetX, y: w.y - winOffsetY, width: w.width, height: w.height, owner: w.owner, name: w.name };
+      // Convert to overlay-viewport-relative coords, then clip to viewport bounds.
+      // Windows partially off-screen (e.g. spanning two displays, or behind the menu bar)
+      // are clipped so hover detection and snap use only the visible portion.
+      const wx = w.x - winOffsetX;
+      const wy = w.y - winOffsetY;
+      const clipX = Math.max(0, wx);
+      const clipY = Math.max(0, wy);
+      const clipX2 = Math.min(width, wx + w.width);
+      const clipY2 = Math.min(height, wy + w.height);
+      return { x: clipX, y: clipY, width: clipX2 - clipX, height: clipY2 - clipY, owner: w.owner, name: w.name };
+    }).filter(function(w) {
+      // Drop windows with less than 50×50 visible area in the viewport
+      return w.width > 50 && w.height > 50;
     });
 
     // Reset previous selection

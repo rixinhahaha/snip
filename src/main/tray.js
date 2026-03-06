@@ -15,12 +15,12 @@ function buildTrayMenu() {
 
   const template = [
     {
-      label: 'Snip It',
-      click: trayCallbacks.capture
-    },
-    {
       label: 'Quick Snip',
       click: trayCallbacks.quickSnip
+    },
+    {
+      label: 'Snip and Annotate',
+      click: trayCallbacks.capture
     },
     {
       label: 'Search Snips',
