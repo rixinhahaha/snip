@@ -91,4 +91,4 @@ async function searchScreenshots(query) {
     .slice(0, 20);
 }
 
-module.exports = { embedText, searchScreenshots };
+module.exports = { embedText, searchScreenshots, cosineSimilarity };
