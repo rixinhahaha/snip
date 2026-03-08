@@ -100,12 +100,43 @@ scripts/                     # Build and generation scripts
   afterPack.js                 # electron-builder afterPack hook (strip unused native modules, pre-sign)
   build-signed.sh              # Production build: sign + notarize
   generate-app-icon.js         # Regenerate app icons from SVG template
+tests/                       # Vitest unit tests
+  setup/
+    electron-mock.js           # vi.mock('electron', ...) — shared setup file
+    load-iife.js               # VM-based IIFE loader for renderer code
+  main/
+    store.test.js              # Config + index CRUD (real fs with temp dirs)
+    agent.test.js              # processScreenshot (Ollama prototype spy)
+    embeddings.test.js         # cosineSimilarity + searchScreenshots
+  renderer/
+    tool-utils.test.js         # hexToRgba, lineEndpointForTag, nextTagId
 vendor/                      # Downloaded at dev time, bundled at build time
   models/                      # HuggingFace models: MiniLM + SlimSAM (~75 MB)
   node/                        # Standalone Node.js binary for SAM subprocess (~100 MB)
     arm64/node                   # Apple Silicon
   (static animation presets inlined in src/main/animation/animation.js)
 ```
+
+---
+
+## Testing
+
+**Framework:** Vitest 3.x with `pool: 'vmThreads'` (required for `vi.mock()` to intercept CJS `require()` calls).
+
+**Run:** `npm test` (single run), `npm run test:watch` (watch mode), `npm run test:coverage` (coverage report).
+
+**CI:** GitHub Actions on `ubuntu-latest` with `npm ci --ignore-scripts` (skips native module compilation). Runs on push to `main`/`enhanced` and PRs to `main`.
+
+**Key mocking patterns:**
+
+| Pattern | Used For | Why |
+|---------|----------|-----|
+| `vi.spyOn(Ollama.prototype, 'chat')` | Ollama API calls in agent.js | Prototype spy intercepts all instances; `vi.mock('ollama')` doesn't reliably intercept CJS `require()` from other CJS modules |
+| `store.setExternalPaths(tmpDir, configPath)` | Store functions in agent.js | Configures real store to use temp dirs instead of Electron paths; avoids `require('electron')` |
+| `vi.spyOn(store, 'readIndex')` | Store calls in embeddings.js | Spy on real module instance for lazy `require('../store')` inside function bodies |
+| `vi.mock('@huggingface/transformers')` | Embedding pipeline | ESM package — `vi.mock()` intercepts ESM imports reliably |
+| `parentPort.postMessage` filtering | agent.js notification messages | Agent sends `'notification'`/`'tags-changed'` messages on parentPort which confuse tinypool's IPC |
+| `new Function(source + '\nreturn Name;')` | Renderer IIFE tools | `const` declarations in IIFEs don't become context properties in `vm.runInContext` |
 
 ---
 

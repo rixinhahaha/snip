@@ -14,7 +14,10 @@
     "sign:adhoc": "for app in dist/mac-*/Snip.app; do if codesign -v \"$app\" 2>/dev/null; then echo \"Already signed: $app\"; else codesign --force --deep --sign - \"$app\" 2>/dev/null && echo \"Ad-hoc signed: $app\"; fi; done",
     "download-models": "node scripts/download-models.js",
     "download-node": "node scripts/download-node.js",
-    "rebuild": "electron-rebuild"
+    "rebuild": "electron-rebuild",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@fontsource-variable/plus-jakarta-sans": "^5.2.8",
@@ -30,7 +33,9 @@
   },
   "devDependencies": {
     "@electron/rebuild": "^3.7.2",
+    "@vitest/coverage-v8": "^3.2.4",
     "electron": "^33.0.0",
-    "electron-builder": "^25.1.0"
+    "electron-builder": "^25.1.0",
+    "vitest": "^3.2.4"
   }
 }
