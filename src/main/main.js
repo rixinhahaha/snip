@@ -111,9 +111,16 @@ async function createOverlayWindow() {
   }
 
   if (prewarmedOverlay && !prewarmedOverlay.isDestroyed()) {
-    // Reuse pre-warmed window (already loaded — no wait needed)
     overlayWindow = prewarmedOverlay;
     prewarmedOverlay = null;
+    // Ensure the prewarmed window has finished loading before use.
+    // loadFile() is async — if capture triggers before it completes,
+    // the IPC listener in the renderer won't be registered yet.
+    if (overlayWindow.webContents.isLoading()) {
+      await new Promise(resolve => {
+        overlayWindow.webContents.once('did-finish-load', resolve);
+      });
+    }
   } else {
     // Fallback: create fresh and wait for load
     overlayWindow = new BrowserWindow(OVERLAY_WINDOW_OPTIONS);
