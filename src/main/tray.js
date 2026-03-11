@@ -64,8 +64,8 @@ function buildTrayMenu() {
   ];
 
   // Add accelerators only if valid (avoid crashing on malformed config)
-  if (captureAccel) template[0].accelerator = captureAccel;
-  if (quickSnipAccel) template[1].accelerator = quickSnipAccel;
+  if (quickSnipAccel) template[0].accelerator = quickSnipAccel;
+  if (captureAccel) template[1].accelerator = captureAccel;
   if (searchAccel) template[2].accelerator = searchAccel;
 
   try {

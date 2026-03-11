@@ -402,13 +402,12 @@ app.whenReady().then(() => {
   showHomeWindow();
 });
 
-app.on('will-quit', () => {
+app.on('will-quit', (e) => {
+  e.preventDefault();
   unregisterShortcuts();
-  stopOllama();
-
-  // Kill child processes so the app can exit cleanly
   try { require('./segmentation/segmentation').killWorker(); } catch (_) {}
   try { require('./upscaler/upscaler').killWorker(); } catch (_) {}
+  stopOllama().finally(() => app.exit(0));
 });
 
 app.on('window-all-closed', (e) => {

@@ -68,7 +68,7 @@ cd "$PROJECT_ROOT"
 
 echo ""
 echo "🔨 Building native modules for $TARGET_ARCH..."
-node-gyp rebuild
+npx node-gyp rebuild
 
 echo ""
 echo "🏗️  Building signed DMG ($TARGET_ARCH)..."
