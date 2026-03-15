@@ -1099,3 +1099,114 @@ The Shortcuts section shows two groups: **configurable shortcuts** (2 global sho
 | Wrong cert type (Apple Development) | Build script exits early with clear error message |
 | Missing env vars | Build script exits early listing missing vars |
 | Notarization rejected | electron-builder shows Apple's error log with specific binary paths |
+
+---
+
+## 14. MCP Server
+
+### 14.1 Enable MCP Server
+
+**Preconditions:** App running, home window open, Settings tab active.
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Scroll to "MCP Server" section in Settings | Section visible with status dot (red) and toggle in off state |
+| 2 | Toggle the MCP switch on | Socket server starts at `~/Library/Application Support/snip/snip.sock` (chmod 600) |
+| 3 | -- | Status dot turns green |
+| 4 | -- | Category list expands (Library Access, Open in Snip, Transcribe, Organize — all enabled by default) |
+| 5 | -- | Client config block expands showing JSON with `command` and `args` for Claude Desktop |
+| 6 | Click "Copy" | JSON config copied to clipboard; copy button shows checkmark briefly |
+| 7 | Toggle off | Socket server stops, status dot turns red, category list and config block collapse |
+
+**Edge cases:**
+
+| Condition | Expected Behavior |
+|-----------|-------------------|
+| MCP toggled on while socket already exists (stale from crash) | Old socket file removed before binding new one |
+| Client config path differs in packaged vs dev | `getMcpClientConfig()` returns absolute path to packaged `server.js` in `Resources/`, or dev path relative to project root |
+
+### 14.2 Configure MCP Tool Categories
+
+**Preconditions:** MCP server enabled (§14.1).
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Click the toggle next to "Transcribe" | Toggle turns off; `mcpCategories.transcribe` set to `false` in config |
+| 2 | -- | `transcribe_screenshot` MCP tool is no longer registered on the socket server |
+| 3 | Re-enable "Transcribe" toggle | Tool re-registered |
+
+### 14.3 Use MCP from External AI Agent (Claude Desktop)
+
+**Preconditions:** MCP enabled, Claude Desktop configured with the copied JSON config.
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Claude Desktop connects to `src/mcp/server.js` via stdio | MCP adapter starts, connects to Snip's Unix socket |
+| 2 | Agent calls `list_screenshots` | Returns JSON array of screenshot metadata from index |
+| 3 | Agent calls `search_screenshots` with a query | Returns top-matching screenshots with similarity scores |
+| 4 | Agent calls `get_screenshot` with a path | Returns base64-encoded PNG (path must be inside screenshots dir) |
+| 5 | Agent calls `transcribe_screenshot` with a path | Returns OCR text via macOS Vision framework |
+| 6 | Agent calls `organize_screenshot` with a path | Triggers AI organizer, returns updated metadata |
+| 7 | Agent calls `open_in_snip` with a local file path | Snip opens the file in the annotation editor; call blocks until user saves or cancels |
+| 7a | -- | User annotates and presses Save | Edited PNG returned as base64 to the agent |
+| 7b | -- | User presses Esc/Done without saving | `null` returned to the agent |
+| 8 | Agent calls `install_extension` with a folder path | Extension manifest validated, approval dialog shown to user |
+
+**Edge cases:**
+
+| Condition | Expected Behavior |
+|-----------|-------------------|
+| Path traversal in `get_screenshot` | `path.resolve` + `startsWith(screenshotsDir)` check rejects out-of-dir paths |
+| `open_in_snip` with non-image file | Rejected by extension check (PNG/JPEG only) |
+| `open_in_snip` with file > 15 MB | Rejected with size error before decoding |
+| Socket buffer overflow (> 16 MB message) | Connection closed |
+| MCP tool called when category disabled | Returns error indicating tool is not enabled |
+
+---
+
+## 15. Extensions
+
+### 15.1 Install User Extension from Folder
+
+**Preconditions:** App running, Settings tab active, scrolled to "Extensions" section.
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Click "Install Extension from Folder…" | macOS folder picker dialog opens |
+| 2 | Select a folder containing `extension.json` | Manifest is read and validated |
+| 3 | -- | Approval dialog shows extension name, type, requested IPC channels (`ext:` prefixed), and permissions |
+| 4 | Click "Allow" | Extension folder copied to `~/Library/Application Support/snip/extensions/<name>/` |
+| 5 | -- | `extension-registry` loads extension, starts sandboxed child process via `extension-sandbox.js` |
+| 6 | -- | Extension appears in the extensions list (name + type pill) |
+| 7 | -- | Status label shows "Installed" briefly then fades |
+
+**Edge cases:**
+
+| Condition | Expected Behavior |
+|-----------|-------------------|
+| Folder has no `extension.json` | Error: "No extension.json found" |
+| Manifest has invalid type (e.g., `canvas-tool`) | Rejected — user extensions only allowed `action-tool` or `processor` |
+| Extension channel missing `ext:` prefix | Rejected — user extension channels must be prefixed `ext:` |
+| Extension name conflicts with existing | Error: name already installed |
+| User clicks "Deny" in approval dialog | Installation cancelled, no files copied |
+
+### 15.2 Uninstall User Extension
+
+**Preconditions:** At least one user extension installed (§15.1).
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Hover over an extension row in the list | Remove (trash) icon appears on the right |
+| 2 | Click the remove icon | Confirmation or immediate removal |
+| 3 | -- | Sandbox process for that extension killed |
+| 4 | -- | Extension folder deleted from `~/Library/Application Support/snip/extensions/<name>/` |
+| 5 | -- | Extension removed from the list |
+
+### 15.3 Extension Sandbox Security
+
+| Scenario | Expected Behavior |
+|----------|------------------|
+| Extension tries to `require('fs')` | Blocked — module allowlist rejects dangerous built-ins (`fs`, `net`, `child_process`, `http`, `https`, etc.) |
+| Extension calls a non-`ext:`-prefixed IPC channel | Rejected by registry — user extensions can only handle `ext:*` channels |
+| Extension tries to access core Snip IPC channels | Core handlers registered first; extension registration attempt for those channels silently skipped |
+| Sandbox process crashes | Registry detects exit, marks extension as inactive, logs error |

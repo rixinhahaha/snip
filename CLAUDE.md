@@ -13,6 +13,7 @@ This project is **fully autonomous**. Claude Code operates independently across 
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Before writing code. Contains directory structure, code conventions, IPC channels, data flow, and key architectural constraints. |
 | [`docs/DEVOPS.md`](docs/DEVOPS.md) | Before changing build scripts, native modules, or deployment config. Contains build pipeline, signing, and environment setup. |
 | [`docs/USER_FLOWS.md`](docs/USER_FLOWS.md) | Before modifying user-facing behavior. Contains step-by-step flows with edge cases — use as acceptance criteria. |
+| [`docs/MARKETER.md`](docs/MARKETER.md) | Before editing `site/`, adding media assets, or producing social/marketing content. Contains SEO rules, asset optimization standards, canonical URL rules, and the marketing content library. |
 
 **Read the relevant role doc(s) before starting work.** Don't guess at conventions — they're documented.
 
@@ -33,6 +34,7 @@ This project is **fully autonomous**. Claude Code operates independently across 
 | Code conventions changed | `docs/ARCHITECTURE.md` conventions section |
 | New tool or annotation type | `docs/PRODUCT.md` tool table + `docs/USER_FLOWS.md` new tool flow + `docs/ARCHITECTURE.md` directory tree + `README.md` shortcut table |
 | Theme system changes | `docs/DESIGN.md` + `docs/ARCHITECTURE.md` theme system section + `docs/USER_FLOWS.md` §8.4 |
+| Marketing site / SEO / media assets | `docs/MARKETER.md` + update `sitemap.xml` lastmod + verify canonical URLs |
 
 ### How to Update
 

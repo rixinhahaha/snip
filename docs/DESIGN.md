@@ -233,6 +233,24 @@ The Settings page "Animation" section uses `animation-api-key-*` CSS classes:
 - **`.animation-api-key-status`**: 12px status text. `.saved` variant uses `--success` color. `.error` variant uses `--error` color.
 - **`.animation-api-key-help`**: 12px help text in `--text-dim`, contains "Get API Key" link.
 
+### MCP Settings Section (home.css)
+
+The Settings page "MCP Server" section (`#mcp-section`) contains:
+
+- **Main toggle row**: Status dot (`.status-dot.stopped` / `.running` — colored circle) + label + `ai-switch` toggle. When toggled on, the category list and client config expand below.
+- **Category list** (`.mcp-category-list`, hidden until enabled): Each `.mcp-category-row` is a flex row with 8px padding, 8px radius, `--bg-hover` on hover. Contains `.mcp-category-label` (13px, 500 weight, `--text-primary`, min 120px), `.mcp-category-desc` (12px, `--text-secondary`, flex-grows), and a small `ai-switch-sm` toggle. Four categories: Library Access, Open in Snip, Transcribe, Organize.
+- **Config block** (`.mcp-info`, shown when enabled): Label text (12px, `--text-secondary`) above a `<pre>` code block (`.mcp-config-block`) using SF Mono 11px, `--bg-tertiary` background, `--border-card` border, 8px radius, padded right 70px to make room for the copy button. An absolute-positioned `.mcp-copy-btn` in the top-right (8px inset) has `--bg-elevated` background and changes border to `--accent` on hover.
+
+### Extensions Management Section (home.css)
+
+The Settings page "Extensions" section (`#extensions-section`) contains:
+
+- **Section subtitle**: 13px `--text-secondary` description of sandbox isolation.
+- **Extensions list** (`.extensions-list`): `--bg-elevated` background, `--border-card` border, 8px radius. Each installed extension is an `.extension-row` — flex row, 12px horizontal padding, 10px vertical. Contains `.extension-row-name` (13px, 500 weight, `--text-primary`), `.extension-row-type` (11px pill: `--accent-bg` background, `--accent` text, 100px border-radius), a spacer, and `.extension-row-remove` (remove/trash icon button, `opacity: 0` until row hover, `--error-hover` color on hover).
+- **Empty state** (`.extensions-empty`): 13px centered `--text-secondary` text ("No user extensions installed.") shown when list is empty.
+- **Actions row** (`.extensions-actions`): Contains `.install-extension-btn` — a full-width-ish outlined button with `--accent` border, `--accent` text, 8px radius. Hover: `--accent-bg` fill, `--accent-glow` box-shadow. Shows a folder icon + "Install Extension from Folder…" label.
+- **Status label** (`.extensions-status`): 12px text below the install button, `opacity: 0` normally, `opacity: 1` when `.visible`. `.error` variant uses `--error` color.
+
 ### Shortcut Key Display & Edit Button (home.css)
 
 The Settings page shows keyboard shortcuts with a key display span and, for configurable global shortcuts, a pencil edit button:

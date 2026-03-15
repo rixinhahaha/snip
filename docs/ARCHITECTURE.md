@@ -515,6 +515,9 @@ The native Liquid Glass layer is always present (macOS 26+). Dark and Light them
 | `aiEnabled` | `boolean \| undefined` | `undefined` on first launch (triggers AI choice screen), `true` if user opted in, `false` if user opted out. When `false`, Ollama is not started and AI organization is skipped entirely. |
 | `mcpEnabled` | `boolean` | Whether the MCP socket server is active. Default `false`. |
 | `mcpCategories` | `object` | Per-category toggles: `{ library, upload, transcribe, organize }`. Each is boolean, all default to `true`. Controls which MCP tools are active. |
+| `shortcuts` | `object` | Custom shortcut overrides keyed by action ID (e.g. `{ "capture": "CommandOrControl+Shift+2" }`). Only overridden shortcuts are stored; defaults come from `DEFAULT_SHORTCUTS` in `store.js`. |
+| `falApiKey` | `string` | fal.ai API key for cloud animation. Empty string if not configured. |
+| `tagDescriptions` | `object` | Custom descriptions per tag/category name (e.g. `{ "code": "Code editors and terminals" }`). Used by the AI organizer prompt. |
 
 | Ollama binary | `/usr/local/bin/ollama`, `/opt/homebrew/bin/ollama`, or `/Applications/Ollama.app/Contents/Resources/ollama` | same (user-installed) |
 | Ollama models | `~/.ollama/models/` | same (shared with system Ollama) |

@@ -118,6 +118,13 @@ Power users on macOS who take 5-50 screenshots per day: developers, designers, P
 - Custom category management (live-updated when AI auto-registers new categories)
 - **Custom Keybindings**: Users can customize 3 global shortcuts (Capture, Quick Snip, and Search) from the Settings page. Click the edit icon next to a shortcut to enter recording mode, then press a modifier+key combo. Conflict detection prevents duplicate bindings. "Reset All to Defaults" restores original shortcuts. Editor tool shortcuts and OS shortcuts are displayed read-only for reference.
 - Full keyboard shortcuts reference table
+- **MCP Server**: Toggle to enable/disable the MCP (Model Context Protocol) server. When enabled, exposes Snip's library and tools to external AI agents (e.g., Claude Desktop) via a Unix domain socket. Per-tool toggles control which capabilities are exposed (Library, Upload, Transcribe, Organize). Copy-to-clipboard button provides the JSON config snippet needed for Claude Desktop.
+- **Extensions**: Lists user-installed extensions with name, type, and permissions. Install button opens a folder picker to load a new extension (shows a manifest preview and permission approval dialog before installing). Uninstall button removes extension and kills its sandbox process.
+
+### MCP Integration
+- When MCP is enabled, external AI agents can search screenshots, list and retrieve files, transcribe text, trigger AI organization, open files in the editor, and install extensions
+- MCP server runs as a stdio process (`src/mcp/server.js`) that bridges to Snip's Unix socket
+- Per-category toggles in Settings control which tools are exposed
 
 ### Tray Menu
 - Quick Snip, Snip and Annotate, Search Snips, Open Snip, Theme submenu (Dark / Light / Glass), Quit Snip
