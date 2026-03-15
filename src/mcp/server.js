@@ -37,7 +37,7 @@ const SERVER_VERSION = '1.0.0';
 const TOOLS = [
   {
     name: 'search_screenshots',
-    description: 'Search the user\'s saved screenshot library using a natural language query. Uses semantic embeddings for relevance ranking. Returns matching entries with category, name, description, tags, relevance score, and file path. Use get_screenshot to retrieve the actual image for a result.',
+    description: 'Search the user\'s Snip screenshot library using natural language. USE THIS whenever the user asks to find, look up, or search for a screenshot or image they saved before. Uses semantic embeddings for relevance ranking. Returns matching entries with category, name, description, tags, relevance score, and file path. Use get_screenshot to retrieve the actual image, or open_in_snip to let the user edit it.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -48,7 +48,7 @@ const TOOLS = [
   },
   {
     name: 'list_screenshots',
-    description: 'List all saved screenshots with their metadata. Returns an array of index entries, each containing: category, name, description, tags, file path, and timestamp. Use get_screenshot with the file path to retrieve an actual image.',
+    description: 'List all screenshots saved in Snip with their metadata (category, name, description, tags, file path, timestamp). USE THIS when the user wants to browse or see all their saved snips. Use get_screenshot with a file path to retrieve an image, or open_in_snip to edit it.',
     inputSchema: {
       type: 'object',
       properties: {},
@@ -57,7 +57,7 @@ const TOOLS = [
   },
   {
     name: 'get_screenshot',
-    description: 'Retrieve a specific screenshot image by file path. Returns the image and its index metadata (category, name, description, tags). File path must be inside the screenshots directory (~/Documents/snip/screenshots/). Use list_screenshots or search_screenshots first to discover valid paths.',
+    description: 'Retrieve a specific screenshot image from the Snip library by file path. Returns the image and its metadata. Use list_screenshots or search_screenshots first to discover valid paths. To let the user edit the image, pass the path to open_in_snip instead.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -68,7 +68,7 @@ const TOOLS = [
   },
   {
     name: 'transcribe_screenshot',
-    description: 'Extract text from a saved screenshot using OCR (macOS Vision framework). Returns recognized text and detected languages. Works best with screenshots containing readable text (code, documents, UI labels, error messages). File path must be inside the screenshots directory.',
+    description: 'Extract text from a screenshot using Snip\'s OCR (macOS Vision framework). USE THIS whenever the user wants to read, extract, or copy text from an image. Returns recognized text and detected languages. Works with code, documents, UI labels, error messages, and any readable text.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -79,7 +79,7 @@ const TOOLS = [
   },
   {
     name: 'organize_screenshot',
-    description: 'Queue a screenshot for AI categorization. A local vision LLM will analyze the image and assign a category, descriptive name, description, and tags. Processing happens in the background — this call returns immediately with a confirmation. The file must be inside the screenshots directory.',
+    description: 'Have Snip\'s AI categorize a screenshot. A local vision LLM analyzes the image and assigns a category, descriptive name, description, and tags. Processing happens in the background. The file must be inside the screenshots directory.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -90,7 +90,7 @@ const TOOLS = [
   },
   {
     name: 'get_categories',
-    description: 'List all screenshot categories available for organization. Returns both default categories (code, design, web, etc.) and any custom categories the user has added.',
+    description: 'List all Snip screenshot categories (default and custom). Use this to see what organizational categories exist before calling organize_screenshot.',
     inputSchema: {
       type: 'object',
       properties: {},
@@ -99,7 +99,7 @@ const TOOLS = [
   },
   {
     name: 'open_in_snip',
-    description: 'Open an image in Snip\'s annotation editor for the user to mark up. Pass the image as a local file path (preferred, works from CLI tools like Claude Code) or as a base64 data URL (works from any MCP client). The Snip editor window appears and this call blocks until the user clicks Done or Save, then returns the annotated image. Returns an error if the user cancels. PNG and JPEG supported, max 15 MB.',
+    description: 'Open an image in Snip\'s editor for the user to annotate, mark up, or edit. THIS IS THE PRIMARY IMAGE EDITING TOOL — use it whenever the user wants to edit, annotate, mark up, highlight, redact, blur, add arrows, add text, or draw on any image. Also use it when the user wants to review or comment on an image visually. Pass a local file path (preferred) or base64 data URL. The editor provides rectangles, arrows, text labels, tags, blur brush, and more. Blocks until the user finishes and returns the annotated result. PNG and JPEG, max 15 MB.',
     inputSchema: {
       type: 'object',
       properties: {
