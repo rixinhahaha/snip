@@ -22,67 +22,7 @@
     </div>
 
     <div id="toolbar">
-      <button id="tool-select" class="tool-btn active" data-tooltip="Select (V)">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/>
-        </svg>
-      </button>
-      <button id="tool-rect" class="tool-btn" data-tooltip="Rectangle (R)">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <rect x="3" y="3" width="18" height="18" rx="2"/>
-        </svg>
-      </button>
-      <button id="tool-text" class="tool-btn" data-tooltip="Text (T)">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="4 7 4 4 20 4 20 7"/>
-          <line x1="9.5" y1="20" x2="14.5" y2="20"/>
-          <line x1="12" y1="4" x2="12" y2="20"/>
-        </svg>
-      </button>
-      <button id="tool-arrow" class="tool-btn" data-tooltip="Arrow (A)">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <line x1="5" y1="19" x2="19" y2="5"/>
-          <polyline points="12 5 19 5 19 12"/>
-        </svg>
-      </button>
-      <button id="tool-tag" class="tool-btn" data-tooltip="Tag (G)">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="4" cy="20" r="2"/>
-          <line x1="5.5" y1="18.5" x2="10" y2="14"/>
-          <rect x="9" y="5" width="13" height="10" rx="3"/>
-        </svg>
-      </button>
-      <button id="tool-blur-brush" class="tool-btn" data-tooltip="Blur Brush (B)">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="5"/>
-          <path d="M12 2v4M12 18v4M2 12h4M18 12h4"/>
-        </svg>
-      </button>
-      <button id="tool-segment" class="tool-btn hidden" data-tooltip="Segment (S)">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M6 3v12"/>
-          <circle cx="18" cy="6" r="3"/>
-          <circle cx="6" cy="18" r="3"/>
-          <path d="M18 9a9 9 0 01-9 9"/>
-        </svg>
-      </button>
-      <button id="btn-upscale" class="tool-btn" data-tooltip="Upscale (U)">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="15 3 21 3 21 9"/>
-          <polyline points="9 21 3 21 3 15"/>
-          <line x1="21" y1="3" x2="14" y2="10"/>
-          <line x1="3" y1="21" x2="10" y2="14"/>
-        </svg>
-      </button>
-      <button id="tool-transcribe" class="tool-btn" data-tooltip="Transcribe (W)">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
-          <polyline points="14 2 14 8 20 8"/>
-          <line x1="16" y1="13" x2="8" y2="13"/>
-          <line x1="16" y1="17" x2="8" y2="17"/>
-          <line x1="10" y1="9" x2="8" y2="9"/>
-        </svg>
-      </button>
+      <div id="toolbar-tools"></div>
       <div class="toolbar-separator"></div>
       <input type="color" id="color-picker" value="#ff3b30" title="Color">
       <div id="rect-mode-group" class="toolbar-group hidden">
@@ -476,6 +416,7 @@
   </div>
 
   <script src="../../node_modules/fabric/dist/index.min.js"></script>
+  <script src="extension-loader.js"></script>
   <script src="toolbar.js"></script>
   <script src="tools/tool-utils.js"></script>
   <script src="tools/rectangle.js"></script>

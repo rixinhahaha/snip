@@ -64,6 +64,10 @@ body {
   box-shadow: var(--shadow-toolbar);
 }
 
+#toolbar-tools {
+  display: contents;
+}
+
 #toolbar button, #toolbar input, #toolbar select {
   -webkit-app-region: no-drag;
 }

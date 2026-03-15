@@ -333,6 +333,38 @@ function resetShortcuts() {
   saveConfig();
 }
 
+var MCP_CATEGORY_DEFAULTS = {
+  library: true,
+  upload: true,
+  transcribe: true,
+  organize: true
+};
+
+function getMcpConfig() {
+  var cfg = loadConfig();
+  var categories = Object.assign({}, MCP_CATEGORY_DEFAULTS, cfg.mcpCategories || {});
+  return {
+    enabled: !!cfg.mcpEnabled,
+    categories: categories
+  };
+}
+
+function setMcpConfig(update) {
+  var cfg = loadConfig();
+  if (update.enabled !== undefined) {
+    cfg.mcpEnabled = !!update.enabled;
+  }
+  if (update.categories) {
+    if (!cfg.mcpCategories) cfg.mcpCategories = {};
+    for (var key in update.categories) {
+      if (MCP_CATEGORY_DEFAULTS.hasOwnProperty(key)) {
+        cfg.mcpCategories[key] = !!update.categories[key];
+      }
+    }
+  }
+  saveConfig();
+}
+
 module.exports = {
   initStore,
   reloadConfig,
@@ -364,4 +396,6 @@ module.exports = {
   getDefaultShortcuts,
   setShortcut,
   resetShortcuts,
+  getMcpConfig,
+  setMcpConfig,
 };

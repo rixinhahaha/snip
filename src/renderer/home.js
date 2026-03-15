@@ -57,6 +57,8 @@
     }
     initThemeToggle();
     initShortcutsSettings();
+    initMcpSettings();
+    initExtensionsSettings();
     initSetupOverlay();
   }
 
@@ -1132,6 +1134,156 @@
     btn.style.display = '';
     btn.disabled = false;
     document.getElementById('setup-' + section + '-progress').classList.add('hidden');
+  }
+
+  // ── MCP Server settings ──
+  async function initMcpSettings() {
+    var masterToggle = document.getElementById('mcp-toggle-input');
+    var statusDot = document.getElementById('mcp-status-dot');
+    var categoriesDiv = document.getElementById('mcp-categories');
+    var infoDiv = document.getElementById('mcp-info');
+    var configJson = document.getElementById('mcp-config-json');
+    var copyBtn = document.getElementById('mcp-copy-config');
+
+    if (!masterToggle) return;
+
+    // Fetch resolved paths and populate config snippet
+    var clientConfig = await window.snip.getMcpClientConfig();
+    var configStr = JSON.stringify(clientConfig, null, 2);
+    if (configJson) configJson.textContent = configStr;
+
+    // Copy button
+    if (copyBtn) {
+      copyBtn.addEventListener('click', function () {
+        navigator.clipboard.writeText(configStr).then(function () {
+          var label = copyBtn.querySelector('.mcp-copy-label');
+          if (label) {
+            label.textContent = 'Copied!';
+            setTimeout(function () { label.textContent = 'Copy'; }, 1500);
+          }
+        });
+      });
+    }
+
+    function updateMcpUI(config) {
+      masterToggle.checked = config.enabled;
+      statusDot.className = 'status-dot ' + (config.enabled ? 'running' : 'stopped');
+      categoriesDiv.classList.toggle('hidden', !config.enabled);
+      infoDiv.classList.toggle('hidden', !config.enabled);
+
+      document.querySelectorAll('.mcp-cat-toggle').forEach(function (toggle) {
+        var cat = toggle.dataset.category;
+        toggle.checked = config.categories[cat] !== false;
+      });
+    }
+
+    // Load initial state
+    var config = await window.snip.getMcpConfig();
+    updateMcpUI(config);
+
+    // Master toggle
+    masterToggle.addEventListener('change', async function () {
+      var result = await window.snip.setMcpConfig({ enabled: masterToggle.checked });
+      updateMcpUI(result);
+    });
+
+    // Category toggles
+    document.querySelectorAll('.mcp-cat-toggle').forEach(function (toggle) {
+      toggle.addEventListener('change', async function () {
+        var update = { categories: {} };
+        update.categories[toggle.dataset.category] = toggle.checked;
+        var result = await window.snip.setMcpConfig(update);
+        updateMcpUI(result);
+      });
+    });
+
+    // Listen for external changes
+    if (window.snip.onMcpConfigChanged) {
+      window.snip.onMcpConfigChanged(function (config) {
+        updateMcpUI(config);
+      });
+    }
+  }
+
+  // ── Installed Extensions settings ──
+  async function initExtensionsSettings() {
+    var listEl = document.getElementById('extensions-list');
+    var emptyEl = document.getElementById('extensions-empty');
+    var statusEl = document.getElementById('extensions-status');
+    var installBtn = document.getElementById('install-extension-btn');
+
+    if (!listEl || !installBtn) return;
+
+    function showStatus(msg, isError) {
+      statusEl.textContent = msg;
+      statusEl.className = 'extensions-status visible' + (isError ? ' error' : '');
+      setTimeout(function () { statusEl.className = 'extensions-status'; }, 3000);
+    }
+
+    async function loadAndRender() {
+      var extensions = await window.snip.getUserExtensions();
+      listEl.innerHTML = '';
+
+      if (extensions.length === 0) {
+        listEl.style.display = 'none';
+        emptyEl.style.display = '';
+        return;
+      }
+
+      listEl.style.display = '';
+      emptyEl.style.display = 'none';
+
+      extensions.forEach(function (ext) {
+        var row = document.createElement('div');
+        row.className = 'extension-row';
+
+        var name = document.createElement('span');
+        name.className = 'extension-row-name';
+        name.textContent = ext.displayName || ext.name;
+
+        var type = document.createElement('span');
+        type.className = 'extension-row-type';
+        type.textContent = ext.type;
+
+        var spacer = document.createElement('span');
+        spacer.className = 'extension-row-spacer';
+
+        var removeBtn = document.createElement('button');
+        removeBtn.className = 'extension-row-remove';
+        removeBtn.textContent = 'Remove';
+        removeBtn.addEventListener('click', async function () {
+          await window.snip.removeUserExtension(ext.name);
+          showStatus('Removed ' + ext.name, false);
+          loadAndRender();
+        });
+
+        row.appendChild(name);
+        row.appendChild(type);
+        if (ext.permissions && ext.permissions.length > 0) {
+          var perms = document.createElement('span');
+          perms.className = 'extension-row-type';
+          perms.textContent = ext.permissions.join(', ');
+          row.appendChild(perms);
+        }
+        row.appendChild(spacer);
+        row.appendChild(removeBtn);
+        listEl.appendChild(row);
+      });
+    }
+
+    await loadAndRender();
+
+    installBtn.addEventListener('click', async function () {
+      var result = await window.snip.installExtensionFromFolder();
+      if (result && result.error) {
+        if (result.error !== 'Cancelled') showStatus(result.error, true);
+        return;
+      }
+      if (result && result.installed) {
+        showStatus('Installed ' + result.name, false);
+        loadAndRender();
+      }
+    });
   }
 
   function initSetupOverlay() {

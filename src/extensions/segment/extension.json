@@ -1,0 +1,23 @@
+{
+  "name": "segment",
+  "displayName": "Segment",
+  "type": "ai-tool",
+  "toolId": "segment",
+  "icon": "<svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M6 3v12\"/><circle cx=\"18\" cy=\"6\" r=\"3\"/><circle cx=\"6\" cy=\"18\" r=\"3\"/><path d=\"M18 9a9 9 0 01-9 9\"/></svg>",
+  "tooltip": "Segment (S)",
+  "shortcut": "s",
+  "toolbarPosition": 7,
+  "hidden": true,
+  "toolbarGroups": [],
+  "renderer": "../../renderer/tools/segment.js",
+  "main": "main.js",
+  "ipc": [
+    { "channel": "check-segment-support", "method": "checkSupport" },
+    { "channel": "segment-at-point", "method": "segmentAtPoint" },
+    { "channel": "check-animate-support", "method": "checkAnimateSupport" },
+    { "channel": "list-animation-presets", "method": "listPresets" },
+    { "channel": "generate-animation-presets", "method": "generatePresets" },
+    { "channel": "animate-cutout", "method": "animateCutout" },
+    { "channel": "save-animation", "method": "saveAnimation" }
+  ]
+}

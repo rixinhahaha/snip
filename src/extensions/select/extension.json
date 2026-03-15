@@ -1,0 +1,12 @@
+{
+  "name": "select",
+  "displayName": "Select",
+  "type": "canvas-tool",
+  "toolId": "select",
+  "icon": "<svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z\"/></svg>",
+  "tooltip": "Select (V)",
+  "shortcut": "v",
+  "toolbarPosition": 1,
+  "toolbarGroups": [],
+  "renderer": "../../renderer/tools/selection.js"
+}

@@ -1,0 +1,12 @@
+{
+  "name": "blur-brush",
+  "displayName": "Blur Brush",
+  "type": "canvas-tool",
+  "toolId": "blur-brush",
+  "icon": "<svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><circle cx=\"12\" cy=\"12\" r=\"5\"/><path d=\"M12 2v4M12 18v4M2 12h4M18 12h4\"/></svg>",
+  "tooltip": "Blur Brush (B)",
+  "shortcut": "b",
+  "toolbarPosition": 6,
+  "toolbarGroups": ["brush-group"],
+  "renderer": "../../renderer/tools/blur-brush.js"
+}

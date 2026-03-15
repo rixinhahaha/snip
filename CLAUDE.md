@@ -98,6 +98,11 @@ These are non-negotiable rules. Violating them causes crashes or broken UX:
 | Annotation tools | `src/renderer/tools/*.js` |
 | Preload (IPC bridge) | `src/preload/preload.js` |
 | AI agent | `src/main/organizer/agent.js` + `worker.js` |
+| Extension registry | `src/main/extension-registry.js` |
+| Extensions (bundled) | `src/extensions/` + `extensions.json` |
+| Extensions (user) | `~/Library/Application Support/snip/extensions/` |
+| MCP server | `src/mcp/server.js` |
+| Extension sandbox | `src/main/extension-sandbox.js` + `extension-sandbox-worker.js` |
 | Ollama manager | `src/main/ollama-manager.js` |
 | Ollama (system) | `/Applications/Ollama.app` or `/usr/local/bin/ollama` (user-installed) |
 | Ollama models | `~/.ollama/models/` (managed by system Ollama) |

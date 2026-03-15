@@ -19,6 +19,22 @@ contextBridge.exposeInMainWorld('snip', {
     ipcRenderer.on('editor-image-data', (event, data) => callback(data));
   },
   closeEditor: () => ipcRenderer.send('close-editor'),
+  sendEditorResult: (dataURL) => ipcRenderer.send('editor-result', dataURL),
+
+  // Generic extension IPC bridge (new extensions use these instead of adding named methods)
+  // Only channels prefixed with 'ext:' are allowed to prevent access to internal IPC channels
+  invokeExtension: (channel, ...args) => {
+    if (typeof channel !== 'string' || !channel.startsWith('ext:')) {
+      return Promise.reject(new Error('Extension channels must use ext: prefix'));
+    }
+    return ipcRenderer.invoke(channel, ...args);
+  },
+  onExtensionEvent: (channel, callback) => {
+    if (typeof channel !== 'string' || !channel.startsWith('ext:')) return;
+    var handler = (event, ...args) => callback(...args);
+    ipcRenderer.on(channel, handler);
+    return () => ipcRenderer.removeListener(channel, handler);
+  },
 
   // Screen recording permission
   getScreenPermission: () => ipcRenderer.invoke('get-screen-permission'),
@@ -106,6 +122,19 @@ contextBridge.exposeInMainWorld('snip', {
   // Settings: Animation (fal.ai)
   getAnimationConfig: () => ipcRenderer.invoke('get-animation-config'),
   setAnimationConfig: (config) => ipcRenderer.invoke('set-animation-config', config),
+
+  // Settings: User Extensions
+  getUserExtensions: () => ipcRenderer.invoke('get-user-extensions'),
+  removeUserExtension: (name) => ipcRenderer.invoke('remove-user-extension', name),
+  installExtensionFromFolder: () => ipcRenderer.invoke('install-extension-from-folder'),
+
+  // Settings: MCP Server
+  getMcpConfig: () => ipcRenderer.invoke('get-mcp-config'),
+  setMcpConfig: (config) => ipcRenderer.invoke('set-mcp-config', config),
+  getMcpClientConfig: () => ipcRenderer.invoke('get-mcp-client-config'),
+  onMcpConfigChanged: (callback) => {
+    ipcRenderer.on('mcp-config-changed', (event, config) => callback(config));
+  },
 
   // Animation (fal.ai)
   checkAnimateSupport: () => ipcRenderer.invoke('check-animate-support'),

@@ -1,0 +1,12 @@
+{
+  "name": "arrow",
+  "displayName": "Arrow",
+  "type": "canvas-tool",
+  "toolId": "arrow",
+  "icon": "<svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><line x1=\"5\" y1=\"19\" x2=\"19\" y2=\"5\"/><polyline points=\"12 5 19 5 19 12\"/></svg>",
+  "tooltip": "Arrow (A)",
+  "shortcut": "a",
+  "toolbarPosition": 4,
+  "toolbarGroups": ["stroke-group"],
+  "renderer": "../../renderer/tools/arrow.js"
+}

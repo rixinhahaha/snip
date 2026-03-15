@@ -1,4 +1,4 @@
-/* global EditorCanvasManager, Toolbar, RectangleTool, TextTool, ArrowTool, TagTool, BlurBrushTool, SegmentTool, AnimateTool, TranscribeTool, ToolUtils */
+/* global EditorCanvasManager, ExtensionLoader, Toolbar, RectangleTool, TextTool, ArrowTool, TagTool, BlurBrushTool, SegmentTool, AnimateTool, TranscribeTool, ToolUtils */
 
 (function() {
   'use strict';
@@ -19,11 +19,13 @@
 
   let _editorReady = false; // DOM + tools initialized
   let _editorInitialized = false; // image data loaded
+  let _mcpUpload = false; // true when editor was opened by MCP upload_image
 
   // Initialize editor with image data (called from push or pull path)
   async function initEditorWithData(imageData) {
     if (_editorInitialized) return; // prevent double init
     _editorInitialized = true;
+    _mcpUpload = !!imageData.mcpUpload;
 
     const { croppedDataURL, cssWidth, cssHeight } = imageData;
 
@@ -43,6 +45,11 @@
 
     // Setup annotation tools (only once)
     if (!_editorReady) {
+      // Build toolbar buttons from extension manifests
+      if (imageData.extensions && typeof ExtensionLoader !== 'undefined') {
+        ExtensionLoader.buildToolbar(imageData.extensions);
+      }
+
       // Load fonts
       const fonts = await window.snip.getSystemFonts();
       var fontSelect = document.getElementById('font-select');
@@ -819,6 +826,7 @@
       onDone: function() { copyToClipboardAndClose(); },
       onSave: function() { saveScreenshot(); },
       onCancel: function() {
+        if (_mcpUpload) window.snip.sendEditorResult(null);
         EditorCanvasManager.clearAnnotations();
         window.snip.closeEditor();
       },
@@ -1053,6 +1061,7 @@
     canvas.renderAll();
     var dataURL = EditorCanvasManager.exportAsDataURL('png', 1.0);
     await window.snip.copyToClipboard(dataURL);
+    if (_mcpUpload) window.snip.sendEditorResult(dataURL);
     EditorCanvasManager.clearAnnotations();
     window.snip.closeEditor();
     window.snip.showNotification('Copied to clipboard');
@@ -1071,6 +1080,7 @@
 
     var pngDataURL = EditorCanvasManager.exportAsDataURL('png', 1.0);
     await window.snip.copyToClipboard(pngDataURL);
+    if (_mcpUpload) window.snip.sendEditorResult(pngDataURL);
 
     EditorCanvasManager.clearAnnotations();
     window.snip.closeEditor();

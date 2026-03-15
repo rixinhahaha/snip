@@ -9,7 +9,8 @@ const {
   getTheme, setTheme,
   getAiEnabled, setAiEnabled,
   getFalApiKey, setFalApiKey,
-  getShortcuts, getDefaultShortcuts, setShortcut, resetShortcuts
+  getShortcuts, getDefaultShortcuts, setShortcut, resetShortcuts,
+  getMcpConfig, setMcpConfig
 } = require('./store');
 const { queueNewFile } = require('./organizer/watcher');
 const ollamaManager = require('./ollama-manager');
@@ -187,6 +188,10 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
     const win = createEditorWindowFn(data.cssWidth, data.cssHeight);
     editorWindowRef = win;
 
+    // Attach extension manifest so the renderer can build the toolbar dynamically
+    const extensionRegistry = require('./extension-registry');
+    data.extensions = extensionRegistry.getRendererManifest();
+
     // Push image data to the editor once its content is ready
     const pushData = () => {
       if (win && !win.isDestroyed()) {
@@ -211,6 +216,10 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
 
   // Editor requests image data on load (fallback for non-prewarmed windows)
   ipcMain.handle('get-editor-image', async () => {
+    if (pendingEditorData && !pendingEditorData.extensions) {
+      const extensionRegistry = require('./extension-registry');
+      pendingEditorData.extensions = extensionRegistry.getRendererManifest();
+    }
     return pendingEditorData;
   });
 
@@ -328,6 +337,156 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
   ipcMain.handle('set-animation-config', async (event, { falApiKey }) => {
     if (falApiKey !== undefined) setFalApiKey(falApiKey);
     return true;
+  });
+
+  // Settings: MCP Server
+  ipcMain.handle('get-mcp-config', async () => {
+    return getMcpConfig();
+  });
+
+  ipcMain.handle('set-mcp-config', async (event, update) => {
+    var before = getMcpConfig();
+    setMcpConfig(update);
+    var after = getMcpConfig();
+
+    // Start or stop the socket server based on toggle
+    if (after.enabled && !before.enabled) {
+      var { startMcpServer } = require('./main');
+      startMcpServer();
+    } else if (!after.enabled && before.enabled) {
+      var { stopSocketServer } = require('./socket-server');
+      stopSocketServer();
+    }
+
+    // Broadcast change to all windows
+    for (const win of BrowserWindow.getAllWindows()) {
+      if (!win.isDestroyed()) win.webContents.send('mcp-config-changed', after);
+    }
+    return after;
+  });
+
+  // MCP: resolve paths for client config snippet
+  ipcMain.handle('get-mcp-client-config', async () => {
+    var nodePath;
+    var serverPath;
+
+    if (app.isPackaged) {
+      // Packaged: use bundled Node + unpacked MCP server
+      nodePath = path.join(process.resourcesPath, 'node', 'node');
+      serverPath = path.join(process.resourcesPath, 'app.asar.unpacked', 'src', 'mcp', 'server.js');
+    } else {
+      // Dev: use system node + source file
+      var { findNodeBinary } = require('./node-binary');
+      nodePath = findNodeBinary() || 'node';
+      serverPath = path.join(__dirname, '..', 'mcp', 'server.js');
+    }
+
+    return {
+      mcpServers: {
+        snip: {
+          command: nodePath,
+          args: [serverPath]
+        }
+      }
+    };
+  });
+
+  // Settings: User Extensions
+  var extensionRegistry = require('./extension-registry');
+
+  ipcMain.handle('get-user-extensions', async () => {
+    return extensionRegistry.getUserExtensions();
+  });
+
+  ipcMain.handle('remove-user-extension', async (event, name) => {
+    extensionRegistry.removeUserExtension(name);
+    return extensionRegistry.getUserExtensions();
+  });
+
+  ipcMain.handle('install-extension-from-folder', async () => {
+    var { dialog } = require('electron');
+    var result = await dialog.showOpenDialog({
+      title: 'Select Extension Folder',
+      properties: ['openDirectory']
+    });
+    if (result.canceled || !result.filePaths[0]) return { error: 'Cancelled' };
+
+    var srcFolder = result.filePaths[0];
+    var manifestPath = path.join(srcFolder, 'extension.json');
+    if (!fs.existsSync(manifestPath)) return { error: 'No extension.json found in selected folder' };
+
+    var manifest;
+    try { manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8')); }
+    catch { return { error: 'Invalid JSON in extension.json' }; }
+
+    // Validate manifest schema
+    if (!extensionRegistry.validateManifest(manifest, manifest.name || 'unknown')) {
+      return { error: 'Invalid manifest — check name, ipc, and toolbarPosition fields' };
+    }
+
+    // Validate name is safe for filesystem
+    if (!/^[a-zA-Z0-9\-]+$/.test(manifest.name)) {
+      return { error: 'Extension name must be alphanumeric with hyphens only' };
+    }
+
+    // User extensions: type restriction
+    if (manifest.type !== 'action-tool' && manifest.type !== 'processor') {
+      return { error: 'Only action-tool and processor types are supported for user extensions' };
+    }
+
+    // User extensions: ext: prefix required
+    if (Array.isArray(manifest.ipc)) {
+      for (var i = 0; i < manifest.ipc.length; i++) {
+        if (!manifest.ipc[i].channel.startsWith('ext:')) {
+          return { error: 'IPC channel "' + manifest.ipc[i].channel + '" must use ext: prefix' };
+        }
+      }
+    }
+
+    // Check main file exists
+    if (manifest.main && !fs.existsSync(path.join(srcFolder, manifest.main))) {
+      return { error: 'File "' + manifest.main + '" not found in folder' };
+    }
+
+    // Check name doesn't conflict
+    var existing = extensionRegistry.getUserExtensions();
+    if (existing.find(function (e) { return e.name === manifest.name; })) {
+      return { error: 'Extension "' + manifest.name + '" is already installed' };
+    }
+
+    // Approval dialog
+    var detail = 'Type: ' + manifest.type + '\n';
+    if (manifest.ipc) detail += 'IPC channels: ' + manifest.ipc.length + '\n';
+    if (manifest.permissions && manifest.permissions.length > 0) {
+      detail += 'Permissions: ' + manifest.permissions.join(', ') + '\n';
+    }
+
+    var approval = await dialog.showMessageBox({
+      type: 'question',
+      title: 'Install Extension',
+      message: 'Install "' + (manifest.displayName || manifest.name) + '"?',
+      detail: detail + '\nOnly install extensions from sources you trust.',
+      buttons: ['Cancel', 'Install'],
+      defaultId: 0, cancelId: 0
+    });
+    if (approval.response !== 1) return { error: 'Installation cancelled' };
+
+    // Copy files (skip symlinks and subdirectories)
+    var destDir = path.join(extensionRegistry.getUserExtensionsDir(), manifest.name);
+    fs.mkdirSync(destDir, { recursive: true });
+    var files = fs.readdirSync(srcFolder);
+    for (var j = 0; j < files.length; j++) {
+      var srcPath = path.join(srcFolder, files[j]);
+      var destPath = path.join(destDir, files[j]);
+      var stat = fs.lstatSync(srcPath);
+      if (stat.isFile() && !stat.isSymbolicLink()) {
+        fs.copyFileSync(srcPath, destPath);
+      }
+    }
+
+    var loaded = extensionRegistry.loadUserExtension(manifest.name);
+    if (!loaded) return { error: 'Extension installed but failed to load' };
+    return { installed: true, name: manifest.name };
   });
 
   // Settings: Categories
@@ -505,163 +664,6 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
     return { pruned, embeddings: generated };
   });
 
-  // Upscaling: upscale image via ONNX model in child process
-  ipcMain.handle('upscale-image', async (event, { imageBase64 }) => {
-    const { upscaleImage } = require('./upscaler/upscaler');
-    return upscaleImage(imageBase64, function(progress) {
-      if (event.sender && !event.sender.isDestroyed()) {
-        event.sender.send('upscale-progress', progress);
-      }
-    });
-  });
-
-  // Segmentation: check device support
-  ipcMain.handle('check-segment-support', async () => {
-    const { checkSupport } = require('./segmentation/segmentation');
-    return checkSupport();
-  });
-
-  // Segmentation: generate mask at click point
-  ipcMain.handle('segment-at-point', async (event, { points, cssWidth, cssHeight }) => {
-    const { generateMask } = require('./segmentation/segmentation');
-
-    if (!pendingEditorData || !pendingEditorData.croppedDataURL) {
-      throw new Error('No editor image available for segmentation');
-    }
-
-    const image = nativeImage.createFromDataURL(pendingEditorData.croppedDataURL);
-    let size = image.getSize();
-
-    // Resize to max 1024px on longest side (saves memory, SAM resizes internally anyway)
-    const MAX_DIM = 1024;
-    let resized = image;
-    if (size.width > MAX_DIM || size.height > MAX_DIM) {
-      const scale = MAX_DIM / Math.max(size.width, size.height);
-      resized = image.resize({
-        width: Math.round(size.width * scale),
-        height: Math.round(size.height * scale)
-      });
-      size = resized.getSize();
-    }
-
-    // Convert BGRA bitmap to RGBA
-    const bitmap = resized.toBitmap();
-    const rgba = new Uint8Array(bitmap.length);
-    for (let i = 0; i < bitmap.length; i += 4) {
-      rgba[i] = bitmap[i + 2];
-      rgba[i + 1] = bitmap[i + 1];
-      rgba[i + 2] = bitmap[i];
-      rgba[i + 3] = bitmap[i + 3];
-    }
-
-    return generateMask(rgba, size.width, size.height, points, cssWidth, cssHeight);
-  });
-
-  // Animation: check support
-  ipcMain.handle('check-animate-support', async () => {
-    const { checkSupport } = require('./animation/animation');
-    return checkSupport();
-  });
-
-  // Animation: list available presets (static fallback)
-  ipcMain.handle('list-animation-presets', async () => {
-    const { listPresets } = require('./animation/animation');
-    return listPresets();
-  });
-
-  // Animation: generate AI-tailored presets from cutout image via Ollama
-  ipcMain.handle('generate-animation-presets', async (event, { cutoutBase64 }) => {
-    try {
-      const { generatePresets, listPresets } = require('./animation/animation');
-      var aiPresets = await generatePresets(cutoutBase64);
-      if (aiPresets && aiPresets.length > 0) {
-        new Notification({ title: 'Snip', body: 'AI presets ready — ' + aiPresets.length + ' animations suggested' }).show();
-        return { source: 'ai', presets: aiPresets };
-      }
-      // AI returned null → fallback
-      return { source: 'static', presets: listPresets() };
-    } catch (err) {
-      console.warn('[Animation] AI preset generation failed:', err.message);
-      const { listPresets } = require('./animation/animation');
-      return { source: 'static', presets: listPresets() };
-    }
-  });
-
-  // Animation: generate animation from cutout via fal.ai API
-  ipcMain.handle('animate-cutout', async (event, { cutoutDataURL, presetName, options }) => {
-    const { generateAnimation } = require('./animation/animation');
-
-    var result = await generateAnimation(
-      cutoutDataURL,
-      presetName,
-      options || { fps: 16, loops: 0 },
-      function(progress) {
-        if (event.sender && !event.sender.isDestroyed()) {
-          event.sender.send('animate-progress', progress);
-        }
-      }
-    );
-
-    new Notification({ title: 'Snip', body: 'GIF ready — ' + result.frameCount + ' frames generated' }).show();
-
-    // Convert Buffers to base64 data URLs for reliable IPC to renderer.
-    var gifB64 = Buffer.from(result.gifBuffer).toString('base64');
-    var apngB64 = Buffer.from(result.apngBuffer).toString('base64');
-
-    return {
-      gifDataURL: 'data:image/gif;base64,' + gifB64,
-      apngDataURL: 'data:image/png;base64,' + apngB64,
-      gifBuffer: Array.from(result.gifBuffer),
-      apngBuffer: Array.from(result.apngBuffer),
-      frameCount: result.frameCount,
-      width: result.width,
-      height: result.height
-    };
-  });
-
-  // Transcription: extract text from screenshot via native macOS Vision framework
-  ipcMain.handle('transcribe-screenshot', async (event) => {
-    if (!pendingEditorData || !pendingEditorData.croppedDataURL) {
-      return { success: false, error: 'No editor image available' };
-    }
-
-    try {
-      const { transcribe } = require('./transcription/transcription');
-      const raw = pendingEditorData.croppedDataURL.replace(/^data:image\/\w+;base64,/, '');
-      const result = await transcribe(raw);
-
-      if (!result.success) {
-        return { success: false, error: result.error || 'Transcription failed' };
-      }
-
-      return {
-        success: true,
-        languages: result.languages || ['unknown'],
-        text: result.text || ''
-      };
-    } catch (err) {
-      console.error('[Snip] Transcription failed:', err.message);
-      return { success: false, error: err.message };
-    }
-  });
-
-  // Animation: save animated file to animations/ subdirectory (skips LLM processing)
-  ipcMain.handle('save-animation', async (event, { buffer, format, timestamp }) => {
-    var screenshotsDir = getScreenshotsDir();
-    var animationsDir = path.join(screenshotsDir, 'animations');
-    fs.mkdirSync(animationsDir, { recursive: true });
-
-    var ext = format === 'apng' ? 'png' : 'gif';
-    var filename = timestamp + '.' + ext;
-    var filepath = path.join(animationsDir, filename);
-
-    var buf = Buffer.from(buffer);
-    fs.writeFileSync(filepath, buf);
-    console.log('[Snip] Saved animation: animations/%s (%s KB)', filename, (buf.length / 1024).toFixed(1));
-
-    return filepath;
-  });
-
   // Shortcuts
   ipcMain.handle('get-shortcuts', async () => {
     return getShortcuts();
@@ -728,4 +730,12 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
   });
 }
 
-module.exports = { registerIpcHandlers };
+function getPendingEditorData() {
+  return pendingEditorData;
+}
+
+function setPendingEditorData(data) {
+  pendingEditorData = data;
+}
+
+module.exports = { registerIpcHandlers, getPendingEditorData, setPendingEditorData };

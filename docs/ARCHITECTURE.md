@@ -30,9 +30,13 @@
 ```
 src/
   main/                     # Main process (Node.js / CommonJS)
-    main.js                  # App lifecycle, window creation, liquid glass init
+    main.js                  # App lifecycle, window creation, liquid glass init, MCP socket handlers
     capturer.js              # Screen capture via desktopCapturer
-    ipc-handlers.js          # All IPC channel handlers
+    ipc-handlers.js          # Core IPC channel handlers (non-extension)
+    extension-registry.js    # Loads extension manifests, registers IPC handlers, manages lifecycle
+    socket-server.js         # Unix domain socket server for MCP adapter communication
+    extension-sandbox.js     # Manages sandboxed child processes for user extensions
+    extension-sandbox-worker.js  # Forked child: blocks dangerous modules, proxies permission APIs
     tray.js                  # Menu-bar tray icon and context menu, rebuildTrayMenu() for live accelerator updates
     shortcuts.js             # Global keyboard shortcuts (Cmd+Shift+2, Cmd+Shift+S, Cmd+Shift+1), reregisterShortcuts() for dynamic rebinding
     store.js                 # Config persistence, index I/O, fal.ai API key storage, aiEnabled flag, reloadConfig(), getShortcuts(), getDefaultShortcuts(), setShortcut(), resetShortcuts()
@@ -58,6 +62,29 @@ src/
       transcription.js       # Node.js wrapper: compiles + spawns Swift helper, parses JSON result
       transcribe.swift       # Swift CLI: VNRecognizeTextRequest OCR + Unicode script detection, reads base64 via stdin
 
+  extensions/                # Extension manifests + main modules (loaded by extension-registry.js)
+    select/extension.json      # Select tool (canvas-tool, no main module)
+    rectangle/extension.json   # Rectangle tool (canvas-tool, no main module)
+    text/extension.json        # Text tool (canvas-tool, no main module)
+    arrow/extension.json       # Arrow tool (canvas-tool, no main module)
+    tag/extension.json         # Tag tool (canvas-tool, no main module)
+    blur-brush/extension.json  # Blur brush tool (canvas-tool, no main module)
+    segment/                   # SAM segmentation + animation (ai-tool)
+      extension.json           # Manifest: segment + animate IPC channels
+      main.js                  # IPC handlers for segmentation + animation
+    upscale/                   # Image upscaling (action-tool)
+      extension.json           # Manifest with buttonId override (btn-upscale)
+      main.js                  # IPC handler for upscale-image
+    transcribe/                # Text extraction (action-tool)
+      extension.json
+      main.js                  # IPC handler for transcribe-screenshot
+    organizer/extension.json   # AI organizer (processor, no toolbar button)
+    extensions.json            # Registry of active bundled extensions
+    EXTENSIONS.md              # Extension developer guide
+
+  mcp/                       # MCP (Model Context Protocol) server
+    server.js                  # Stdio adapter — bridges MCP JSON-RPC to Snip's Unix socket
+
   renderer/                  # Renderer processes (no modules, globals via IIFEs)
     index.html / app.js      # Capture overlay — fullscreen transparent region selector
     styles.css               # Overlay-specific styles (capture selection UI)
@@ -66,6 +93,7 @@ src/
     editor.html / editor-app.js  # Annotation editor
     editor-styles.css        # Editor toolbar and canvas styles
     editor-canvas-manager.js # Fabric.js canvas wrapper (init, export, undo/redo)
+    extension-loader.js      # Builds toolbar buttons dynamically from extension manifests
     toolbar.js               # Editor toolbar state machine
     theme.css                # ALL theme tokens (Dark, Light, Glass + solid fallback)
     tools/
@@ -108,6 +136,7 @@ tests/                       # Vitest unit tests
     store.test.js              # Config + index CRUD (real fs with temp dirs)
     agent.test.js              # processScreenshot (Ollama prototype spy)
     embeddings.test.js         # cosineSimilarity + searchScreenshots
+    mcp.test.js                # MCP config, socket server, category gating, path validation
   renderer/
     tool-utils.test.js         # hexToRgba, lineEndpointForTag, nextTagId
 vendor/                      # Downloaded at dev time, bundled at build time
@@ -214,6 +243,53 @@ AI preset generation uses the `generate-animation-presets` IPC channel, which ca
 All fal.ai communication uses raw Node.js `https` module (no SDK). Users must provide their own fal.ai API key in Settings > Animation. The key is stored in `snip-config.json`. If no key is configured, the Animate button does not appear. Cost is approximately $0.08-0.15 per animation at 480p resolution.
 
 Saved animations go to `~/Documents/snip/screenshots/animations/` subdirectory, which is excluded from AI organizer processing (watcher's `depth: 0` skips subdirectories, and `.gif` extensions aren't in the watcher's allow list). The result panel supports keyboard shortcuts: Enter or Cmd+S saves GIF (and auto-closes the panel), R redoes with another preset, Esc discards. The Settings page shows an Animation section with a fal.ai API key input (password field with show/hide toggle and save button) and an info panel with provider, resolution, duration, output formats, save location, and AI preset availability status.
+
+### Extension System
+Tools and features are defined as extensions in `src/extensions/{name}/extension.json`. Each manifest declares:
+
+| Field | Purpose |
+|-------|---------|
+| `name` | Unique identifier |
+| `type` | `canvas-tool`, `ai-tool`, `action-tool`, or `processor` |
+| `toolId` | DOM button ID suffix (e.g., `select` → `tool-select`) |
+| `buttonId` | Optional override for the button ID (e.g., `btn-upscale`) |
+| `icon` | SVG markup for the toolbar button |
+| `shortcut` | Keyboard shortcut key |
+| `toolbarPosition` | Sort order in toolbar (1-based) |
+| `hidden` | Start hidden (e.g., segment waits for device check) |
+| `toolbarGroups` | Contextual control groups to show when active (e.g., `["stroke-group"]`) |
+| `main` | Path to Node.js module with IPC handlers (relative to extension dir, must be a basename — no `..` allowed) |
+| `ipc` | Array of `{ channel, method }` mappings from IPC channel to exported function |
+
+**Startup flow:**
+1. `extension-registry.loadAll()` reads `extensions.json` for bundled extensions, then scans `~/Library/Application Support/snip/extensions/` for user extensions. User extensions are tagged `_source: 'user'` and restricted to `action-tool`/`processor` types with `ext:` prefixed channels.
+2. `extension-registry.setContext()` provides shared context (e.g., `getEditorData`)
+3. Core IPC handlers register first (protects channels from squatting), then `extension-registry.registerIpcHandlers()` registers extension handlers. Builtin extensions use in-process `require()`. User extensions run in sandboxed child processes via `extension-sandbox.js`.
+4. `extension-registry.warmUp()` calls `warmUp()` on builtin extensions that export it (e.g., SAM model pre-loading)
+5. On quit, `extension-registry.killWorkers()` calls `killWorker()` on builtin extensions and kills all sandboxed user extension processes
+
+**Renderer side:** `extension-loader.js` receives the manifest array via `editor-image-data` IPC, builds toolbar buttons into `#toolbar-tools`, and provides helpers for shortcut maps and toolbar group visibility.
+
+Extensions with `toolbarGroups: []` manage their own contextual controls (e.g., segment.js shows `segment-color-group` manually during cutout tagging, not on tool selection).
+
+### MCP Server
+An MCP (Model Context Protocol) server exposes Snip's capabilities to external AI agents (e.g., Claude Desktop). Two components:
+
+1. **Unix domain socket** (`socket-server.js`) — listens at `~/Library/Application Support/snip/snip.sock` (chmod 600). Accepts newline-delimited JSON messages with `{ id, action, params }`. Registered actions: `search_screenshots`, `list_screenshots`, `get_screenshot`, `transcribe_screenshot`, `organize_screenshot`, `get_categories`, `open_in_snip`, `install_extension`. The `open_in_snip` action opens the editor with an external image, blocks until the user finishes annotating, and returns the edited PNG via a `pendingMcpResolve` promise resolved by the `editor-result` IPC channel.
+
+2. **MCP stdio adapter** (`src/mcp/server.js`) — standalone Node.js process that speaks MCP JSON-RPC 2.0 over stdio and forwards tool calls to the socket. Configure in Claude Desktop:
+```json
+{
+  "mcpServers": {
+    "snip": {
+      "command": "node",
+      "args": ["/path/to/snip/src/mcp/server.js"]
+    }
+  }
+}
+```
+
+**Security:** Library, transcribe, and organize MCP tools validate that paths are inside the screenshots directory (`path.resolve` + `startsWith` check). `open_in_snip` intentionally accepts any local file path (restricted to PNG/JPEG by extension check, size-capped at 15 MB) since it's designed for uploading external images to annotate. The socket buffer is capped at 16 MB per connection, and MCP Content-Length is capped at 10 MB. The `open_in_snip` action validates base64 length before decoding (max ~15 MB raw). The `editor-result` IPC channel validates `event.sender.id` against the editor window's `webContentsId` to prevent other windows from resolving the pending upload promise.
 
 ### Single Index File
 All screenshot metadata lives in `~/Documents/snip/screenshots/.index.json`. Simple, atomic, easy to debug. No database.
@@ -345,6 +421,14 @@ The preload script (`preload.js`) exposes `window.snip` with these methods:
 | `setShortcut(id, keys)` | R -> M | Saves a single shortcut override |
 | `resetShortcuts()` | R -> M | Deletes all custom shortcuts, restores defaults |
 | `onShortcutsChanged(cb)` | M -> R | Broadcast event when shortcuts change (re-registers global shortcuts) |
+| `getMcpConfig()` | R -> M | Get MCP enabled state + per-category toggles |
+| `setMcpConfig(config)` | R -> M | Update MCP enabled/category state; starts/stops socket server on toggle |
+| `getMcpClientConfig()` | R -> M | Get resolved `command`+`args` JSON for MCP client config (dev vs packaged paths) |
+| `onMcpConfigChanged(cb)` | M -> R | Push event when MCP config changes |
+| `sendEditorResult(dataURL)` | R -> M | Send edited image (or null for cancel) back to MCP `open_in_snip` handler |
+| `getUserExtensions()` | R -> M | List user-installed extensions (name, type, permissions) |
+| `removeUserExtension(name)` | R -> M | Remove a user extension (kills sandbox, deletes files) |
+| `installExtensionFromFolder()` | R -> M | Open folder picker, validate, show approval dialog, install |
 
 *(R = Renderer, M = Main)*
 
@@ -421,12 +505,16 @@ The native Liquid Glass layer is always present (macOS 26+). Dark and Light them
 | Animations | `~/Documents/snip/screenshots/animations/` | same |
 | Index | `~/Documents/snip/screenshots/.index.json` | same |
 | Config | `~/Library/Application Support/snip/snip-config.json` | same |
+| MCP Socket | `~/Library/Application Support/snip/snip.sock` | same |
+| User Extensions | `~/Library/Application Support/snip/extensions/` | same |
 
 **Config fields of note:**
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `aiEnabled` | `boolean \| undefined` | `undefined` on first launch (triggers AI choice screen), `true` if user opted in, `false` if user opted out. When `false`, Ollama is not started and AI organization is skipped entirely. |
+| `mcpEnabled` | `boolean` | Whether the MCP socket server is active. Default `false`. |
+| `mcpCategories` | `object` | Per-category toggles: `{ library, upload, transcribe, organize }`. Each is boolean, all default to `true`. Controls which MCP tools are active. |
 
 | Ollama binary | `/usr/local/bin/ollama`, `/opt/homebrew/bin/ollama`, or `/Applications/Ollama.app/Contents/Resources/ollama` | same (user-installed) |
 | Ollama models | `~/.ollama/models/` | same (shared with system Ollama) |

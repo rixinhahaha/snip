@@ -1,9 +1,10 @@
 /* exported Toolbar */
 
 const Toolbar = (() => {
-  const TOOLS = { SELECT: 'select', RECT: 'rect', TEXT: 'text', ARROW: 'arrow', TAG: 'tag', BLUR_BRUSH: 'blur-brush', SEGMENT: 'segment' };
+  // TOOLS is built dynamically from extensions, but starts with a default for backwards compat
+  let TOOLS = { SELECT: 'select', RECT: 'rect', TEXT: 'text', ARROW: 'arrow', TAG: 'tag', BLUR_BRUSH: 'blur-brush', SEGMENT: 'segment' };
 
-  let activeTool = TOOLS.SELECT;
+  let activeTool = 'select';
   let activeColor = '#ff3b30';
   let activeStrokeWidth = 4;
   let activeFont = 'Plus Jakarta Sans';
@@ -17,14 +18,24 @@ const Toolbar = (() => {
   function initToolbar(callbacks) {
     toolChangeCallback = callbacks.onToolChange;
 
-    document.getElementById('tool-select').addEventListener('click', () => setTool(TOOLS.SELECT));
-    document.getElementById('tool-rect').addEventListener('click', () => setTool(TOOLS.RECT));
-    document.getElementById('tool-text').addEventListener('click', () => setTool(TOOLS.TEXT));
-    document.getElementById('tool-arrow').addEventListener('click', () => setTool(TOOLS.ARROW));
-    document.getElementById('tool-tag').addEventListener('click', () => setTool(TOOLS.TAG));
-    document.getElementById('tool-blur-brush').addEventListener('click', () => setTool(TOOLS.BLUR_BRUSH));
-    var segmentBtn = document.getElementById('tool-segment');
-    if (segmentBtn) segmentBtn.addEventListener('click', () => setTool(TOOLS.SEGMENT));
+    // Build TOOLS enum from extensions if available
+    if (typeof ExtensionLoader !== 'undefined' && ExtensionLoader.getExtensions().length > 0) {
+      TOOLS = ExtensionLoader.buildToolsEnum();
+      // Ensure SELECT always exists
+      if (!TOOLS.SELECT) TOOLS.SELECT = 'select';
+    }
+
+    // Wire up tool buttons dynamically from DOM
+    document.querySelectorAll('#toolbar-tools .tool-btn').forEach(function (btn) {
+      var toolId = btn.id.replace(/^tool-/, '');
+      // Only wire canvas-tool and ai-tool buttons (not action-tool buttons like btn-upscale)
+      if (btn.id.startsWith('tool-')) {
+        btn.addEventListener('click', function () { setTool(toolId); });
+      }
+    });
+
+    // Wire action buttons (btn-upscale etc.) — these just click, no tool mode switch
+    // They're handled by editor-app.js directly
 
     document.getElementById('color-picker').addEventListener('input', (e) => {
       activeColor = e.target.value;
@@ -73,22 +84,20 @@ const Toolbar = (() => {
       });
     });
 
-    // Build dynamic shortcut-to-tool map
-    var toolShortcutMap = {
-      'v': TOOLS.SELECT, 'r': TOOLS.RECT, 't': TOOLS.TEXT,
-      'a': TOOLS.ARROW, 'g': TOOLS.TAG, 'b': TOOLS.BLUR_BRUSH, 's': TOOLS.SEGMENT
-    };
+    // Build shortcut maps from extensions
+    var toolShortcutMap = (typeof ExtensionLoader !== 'undefined')
+      ? ExtensionLoader.buildShortcutMap()
+      : { 'v': 'select', 'r': 'rect', 't': 'text', 'a': 'arrow', 'g': 'tag', 'b': 'blur-brush', 's': 'segment' };
 
-    // Action shortcuts trigger button clicks (not tool mode switches)
-    var actionShortcutMap = {
-      'u': 'btn-upscale',
-      'w': 'tool-transcribe'
-    };
+    var actionShortcutMap = (typeof ExtensionLoader !== 'undefined')
+      ? ExtensionLoader.buildActionShortcutMap()
+      : { 'u': 'btn-upscale', 'w': 'tool-transcribe' };
 
+    // Maps for custom shortcut config updates
     var shortcutToToolAction = {
-      'tool-select': TOOLS.SELECT, 'tool-rectangle': TOOLS.RECT, 'tool-text': TOOLS.TEXT,
-      'tool-arrow': TOOLS.ARROW, 'tool-tag': TOOLS.TAG, 'tool-blur': TOOLS.BLUR_BRUSH,
-      'tool-segment': TOOLS.SEGMENT
+      'tool-select': 'select', 'tool-rectangle': 'rect', 'tool-text': 'text',
+      'tool-arrow': 'arrow', 'tool-tag': 'tag', 'tool-blur': 'blur-brush',
+      'tool-segment': 'segment'
     };
 
     var shortcutToActionBtn = {
@@ -153,23 +162,39 @@ const Toolbar = (() => {
   function setTool(tool) {
     // Don't switch to segment if button is hidden (device not supported)
     var segBtn = document.getElementById('tool-segment');
-    if (tool === TOOLS.SEGMENT && segBtn && segBtn.classList.contains('hidden')) return;
+    if (tool === 'segment' && segBtn && segBtn.classList.contains('hidden')) return;
 
     activeTool = tool;
-    document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('#toolbar-tools .tool-btn').forEach(btn => btn.classList.remove('active'));
     var toolBtn = document.getElementById('tool-' + tool);
     if (toolBtn) toolBtn.classList.add('active');
 
-    // Show/hide contextual controls
-    var isTag = (tool === TOOLS.TAG);
-    var showStroke = (tool === TOOLS.RECT || tool === TOOLS.ARROW);
-    document.getElementById('stroke-group').classList.toggle('hidden', !showStroke);
-    document.getElementById('rect-mode-group').classList.toggle('hidden', tool !== TOOLS.RECT);
-    document.getElementById('font-group').classList.toggle('hidden', tool !== TOOLS.TEXT && !isTag);
-    document.getElementById('tag-color-group').classList.toggle('hidden', !isTag);
-    document.getElementById('brush-group').classList.toggle('hidden', tool !== TOOLS.BLUR_BRUSH);
-    document.getElementById('segment-color-group').classList.add('hidden');
-    document.getElementById('color-picker').classList.toggle('hidden', isTag);
+    // Show/hide contextual controls based on extension toolbar groups
+    var allGroups = ['rect-mode-group', 'stroke-group', 'font-group', 'tag-color-group', 'brush-group', 'segment-color-group'];
+    var activeGroups = (typeof ExtensionLoader !== 'undefined')
+      ? ExtensionLoader.getToolbarGroups(tool)
+      : [];
+
+    // Fallback: if no extension data, use hardcoded mappings
+    if (activeGroups.length === 0 && typeof ExtensionLoader === 'undefined') {
+      var isTag = (tool === 'tag');
+      var showStroke = (tool === 'rect' || tool === 'arrow');
+      activeGroups = [];
+      if (showStroke) activeGroups.push('stroke-group');
+      if (tool === 'rect') activeGroups.push('rect-mode-group');
+      if (tool === 'text' || isTag) activeGroups.push('font-group');
+      if (isTag) activeGroups.push('tag-color-group');
+      if (tool === 'blur-brush') activeGroups.push('brush-group');
+    }
+
+    allGroups.forEach(function (groupId) {
+      var el = document.getElementById(groupId);
+      if (el) el.classList.toggle('hidden', activeGroups.indexOf(groupId) === -1);
+    });
+
+    // Hide color picker when tag tool is active (tags use their own swatches)
+    var colorPicker = document.getElementById('color-picker');
+    if (colorPicker) colorPicker.classList.toggle('hidden', tool === 'tag');
 
     if (toolChangeCallback) toolChangeCallback(tool);
   }
