@@ -275,7 +275,7 @@ Extensions with `toolbarGroups: []` manage their own contextual controls (e.g., 
 ### MCP Server
 An MCP (Model Context Protocol) server exposes Snip's capabilities to external AI agents (e.g., Claude Desktop). Two components:
 
-1. **Unix domain socket** (`socket-server.js`) — listens at `~/Library/Application Support/snip/snip.sock` (chmod 600). Accepts newline-delimited JSON messages with `{ id, action, params }`. Registered actions: `search_screenshots`, `list_screenshots`, `get_screenshot`, `transcribe_screenshot`, `organize_screenshot`, `get_categories`, `upload_image`, `install_extension`. The `upload_image` action opens the editor with an external image, blocks until the user finishes annotating, and returns the edited PNG via a `pendingMcpResolve` promise resolved by the `editor-result` IPC channel.
+1. **Unix domain socket** (`socket-server.js`) — listens at `~/Library/Application Support/snip/snip.sock` (chmod 600). Accepts newline-delimited JSON messages with `{ id, action, params }`. Registered actions: `search_screenshots`, `list_screenshots`, `get_screenshot`, `transcribe_screenshot`, `organize_screenshot`, `get_categories`, `open_in_snip`, `install_extension`. The `open_in_snip` action opens the editor with an external image, blocks until the user finishes annotating, and returns the edited PNG via a `pendingMcpResolve` promise resolved by the `editor-result` IPC channel.
 
 2. **MCP stdio adapter** (`src/mcp/server.js`) — standalone Node.js process that speaks MCP JSON-RPC 2.0 over stdio and forwards tool calls to the socket. Configure in Claude Desktop:
 ```json
@@ -289,7 +289,7 @@ An MCP (Model Context Protocol) server exposes Snip's capabilities to external A
 }
 ```
 
-**Security:** Library, transcribe, and organize MCP tools validate that paths are inside the screenshots directory (`path.resolve` + `startsWith` check). `upload_image` intentionally accepts any local file path (restricted to PNG/JPEG by extension check, size-capped at 15 MB) since it's designed for uploading external images to annotate. The socket buffer is capped at 16 MB per connection, and MCP Content-Length is capped at 10 MB. The `upload_image` action validates base64 length before decoding (max ~15 MB raw). The `editor-result` IPC channel validates `event.sender.id` against the editor window's `webContentsId` to prevent other windows from resolving the pending upload promise.
+**Security:** Library, transcribe, and organize MCP tools validate that paths are inside the screenshots directory (`path.resolve` + `startsWith` check). `open_in_snip` intentionally accepts any local file path (restricted to PNG/JPEG by extension check, size-capped at 15 MB) since it's designed for uploading external images to annotate. The socket buffer is capped at 16 MB per connection, and MCP Content-Length is capped at 10 MB. The `open_in_snip` action validates base64 length before decoding (max ~15 MB raw). The `editor-result` IPC channel validates `event.sender.id` against the editor window's `webContentsId` to prevent other windows from resolving the pending upload promise.
 
 ### Single Index File
 All screenshot metadata lives in `~/Documents/snip/screenshots/.index.json`. Simple, atomic, easy to debug. No database.
@@ -425,7 +425,7 @@ The preload script (`preload.js`) exposes `window.snip` with these methods:
 | `setMcpConfig(config)` | R -> M | Update MCP enabled/category state; starts/stops socket server on toggle |
 | `getMcpClientConfig()` | R -> M | Get resolved `command`+`args` JSON for MCP client config (dev vs packaged paths) |
 | `onMcpConfigChanged(cb)` | M -> R | Push event when MCP config changes |
-| `sendEditorResult(dataURL)` | R -> M | Send edited image (or null for cancel) back to MCP `upload_image` handler |
+| `sendEditorResult(dataURL)` | R -> M | Send edited image (or null for cancel) back to MCP `open_in_snip` handler |
 | `getUserExtensions()` | R -> M | List user-installed extensions (name, type, permissions) |
 | `removeUserExtension(name)` | R -> M | Remove a user extension (kills sandbox, deletes files) |
 | `installExtensionFromFolder()` | R -> M | Open folder picker, validate, show approval dialog, install |

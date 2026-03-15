@@ -460,7 +460,7 @@ function requireCategory(category) {
   }
 }
 
-// ── MCP upload_image: pending promise for editor result ──
+// ── MCP open_in_snip: pending promise for editor result ──
 
 var pendingMcpResolve = null; // { resolve, reject, webContentsId, win }
 
@@ -526,7 +526,7 @@ function startMcpServer() {
       requireCategory('library');
       return getAllCategories();
     },
-    upload_image: async function (params) {
+    open_in_snip: async function (params) {
       requireCategory('upload');
 
       if (!params.filepath && !params.imageDataURL) {

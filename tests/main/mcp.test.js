@@ -560,9 +560,9 @@ describe('requireScreenshotPath', () => {
   });
 });
 
-// ── upload_image validation ──
+// ── open_in_snip validation ──
 
-describe('upload_image validation', () => {
+describe('open_in_snip validation', () => {
   let socketPath;
   let server;
 
@@ -578,7 +578,7 @@ describe('upload_image validation', () => {
     let pendingResolve = null;
 
     server = createTestSocketServer(socketPath, {
-      upload_image: async (params) => {
+      open_in_snip: async (params) => {
         // Category check
         const config = store.getMcpConfig();
         if (!config.categories.upload) throw new Error('upload is disabled in MCP settings');
@@ -603,14 +603,14 @@ describe('upload_image validation', () => {
   it('rejects when upload category is disabled', async () => {
     store.setMcpConfig({ enabled: true, categories: { upload: false } });
     await startUploadServer();
-    const res = await socketRequest(socketPath, { id: '1', action: 'upload_image', params: { imageDataURL: 'data:image/png;base64,abc' } });
+    const res = await socketRequest(socketPath, { id: '1', action: 'open_in_snip', params: { imageDataURL: 'data:image/png;base64,abc' } });
     expect(res.error).toContain('upload is disabled');
   });
 
   it('rejects missing imageDataURL', async () => {
     store.setMcpConfig({ enabled: true });
     await startUploadServer();
-    const res = await socketRequest(socketPath, { id: '1', action: 'upload_image', params: {} });
+    const res = await socketRequest(socketPath, { id: '1', action: 'open_in_snip', params: {} });
     expect(res.error).toBe('Missing imageDataURL parameter');
   });
 
@@ -628,7 +628,7 @@ describe('upload_image validation', () => {
     server = null;
 
     server = createTestSocketServer(socketPath, {
-      upload_image: async (params) => {
+      open_in_snip: async (params) => {
         if (!params.imageDataURL) throw new Error('Missing imageDataURL parameter');
         var commaIdx = params.imageDataURL.indexOf(',');
         var base64Len = commaIdx >= 0 ? params.imageDataURL.length - commaIdx - 1 : params.imageDataURL.length;
@@ -640,7 +640,7 @@ describe('upload_image validation', () => {
     await server.waitReady();
 
     var bigPayload = 'data:image/png;base64,' + 'A'.repeat(2048);
-    const res = await socketRequest(socketPath, { id: '1', action: 'upload_image', params: { imageDataURL: bigPayload } });
+    const res = await socketRequest(socketPath, { id: '1', action: 'open_in_snip', params: { imageDataURL: bigPayload } });
     expect(res.error).toContain('Image too large');
   });
 
@@ -648,7 +648,7 @@ describe('upload_image validation', () => {
     store.setMcpConfig({ enabled: true });
     await startUploadServer();
     // Small valid payload passes
-    const res = await socketRequest(socketPath, { id: '1', action: 'upload_image', params: { imageDataURL: 'data:image/png;base64,iVBOR' } });
+    const res = await socketRequest(socketPath, { id: '1', action: 'open_in_snip', params: { imageDataURL: 'data:image/png;base64,iVBOR' } });
     expect(res.result).toEqual({ accepted: true });
   });
 
@@ -658,7 +658,7 @@ describe('upload_image validation', () => {
     if (server) { server.stop(); server = null; }
 
     server = createTestSocketServer(socketPath, {
-      upload_image: async (params) => {
+      open_in_snip: async (params) => {
         if (!params.imageDataURL) throw new Error('Missing imageDataURL parameter');
         var commaIdx = params.imageDataURL.indexOf(',');
         var base64Len = commaIdx >= 0 ? params.imageDataURL.length - commaIdx - 1 : params.imageDataURL.length;
@@ -669,7 +669,7 @@ describe('upload_image validation', () => {
     await server.waitReady();
 
     var noComma = 'A'.repeat(200);
-    const res = await socketRequest(socketPath, { id: '1', action: 'upload_image', params: { imageDataURL: noComma } });
+    const res = await socketRequest(socketPath, { id: '1', action: 'open_in_snip', params: { imageDataURL: noComma } });
     expect(res.error).toContain('Image too large');
   });
 });

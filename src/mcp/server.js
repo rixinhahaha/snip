@@ -98,8 +98,8 @@ const TOOLS = [
     }
   },
   {
-    name: 'upload_image',
-    description: 'Open an image in Snip\'s annotation editor for the user to mark up. Pass the image as a base64 data URL (works from any MCP client) or as a local file path (only works from CLI tools like Claude Code that share the local filesystem). The editor window appears and this call blocks until the user clicks Done or Save, then returns the annotated image. Returns an error if the user cancels. PNG and JPEG supported, max 15 MB.',
+    name: 'open_in_snip',
+    description: 'Open an image in Snip\'s annotation editor for the user to mark up. Pass the image as a local file path (preferred, works from CLI tools like Claude Code) or as a base64 data URL (works from any MCP client). The Snip editor window appears and this call blocks until the user clicks Done or Save, then returns the annotated image. Returns an error if the user cancels. PNG and JPEG supported, max 15 MB.',
     inputSchema: {
       type: 'object',
       properties: {
