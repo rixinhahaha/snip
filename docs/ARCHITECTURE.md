@@ -115,7 +115,7 @@ src/
     preload.js               # contextBridge — defines window.snip API surface
 
   native/
-    window_utils.mm          # Obj-C++ N-API addon: setMoveToActiveSpace (Space behavior), getWindowList (CGWindowList for window snap — merges sub-windows by PID)
+    window_utils.mm          # Obj-C++ N-API addon: setMoveToActiveSpace (Space behavior), getWindowList (CGWindowList for window snap — individual windows in z-order with PID)
 
 assets/                      # App icons, tray icons
 site/                        # Marketing site (GitHub Pages, snipit.dev)
@@ -142,6 +142,8 @@ tests/                       # Vitest unit tests
     mcp.test.js                # MCP config, socket server, category gating, path validation
   renderer/
     tool-utils.test.js         # hexToRgba, lineEndpointForTag, nextTagId
+  cli/
+    cli.test.js                # CLI help, commands, parameter passing, socket, error handling
 vendor/                      # Downloaded at dev time, bundled at build time
   models/                      # HuggingFace models: MiniLM + SlimSAM (~75 MB)
   node/                        # Standalone Node.js binary for SAM subprocess (~100 MB)
@@ -157,7 +159,7 @@ vendor/                      # Downloaded at dev time, bundled at build time
 
 **Run:** `npm test` (single run), `npm run test:watch` (watch mode), `npm run test:coverage` (coverage report).
 
-**CI:** GitHub Actions on `ubuntu-latest` with `npm ci --ignore-scripts` (skips native module compilation). Runs on push to `main`/`enhanced` and PRs to `main`.
+**CI:** GitHub Actions on `ubuntu-latest` with `npm ci --ignore-scripts` (skips native module compilation). Runs on push to `main` and PRs to `main`.
 
 **Key mocking patterns:**
 
@@ -377,14 +379,17 @@ The preload script (`preload.js`) exposes `window.snip` with these methods:
 | `onOllamaPullProgress(cb)` | M -> R | Real-time model pull progress push events |
 | `getTheme()` / `setTheme(t)` | R -> M | Theme persistence |
 | `onThemeChanged(cb)` | M -> R | Theme broadcast listener |
+| `openEditor(data)` | R -> M | Open editor with image data (used by overlay renderer) |
 | `onEditorImageData(cb)` | M -> R | Push cropped capture to pre-warmed editor (primary path) |
 | `getEditorImage()` | R -> M | Get cropped capture for editor (fallback for non-prewarmed) |
+| `onScreenshotCaptured(cb)` | M -> R | Push captured screenshot data to overlay renderer |
+| `closeOverlay()` | R -> M | Close the capture overlay window |
 | `getCaptureImage()` | R -> M | Get captured screenshot as dataURL (deferred from capture time) |
 | `showNotification(body)` | R -> M | Show floating toast notification (auto-dismisses) |
 | `copyToClipboard(dataURL)` | R -> M | Write PNG to system clipboard |
 | `saveScreenshot(dataURL, ts)` | R -> M | Save JPEG + queue for AI |
 | `closeEditor()` | R -> M | Close editor window |
-| `resizeEditor(width)` | R -> M | Widen editor for toolbar |
+| `resizeEditor(minWidth)` | R -> M | Widen editor to minimum width |
 | `getSystemFonts()` | R -> M | List installed fonts |
 | `checkSegmentSupport()` | R -> M | Check SAM availability |
 | `segmentAtPoint(data)` | R -> M | Run SAM segmentation at click points |
@@ -430,11 +435,14 @@ The preload script (`preload.js`) exposes `window.snip` with these methods:
 | `setMcpConfig(config)` | R -> M | Update MCP UI visibility + category toggles (socket always runs) |
 | `getMcpClientConfig()` | R -> M | Get resolved `command`+`args` JSON for MCP client config (dev vs packaged paths) |
 | `onMcpConfigChanged(cb)` | M -> R | Push event when MCP config changes |
+| `invokeExtension(channel, ...args)` | R -> M | Generic extension IPC bridge (ext: prefix enforced) |
+| `onExtensionEvent(channel, cb)` | M -> R | Listen for extension push events (ext: prefix enforced, returns cleanup fn) |
 | `sendEditorResult(dataURL)` | R -> M | Send edited image (or null for cancel) back to MCP `open_in_snip` handler |
 | `getUserExtensions()` | R -> M | List user-installed extensions (name, type, permissions) |
 | `removeUserExtension(name)` | R -> M | Remove a user extension (kills sandbox, deletes files) |
 | `installExtensionFromFolder()` | R -> M | Open folder picker, validate, show approval dialog, install |
-| `installCli()` | R -> M | Write shell wrapper to `/usr/local/bin/snip` (or `~/bin/snip`) |
+| `onUserExtensionsChanged(cb)` | M -> R | Push event when user extensions are added/removed |
+| `installCli()` | R -> M | Write shell wrapper to `/usr/local/bin/snip`, `~/.local/bin/snip`, or `~/bin/snip` |
 | `checkCliInstalled()` | R -> M | Check if CLI wrapper exists |
 | `detectAiProviders()` | R -> M | Scan for installed AI tools (Claude Code, Cursor, Windsurf, Cline) |
 | `configureAiProvider(id)` | R -> M | Write Snip rules to a detected AI provider's config |
@@ -527,6 +535,9 @@ The native Liquid Glass layer is always present (macOS 26+). Dark and Light them
 | `aiEnabled` | `boolean \| undefined` | `undefined` on first launch (triggers AI choice screen), `true` if user opted in, `false` if user opted out. When `false`, Ollama is not started and AI organization is skipped entirely. |
 | `mcpEnabled` | `boolean` | Controls MCP config visibility in Settings UI. Socket server always runs. Default `false`. |
 | `mcpCategories` | `object` | Per-category toggles: `{ library, upload, transcribe, organize }`. Each is boolean, all default to `true`. Controls which MCP tools are active. |
+| `ollamaModel` | `string` | Ollama model name. Default `'minicpm-v'`. |
+| `ollamaUrl` | `string` | Ollama server URL. Default `'http://127.0.0.1:11434'`. |
+| `theme` | `string` | Active theme: `'dark'`, `'light'`, or `'glass'`. Default `'dark'`. |
 | `shortcuts` | `object` | Custom shortcut overrides keyed by action ID (e.g. `{ "capture": "CommandOrControl+Shift+2" }`). Only overridden shortcuts are stored; defaults come from `DEFAULT_SHORTCUTS` in `store.js`. |
 | `falApiKey` | `string` | fal.ai API key for cloud animation. Empty string if not configured. |
 | `tagDescriptions` | `object` | Custom descriptions per tag/category name (e.g. `{ "code": "Code editors and terminals" }`). Used by the AI organizer prompt. |

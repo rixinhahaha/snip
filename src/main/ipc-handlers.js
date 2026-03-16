@@ -137,6 +137,15 @@ function showFloatingToast(message) {
   }, 1600);
 }
 
+function broadcastToWindows(channel, data) {
+  for (const win of BrowserWindow.getAllWindows()) {
+    if (!win.isDestroyed()) {
+      if (data !== undefined) win.webContents.send(channel, data);
+      else win.webContents.send(channel);
+    }
+  }
+}
+
 function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterShortcutsFn, rebuildTrayMenuFn) {
   // Copy annotated image to clipboard
   ipcMain.handle('copy-to-clipboard', async (event, dataURL) => {
@@ -155,7 +164,7 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
 
     const base64Data = dataURL.replace(/^data:image\/\w+;base64,/, '');
     const buffer = Buffer.from(base64Data, 'base64');
-    fs.writeFileSync(filepath, buffer);
+    await fs.promises.writeFile(filepath, buffer);
     console.log('[Snip] Saved snip: %s (%s KB)', filename, (buffer.length / 1024).toFixed(1));
 
     // Mark for agent processing before watcher picks it up
@@ -314,20 +323,6 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
     return ollamaManager.checkModel();
   });
 
-  // Setup overlay controls (broadcast to all windows)
-  ipcMain.handle('close-setup-overlay', async () => {
-    for (const win of BrowserWindow.getAllWindows()) {
-      if (!win.isDestroyed()) win.webContents.send('hide-setup-overlay');
-    }
-    return true;
-  });
-
-  ipcMain.handle('open-setup-overlay', async () => {
-    for (const win of BrowserWindow.getAllWindows()) {
-      if (!win.isDestroyed()) win.webContents.send('show-setup-overlay');
-    }
-    return true;
-  });
 
   // Settings: Animation (fal.ai)
   ipcMain.handle('get-animation-config', async () => {
@@ -348,10 +343,7 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
     setMcpConfig(update);
     var after = getMcpConfig();
 
-    // Broadcast change to all windows (MCP toggle controls UI visibility only)
-    for (const win of BrowserWindow.getAllWindows()) {
-      if (!win.isDestroyed()) win.webContents.send('mcp-config-changed', after);
-    }
+    broadcastToWindows('mcp-config-changed', after);
     return after;
   });
 
@@ -383,12 +375,12 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
 
   // CLI + AI Integration
   ipcMain.handle('install-cli', async () => {
+    var { findNodeBinary } = require('./node-binary');
     var nodePath, cliPath;
     if (app.isPackaged) {
-      nodePath = path.join(process.resourcesPath, 'node', 'node');
+      nodePath = findNodeBinary() || '/usr/local/bin/node';
       cliPath = path.join(process.resourcesPath, 'cli', 'snip.js');
     } else {
-      var { findNodeBinary } = require('./node-binary');
       nodePath = findNodeBinary() || '/usr/local/bin/node';
       cliPath = path.join(__dirname, '..', 'cli', 'snip.js');
     }
@@ -404,13 +396,16 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
       path.join(home, 'bin', 'snip')
     ];
 
+    // Directories that are commonly in shell PATH even if Electron doesn't see them
+    // (Electron launched via Finder gets a minimal PATH without shell profile additions)
+    var commonShellPaths = ['/usr/local/bin', path.join(home, '.local', 'bin'), path.join(home, 'bin')];
+
     for (var target of targets) {
       try {
         fs.mkdirSync(path.dirname(target), { recursive: true });
         fs.writeFileSync(target, wrapper, { mode: 0o755 });
-        // Check if the directory is in PATH
         var dir = path.dirname(target);
-        var inPath = (process.env.PATH || '').split(':').includes(dir);
+        var inPath = (process.env.PATH || '').split(':').includes(dir) || commonShellPaths.includes(dir);
         return {
           installed: true,
           path: target,
@@ -458,7 +453,7 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
   var snipRulesContent = [
     '# Snip — Image Editor',
     'For any image editing, annotation, markup, highlighting, or visual feedback, use the `snip` CLI.',
-    '- `snip open <filepath>` — Opens image in Snip editor. Blocks until done. Returns JSON: `{"status":"edited","path":"...","message":"..."}`. Read the file at `path` to see the annotated result. If the user cancels, the command exits with code 1.',
+    '- `snip open <filepath>` — Opens image in Snip editor. Blocks until done. Returns JSON: `{"status":"done","path":"...","message":"..."}`. Read the file at `path` to see the result. If the user cancels, the command exits with code 1.',
     '- `snip search "<query>"` — Search screenshot library. Returns JSON array.',
     '- `snip list` — List saved screenshots with metadata. Returns JSON array.',
     '- `snip transcribe <filepath>` — Extract text via OCR. Returns plain text.',
@@ -699,15 +694,18 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
     return readIndex();
   });
 
-  // Search: get thumbnail
+  // Search: get thumbnail (path-validated to screenshots dir)
   ipcMain.handle('get-thumbnail', async (event, filepath) => {
     try {
+      var screenshotsDir = getScreenshotsDir();
+      var resolved = path.resolve(filepath);
+      if (!resolved.startsWith(screenshotsDir + path.sep) && resolved !== screenshotsDir) return null;
       // GIFs: return full file as data URL (nativeImage strips animation)
-      if (filepath.toLowerCase().endsWith('.gif')) {
-        const buf = fs.readFileSync(filepath);
+      if (resolved.toLowerCase().endsWith('.gif')) {
+        const buf = fs.readFileSync(resolved);
         return 'data:image/gif;base64,' + buf.toString('base64');
       }
-      const image = nativeImage.createFromPath(filepath);
+      const image = nativeImage.createFromPath(resolved);
       const resized = image.resize({ width: 200 });
       return resized.toDataURL();
     } catch (err) {
@@ -716,13 +714,19 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
     }
   });
 
-  // Reveal in Finder
+  // Reveal in Finder (path-validated to screenshots dir)
   ipcMain.handle('reveal-in-finder', async (event, filepath) => {
-    shell.showItemInFolder(filepath);
+    var screenshotsDir = getScreenshotsDir();
+    var resolved = path.resolve(filepath);
+    if (!resolved.startsWith(screenshotsDir + path.sep) && resolved !== screenshotsDir) return false;
+    shell.showItemInFolder(resolved);
     return true;
   });
 
   ipcMain.handle('open-external-url', async (event, url) => {
+    if (typeof url !== 'string' || (!url.startsWith('https://') && !url.startsWith('http://') && !url.startsWith('x-apple.systempreferences:'))) {
+      return false;
+    }
     shell.openExternal(url);
     return true;
   });
@@ -750,11 +754,11 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
     }
 
     try {
-      const entries = fs.readdirSync(resolved, { withFileTypes: true });
-      return entries.map(entry => {
+      const entries = await fs.promises.readdir(resolved, { withFileTypes: true });
+      return Promise.all(entries.map(async entry => {
         const fullPath = path.join(resolved, entry.name);
         let stat;
-        try { stat = fs.statSync(fullPath); } catch { stat = null; }
+        try { stat = await fs.promises.stat(fullPath); } catch { stat = null; }
         return {
           name: entry.name,
           isDirectory: entry.isDirectory(),
@@ -762,7 +766,7 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
           size: stat ? stat.size : 0,
           mtime: stat ? stat.mtimeMs : 0
         };
-      });
+      }));
     } catch (err) {
       console.warn('[Snip] List folder failed:', resolved, err.message);
       return [];
@@ -785,10 +789,8 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
     try {
       console.log('[Snip] Deleting file:', resolved);
       await shell.trashItem(resolved);
-      const before = readIndex().length;
-      removeFromIndex(resolved);
-      const after = readIndex().length;
-      console.log('[Snip] Index updated: removed %d entry (%d → %d)', before - after, before, after);
+      var remaining = removeFromIndex(resolved);
+      console.log('[Snip] Index updated: %d entries remaining', remaining.length);
       return { success: true };
     } catch (err) {
       console.error('[Snip] Delete failed:', err.message);
@@ -807,10 +809,8 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
     try {
       console.log('[Snip] Deleting folder:', resolved);
       await shell.trashItem(resolved);
-      const before = readIndex().length;
-      removeFromIndexByDir(resolved);
-      const after = readIndex().length;
-      console.log('[Snip] Index updated: removed %d entries (%d → %d)', before - after, before, after);
+      var remaining = removeFromIndexByDir(resolved);
+      console.log('[Snip] Index updated: %d entries remaining', remaining.length);
       return { success: true };
     } catch (err) {
       console.error('[Snip] Delete folder failed:', err.message);
@@ -858,11 +858,7 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
       reregisterShortcutsFn();
     }
     if (rebuildTrayMenuFn) rebuildTrayMenuFn();
-    // Broadcast to all windows
-    const shortcuts = getShortcuts();
-    for (const win of BrowserWindow.getAllWindows()) {
-      if (!win.isDestroyed()) win.webContents.send('shortcuts-changed', shortcuts);
-    }
+    broadcastToWindows('shortcuts-changed', getShortcuts());
     return true;
   });
 
@@ -870,10 +866,7 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
     resetShortcuts();
     if (reregisterShortcutsFn) reregisterShortcutsFn();
     if (rebuildTrayMenuFn) rebuildTrayMenuFn();
-    const shortcuts = getShortcuts();
-    for (const win of BrowserWindow.getAllWindows()) {
-      if (!win.isDestroyed()) win.webContents.send('shortcuts-changed', shortcuts);
-    }
+    broadcastToWindows('shortcuts-changed', getShortcuts());
     return true;
   });
 
@@ -884,12 +877,7 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
 
   ipcMain.handle('set-theme', async (event, theme) => {
     setTheme(theme);
-    // Broadcast to all windows
-    for (const win of BrowserWindow.getAllWindows()) {
-      if (!win.isDestroyed()) {
-        win.webContents.send('theme-changed', theme);
-      }
-    }
+    broadcastToWindows('theme-changed', theme);
     return true;
   });
 

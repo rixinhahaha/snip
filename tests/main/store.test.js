@@ -16,6 +16,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  store.flushConfig(); // cancel any pending debounced write
   rmSync(tmpDir, { recursive: true, force: true });
 });
 

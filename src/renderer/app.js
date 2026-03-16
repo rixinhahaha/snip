@@ -4,6 +4,7 @@
   'use strict';
 
   let displayOrigin = { x: 0, y: 0 };
+  let overlayOrigin = { x: 0, y: 0 };
   let selectionInstance = null;
   let captureMode = 'capture';
 
@@ -17,9 +18,12 @@
     const height = window.innerHeight;
 
     // Convert window list from display-relative to overlay-viewport-relative coords.
-    // macOS may push the overlay below the menu bar, creating an offset.
-    const winOffsetX = (window.screenX || 0) - displayOrigin.x;
-    const winOffsetY = (window.screenY || 0) - displayOrigin.y;
+    // The offset is how far macOS shifted the overlay from the display origin
+    // (e.g., pushed below menu bar). Main process sends both the requested
+    // display origin and the actual overlay position after setBounds.
+    overlayOrigin = data.overlayOrigin || displayOrigin;
+    var winOffsetX = overlayOrigin.x - displayOrigin.x;
+    var winOffsetY = overlayOrigin.y - displayOrigin.y;
     windowList = (data.windowList || []).map(function(w) {
       // Convert to overlay-viewport-relative coords, then clip to viewport bounds.
       // Windows partially off-screen (e.g. spanning two displays, or behind the menu bar)
@@ -30,7 +34,7 @@
       const clipY = Math.max(0, wy);
       const clipX2 = Math.min(width, wx + w.width);
       const clipY2 = Math.min(height, wy + w.height);
-      return { x: clipX, y: clipY, width: clipX2 - clipX, height: clipY2 - clipY, owner: w.owner, name: w.name };
+      return { x: clipX, y: clipY, width: clipX2 - clipX, height: clipY2 - clipY, owner: w.owner, name: w.name, pid: w.pid };
     }).filter(function(w) {
       // Drop windows with less than 50×50 visible area in the viewport
       return w.width > 50 && w.height > 50;
@@ -75,12 +79,12 @@
 
     const imgW = fullImg.naturalWidth;
     const imgH = fullImg.naturalHeight;
-    const scaleX = imgW / window.screen.width;
-    const scaleY = imgH / window.screen.height;
+    const scaleX = imgW / window.innerWidth;
+    const scaleY = imgH / window.innerHeight;
 
     // Account for overlay window's offset within its display (menu bar / notch on macOS)
-    const winOffsetX = (window.screenX || 0) - displayOrigin.x;
-    const winOffsetY = (window.screenY || 0) - displayOrigin.y;
+    const winOffsetX = overlayOrigin.x - displayOrigin.x;
+    const winOffsetY = overlayOrigin.y - displayOrigin.y;
 
     const physX = Math.round((region.x + winOffsetX) * scaleX);
     const physY = Math.round((region.y + winOffsetY) * scaleY);

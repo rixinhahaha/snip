@@ -30,13 +30,15 @@ const SelectionTool = (() => {
     var hoveredWindow = null;
     var pendingClick = false;
     var pendingClickX = 0, pendingClickY = 0;
-    var DRAG_THRESHOLD = 5 * dpr;
+    var DRAG_THRESHOLD = 5; // CSS pixels (clientX/Y space)
 
     function findWindowAt(mx, my) {
-      // Windows are sorted front-to-back (topmost first)
+      // Windows are in CGWindowList front-to-back z-order (frontmost first).
+      // Modern macOS reports each app window as a single entry, so no sub-window
+      // merging is needed. Just return the frontmost window containing the cursor.
       for (var i = 0; i < windows.length; i++) {
         var w = windows[i];
-        if (mx >= w.x && mx <= w.x + w.width && my >= w.y && my <= w.y + w.height) {
+        if (mx >= w.x && mx < w.x + w.width && my >= w.y && my < w.y + w.height) {
           return w;
         }
       }

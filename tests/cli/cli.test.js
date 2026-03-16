@@ -214,9 +214,9 @@ describe('CLI commands', () => {
     var res = await runCli(['open', '/tmp/test.png']);
     expect(res.code).toBe(0);
     var data = JSON.parse(res.stdout);
-    expect(data.status).toBe('edited');
+    expect(data.status).toBe('done');
     expect(data.path).toBe(outPath);
-    expect(data.message).toContain('annotated');
+    expect(data.message).toContain('finished reviewing');
   });
 
   it('--pretty flag indents JSON output', async () => {
@@ -318,7 +318,7 @@ describe('CLI open command', () => {
     var res = await runCli(['open', '/tmp/img.png']);
     expect(res.code).toBe(0);
     var data = JSON.parse(res.stdout);
-    expect(data.status).toBe('edited');
+    expect(data.status).toBe('done');
     expect(data.path).toBe(outFile);
   });
 
@@ -331,7 +331,7 @@ describe('CLI open command', () => {
     var res = await runCli(['open', '/tmp/img.png']);
     expect(res.code).toBe(0);
     var data = JSON.parse(res.stdout);
-    expect(data.status).toBe('edited');
+    expect(data.status).toBe('done');
     expect(data.path).toContain('.tmp');
     expect(existsSync(data.path)).toBe(true);
     // Clean up

@@ -194,7 +194,7 @@ function formatOutput(command, result) {
       fs.writeFileSync(outPath, raw);
     }
     if (outPath) {
-      printJson({ status: 'edited', path: outPath, message: 'User annotated the image. Read the file at path to see the result.' });
+      printJson({ status: 'done', path: outPath, message: 'User finished reviewing the image. Read the file at path to see the result.' });
     }
     return;
   }

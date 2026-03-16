@@ -8,6 +8,14 @@ let model = null;
 let processor = null;
 let envConfigured = false;
 
+// CRC32 table (computed once at module scope)
+const CRC_TABLE = new Uint32Array(256);
+for (let n = 0; n < 256; n++) {
+  let c = n;
+  for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+  CRC_TABLE[n] = c;
+}
+
 function encodeRGBAtoPNG(rgbaData, width, height) {
   const rowBytes = width * 4;
   const srcBuf = Buffer.from(rgbaData.buffer, rgbaData.byteOffset, rgbaData.byteLength);
@@ -18,15 +26,9 @@ function encodeRGBAtoPNG(rgbaData, width, height) {
   }
   const deflated = zlib.deflateSync(filtered);
 
-  const crcTable = new Uint32Array(256);
-  for (let n = 0; n < 256; n++) {
-    let c = n;
-    for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
-    crcTable[n] = c;
-  }
   function crc32(buf) {
     let crc = 0xFFFFFFFF;
-    for (let i = 0; i < buf.length; i++) crc = crcTable[(crc ^ buf[i]) & 0xFF] ^ (crc >>> 8);
+    for (let i = 0; i < buf.length; i++) crc = CRC_TABLE[(crc ^ buf[i]) & 0xFF] ^ (crc >>> 8);
     return (crc ^ 0xFFFFFFFF) >>> 0;
   }
   function makeChunk(type, data) {

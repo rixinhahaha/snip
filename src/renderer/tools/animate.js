@@ -261,8 +261,14 @@ var AnimateTool = (function() {
       var btn = document.createElement('button');
       btn.className = 'animate-preset-btn';
       btn.title = preset.prompt || preset.description;
-      btn.innerHTML = '<span class="animate-preset-label">' + preset.label + '</span>' +
-                       '<span class="animate-preset-desc">' + preset.description + '</span>';
+      var labelSpan = document.createElement('span');
+      labelSpan.className = 'animate-preset-label';
+      labelSpan.textContent = preset.label;
+      var descSpan = document.createElement('span');
+      descSpan.className = 'animate-preset-desc';
+      descSpan.textContent = preset.description;
+      btn.appendChild(labelSpan);
+      btn.appendChild(descSpan);
       btn.addEventListener('click', function() {
         // AI presets pass their prompt as _custom so generateAnimation()
         // uses the AI-generated prompt directly instead of looking up static presets

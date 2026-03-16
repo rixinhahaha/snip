@@ -32,9 +32,6 @@ function getFfmpegPath() {
 function extractFrames(mp4Path, fps, maxDuration) {
   return new Promise(function(resolve, reject) {
     var ffmpeg = getFfmpegPath();
-    var tmpDir = path.join(os.tmpdir(), 'snip-frames-' + Date.now());
-    fs.mkdirSync(tmpDir, { recursive: true });
-
     // Build ffmpeg args: extract frames as raw RGBA
     var args = [
       '-i', mp4Path,
@@ -44,16 +41,6 @@ function extractFrames(mp4Path, fps, maxDuration) {
       '-f', 'rawvideo',                          // Raw video output
       '-v', 'error',                             // Quiet
       'pipe:1'                                    // Output to stdout
-    ];
-
-    // First, get video dimensions
-    var probeArgs = [
-      '-i', mp4Path,
-      '-v', 'error',
-      '-select_streams', 'v:0',
-      '-show_entries', 'stream=width,height',
-      '-of', 'csv=p=0',
-      '-f', 'null', '-'
     ];
 
     // Use ffprobe-like approach: extract one frame to get dimensions

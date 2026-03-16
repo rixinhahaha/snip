@@ -1,4 +1,4 @@
-const { app, desktopCapturer, screen, dialog, shell } = require('electron');
+const { app, BrowserWindow, desktopCapturer, screen, dialog, shell } = require('electron');
 const path = require('path');
 
 // Load native addon for macOS Space behavior.
@@ -20,7 +20,9 @@ let storedNativeImage = null;
  * Show a dialog directing the user to grant Screen Recording permission.
  */
 function showPermissionDialog(detail) {
-  dialog.showMessageBox({
+  var parent = BrowserWindow.getFocusedWindow() || BrowserWindow.getAllWindows().find(function (w) { return !w.isDestroyed(); }) || null;
+  var showFn = parent ? dialog.showMessageBox.bind(dialog, parent) : dialog.showMessageBox.bind(dialog);
+  showFn({
     type: 'warning',
     title: 'Screen Recording Permission Required',
     message: 'Snip needs Screen Recording permission to capture snips.',
@@ -52,7 +54,8 @@ function getWindowList(cursorDisplay) {
           width: w.width,
           height: w.height,
           owner: w.owner,
-          name: w.name
+          name: w.name,
+          pid: w.pid
         };
       });
     } catch (e) {
@@ -173,7 +176,12 @@ async function captureScreen(createOverlayFn, getOverlayFn, opts) {
   // (macOS may push the window below menu bar on show)
   const bounds = cursorDisplay.bounds;
   overlayWindow.setBounds({ x: bounds.x, y: bounds.y, width, height });
-  overlayWindow.webContents.send('screenshot-captured', { displayOrigin: { x: bounds.x, y: bounds.y }, windowList, mode });
+  const actualBounds = overlayWindow.getBounds();
+  overlayWindow.webContents.send('screenshot-captured', {
+    displayOrigin: { x: bounds.x, y: bounds.y },
+    overlayOrigin: { x: actualBounds.x, y: actualBounds.y },
+    windowList, mode
+  });
 }
 
 /**

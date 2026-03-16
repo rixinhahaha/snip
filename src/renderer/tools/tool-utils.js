@@ -119,9 +119,18 @@ const ToolUtils = (() => {
     }
   }
 
-  /** Read the current theme's --accent color from CSS. */
+  /** Read the current theme's --accent color from CSS (cached, invalidated on theme change). */
+  var _cachedAccent = null;
   function getAccentColor() {
-    return getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
+    if (!_cachedAccent) {
+      _cachedAccent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
+    }
+    return _cachedAccent;
+  }
+  // Invalidate cache on theme change
+  if (typeof MutationObserver !== 'undefined') {
+    var _observer = new MutationObserver(function () { _cachedAccent = null; });
+    _observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
   }
 
   /** Convert hex color to rgba string. */

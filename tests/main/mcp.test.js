@@ -19,6 +19,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  store.flushConfig();
   rmSync(tmpDir, { recursive: true, force: true });
 });
 
@@ -245,6 +246,7 @@ describe('getMcpConfig', () => {
 
   it('survives reload from disk', () => {
     store.setMcpConfig({ enabled: true, categories: { library: false } });
+    store.flushConfig(); // flush debounced write before reading from disk
     store.reloadConfig();
     const config = store.getMcpConfig();
     expect(config.enabled).toBe(true);

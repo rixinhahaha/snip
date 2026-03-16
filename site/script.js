@@ -13,8 +13,6 @@
 
   // --- Nav scroll effect ---
   var nav = document.getElementById('nav');
-  var lastScroll = 0;
-
   function onScroll() {
     var scrollY = window.scrollY || window.pageYOffset;
     if (scrollY > 40) {
@@ -22,7 +20,6 @@
     } else {
       nav.classList.remove('scrolled');
     }
-    lastScroll = scrollY;
   }
 
   window.addEventListener('scroll', onScroll, { passive: true });

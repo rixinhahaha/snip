@@ -64,10 +64,28 @@ function loadConfig() {
   return configData;
 }
 
+var _saveTimer = null;
+
 function saveConfig() {
-  const dir = path.dirname(getConfigPath());
-  fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(getConfigPath(), JSON.stringify(configData, null, 2));
+  // Debounce: batch rapid config changes into a single write (500ms)
+  if (_saveTimer) clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(function () {
+    _saveTimer = null;
+    var dir = path.dirname(getConfigPath());
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(getConfigPath(), JSON.stringify(configData, null, 2));
+  }, 500);
+}
+
+// Flush pending config write immediately (for shutdown)
+function flushConfig() {
+  if (_saveTimer) {
+    clearTimeout(_saveTimer);
+    _saveTimer = null;
+    var dir = path.dirname(getConfigPath());
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(getConfigPath(), JSON.stringify(configData, null, 2));
+  }
 }
 
 /**
@@ -398,4 +416,5 @@ module.exports = {
   resetShortcuts,
   getMcpConfig,
   setMcpConfig,
+  flushConfig,
 };

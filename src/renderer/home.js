@@ -12,7 +12,6 @@
 
   var descriptionSaveTimers = {}; // debounce timers for description auto-save
 
-  var screenshotsDir = '';
   var currentSubdir = ''; // relative path within screenshots dir
 
   // ── Navigation ──
@@ -47,7 +46,6 @@
 
   // ── Screenshots page ──
   async function init() {
-    screenshotsDir = await window.snip.getScreenshotsDir();
     loadFolder('');
     initOllamaSettings();
     initAnimationSettings();

@@ -96,9 +96,13 @@ var TranscribeTool = (function() {
     els.empty.classList.add('hidden');
     els.error.classList.add('hidden');
     var langs = data.languages.slice(0, 3);
-    els.language.innerHTML = langs.map(function(lang) {
-      return '<span class="transcript-lang-pill">' + lang + '</span>';
-    }).join('');
+    els.language.innerHTML = '';
+    langs.forEach(function(lang) {
+      var pill = document.createElement('span');
+      pill.className = 'transcript-lang-pill';
+      pill.textContent = lang;
+      els.language.appendChild(pill);
+    });
     els.text.textContent = data.text.replace(/\n{3,}/g, '\n\n').trim();
     els.actions.classList.remove('hidden');
   }

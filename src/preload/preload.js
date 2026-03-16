@@ -110,8 +110,6 @@ contextBridge.exposeInMainWorld('snip', {
   checkSegmentSupport: () => ipcRenderer.invoke('check-segment-support'),
 
   // Setup overlay
-  closeSetupOverlay: () => ipcRenderer.invoke('close-setup-overlay'),
-  openSetupOverlay: () => ipcRenderer.invoke('open-setup-overlay'),
   onShowSetupOverlay: (callback) => {
     ipcRenderer.on('show-setup-overlay', () => callback());
   },

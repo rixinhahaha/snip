@@ -33,8 +33,6 @@ async function processQueue() {
     console.log('[Worker] Processing (%d remaining in queue): %s', queue.length, path.basename(filepath));
     try {
       var result = await processScreenshot(filepath);
-      // Rebuild index after each successful organization — prunes stale entries
-      rebuildIndex();
       console.log('[Worker] Done: %s', path.basename(filepath));
       // Send embedding text to main thread (ONNX can't run in worker threads)
       parentPort.postMessage({
@@ -67,6 +65,8 @@ async function processQueue() {
     }
   }
 
+  // Prune stale entries once after the entire queue is processed
+  rebuildIndex();
   processing = false;
 }
 
