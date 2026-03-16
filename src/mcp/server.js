@@ -23,13 +23,15 @@ var NODE_PATH;
 var isPackaged = false;
 try { isPackaged = require('fs').existsSync(path.join(__dirname, '..', '..', 'app.asar')); } catch {}
 
+var { findNodeBinary } = require('../main/node-binary');
+
 if (isPackaged || __dirname.includes('app.asar')) {
   var resourcesPath = path.resolve(__dirname, '..', '..', '..');
   CLI_PATH = path.join(resourcesPath, 'cli', 'snip.js');
   NODE_PATH = path.join(resourcesPath, 'node', 'node');
   // Fallback to system node if bundled node not found
   if (!require('fs').existsSync(NODE_PATH)) {
-    NODE_PATH = '/usr/local/bin/node';
+    NODE_PATH = findNodeBinary() || '/usr/local/bin/node';
   }
 } else {
   CLI_PATH = path.join(__dirname, '..', 'cli', 'snip.js');

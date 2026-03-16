@@ -406,13 +406,18 @@ app.whenReady().then(() => {
   showHomeWindow();
 });
 
+var isQuitting = false;
 app.on('will-quit', (e) => {
+  if (isQuitting) return; // already shutting down
+  isQuitting = true;
   e.preventDefault();
   unregisterShortcuts();
   flushConfig();
   extensionRegistry.killWorkers();
   stopSocketServer();
-  stopOllama().finally(() => app.exit(0));
+  // Safety timeout: force exit after 5s no matter what
+  var forceExit = setTimeout(() => app.exit(0), 5000);
+  stopOllama().finally(() => { clearTimeout(forceExit); app.exit(0); });
 });
 
 app.on('window-all-closed', (e) => {

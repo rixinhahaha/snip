@@ -375,12 +375,12 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
 
   // CLI + AI Integration
   ipcMain.handle('install-cli', async () => {
+    var { findNodeBinary } = require('./node-binary');
     var nodePath, cliPath;
     if (app.isPackaged) {
-      nodePath = path.join(process.resourcesPath, 'node', 'node');
+      nodePath = findNodeBinary() || '/usr/local/bin/node';
       cliPath = path.join(process.resourcesPath, 'cli', 'snip.js');
     } else {
-      var { findNodeBinary } = require('./node-binary');
       nodePath = findNodeBinary() || '/usr/local/bin/node';
       cliPath = path.join(__dirname, '..', 'cli', 'snip.js');
     }
@@ -396,13 +396,16 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
       path.join(home, 'bin', 'snip')
     ];
 
+    // Directories that are commonly in shell PATH even if Electron doesn't see them
+    // (Electron launched via Finder gets a minimal PATH without shell profile additions)
+    var commonShellPaths = ['/usr/local/bin', path.join(home, '.local', 'bin'), path.join(home, 'bin')];
+
     for (var target of targets) {
       try {
         fs.mkdirSync(path.dirname(target), { recursive: true });
         fs.writeFileSync(target, wrapper, { mode: 0o755 });
-        // Check if the directory is in PATH
         var dir = path.dirname(target);
-        var inPath = (process.env.PATH || '').split(':').includes(dir);
+        var inPath = (process.env.PATH || '').split(':').includes(dir) || commonShellPaths.includes(dir);
         return {
           installed: true,
           path: target,
