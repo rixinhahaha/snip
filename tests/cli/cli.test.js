@@ -216,7 +216,7 @@ describe('CLI commands', () => {
     var data = JSON.parse(res.stdout);
     expect(data.status).toBe('done');
     expect(data.path).toBe(outPath);
-    expect(data.message).toContain('annotated');
+    expect(data.message).toContain('finished reviewing');
   });
 
   it('--pretty flag indents JSON output', async () => {

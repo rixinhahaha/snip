@@ -1108,22 +1108,23 @@ The Shortcuts section shows two groups: **configurable shortcuts** (2 global sho
 
 **Preconditions:** App running, home window open, Settings tab active.
 
+Note: The Unix domain socket server (`~/Library/Application Support/snip/snip.sock`, chmod 600) **always runs** regardless of this toggle — the CLI depends on it. This toggle controls **UI visibility** of MCP settings, not the socket lifecycle.
+
 | Step | Action | Expected Result |
 |------|--------|-----------------|
-| 1 | Scroll to "MCP Server" section in Settings | Section visible with status dot (red) and toggle in off state |
-| 2 | Toggle the MCP switch on | Socket server starts at `~/Library/Application Support/snip/snip.sock` (chmod 600) |
-| 3 | -- | Status dot turns green |
-| 4 | -- | Category list expands (Library Access, Open in Snip, Transcribe, Organize — all enabled by default) |
-| 5 | -- | Client config block expands showing JSON with `command` and `args` for Claude Desktop |
-| 6 | Click "Copy" | JSON config copied to clipboard; copy button shows checkmark briefly |
-| 7 | Toggle off | Socket server stops, status dot turns red, category list and config block collapse |
+| 1 | Scroll to "MCP Server" section in Settings | Section visible with status dot (gray = toggle off) and toggle switch |
+| 2 | Toggle the MCP switch on | Status dot turns green |
+| 3 | -- | Category toggles expand (Library Access, Open in Snip, Transcribe, Organize — all enabled by default) |
+| 4 | -- | Client config block expands showing JSON with `command` and `args` for Claude Desktop |
+| 5 | Click "Copy" | JSON config copied to clipboard; button text changes to "Copied!" for 1.5s |
+| 6 | Toggle off | Category toggles and config block collapse; status dot turns gray |
 
 **Edge cases:**
 
 | Condition | Expected Behavior |
 |-----------|-------------------|
-| MCP toggled on while socket already exists (stale from crash) | Old socket file removed before binding new one |
 | Client config path differs in packaged vs dev | `getMcpClientConfig()` returns absolute path to packaged `server.js` in `Resources/`, or dev path relative to project root |
+| Config changed externally (e.g., via MCP command) | UI refreshes automatically via `onMcpConfigChanged` listener |
 
 ### 14.2 Configure MCP Tool Categories
 
@@ -1139,18 +1140,20 @@ The Shortcuts section shows two groups: **configurable shortcuts** (2 global sho
 
 **Preconditions:** MCP enabled, Claude Desktop configured with the copied JSON config.
 
+The MCP adapter (`src/mcp/server.js`) is a **thin CLI wrapper** — it spawns `snip <command>` for most tool calls and reads stdout. It falls back to direct socket for `install_extension` (complex JSON params) and `open_in_snip` with `imageDataURL` (too large for CLI args). The adapter auto-detects stdio framing (Content-Length headers vs newline-delimited JSON).
+
 | Step | Action | Expected Result |
 |------|--------|-----------------|
-| 1 | Claude Desktop connects to `src/mcp/server.js` via stdio | MCP adapter starts, connects to Snip's Unix socket |
+| 1 | Claude Desktop launches `node src/mcp/server.js` via stdio | MCP adapter starts, spawns CLI subprocesses for tool calls |
 | 2 | Agent calls `list_screenshots` | Returns JSON array of screenshot metadata from index |
 | 3 | Agent calls `search_screenshots` with a query | Returns top-matching screenshots with similarity scores |
-| 4 | Agent calls `get_screenshot` with a path | Returns base64-encoded PNG (path must be inside screenshots dir) |
+| 4 | Agent calls `get_screenshot` with a path | Returns metadata JSON (name, category, tags — dataURL stripped) |
 | 5 | Agent calls `transcribe_screenshot` with a path | Returns OCR text via macOS Vision framework |
-| 6 | Agent calls `organize_screenshot` with a path | Triggers AI organizer, returns updated metadata |
-| 7 | Agent calls `open_in_snip` with a local file path | Snip opens the file in the annotation editor; call blocks until user saves or cancels |
-| 7a | -- | User annotates and presses Save | Edited PNG returned as base64 to the agent |
-| 7b | -- | User presses Esc/Done without saving | `null` returned to the agent |
-| 8 | Agent calls `install_extension` with a folder path | Extension manifest validated, approval dialog shown to user |
+| 6 | Agent calls `organize_screenshot` with a path | Returns queued status: `{ queued: true, filepath }` |
+| 7 | Agent calls `open_in_snip` with a local file path | Snip opens the file in the annotation editor; call blocks until user finishes |
+| 7a | -- | User annotates and saves | Returns file path to annotated image |
+| 7b | -- | User presses Esc/cancels | Error returned to agent |
+| 8 | Agent calls `install_extension` with manifest + code | Extension validated, approval dialog shown to user (uses direct socket) |
 
 **Edge cases:**
 
@@ -1161,6 +1164,8 @@ The Shortcuts section shows two groups: **configurable shortcuts** (2 global sho
 | `open_in_snip` with file > 15 MB | Rejected with size error before decoding |
 | Socket buffer overflow (> 16 MB message) | Connection closed |
 | MCP tool called when category disabled | Returns error indicating tool is not enabled |
+| Client sends Content-Length framing | Adapter auto-detects and responds with Content-Length framing |
+| Client sends newline-delimited JSON | Adapter auto-detects and responds with newline-delimited JSON |
 
 ---
 
@@ -1210,3 +1215,152 @@ The Shortcuts section shows two groups: **configurable shortcuts** (2 global sho
 | Extension calls a non-`ext:`-prefixed IPC channel | Rejected by registry — user extensions can only handle `ext:*` channels |
 | Extension tries to access core Snip IPC channels | Core handlers registered first; extension registration attempt for those channels silently skipped |
 | Sandbox process crashes | Registry detects exit, marks extension as inactive, logs error |
+
+---
+
+## 16. CLI
+
+### 16.1 Install CLI
+
+**Preconditions:** App running, home window open, Settings tab active.
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Scroll to "AI Workflow" section in Settings | "Install CLI" button visible |
+| 2 | Click "Install CLI" | Shell wrapper written to first writable path: `/usr/local/bin/snip`, `~/.local/bin/snip`, or `~/bin/snip` |
+| 3 | -- | Button changes to "CLI Installed ✓" (disabled/success state) |
+| 4 | -- | Install path displayed (e.g., "Installed at /usr/local/bin/snip") |
+| 5 | -- | If path is not in default `$PATH`, shows hint: "add to your shell: `export PATH=...`" |
+| 6 | -- | AI Providers section appears below (see §17) |
+
+**Edge cases:**
+
+| Condition | Expected Behavior |
+|-----------|-------------------|
+| `/usr/local/bin` not writable | Falls back to `~/.local/bin/snip`, then `~/bin/snip` |
+| All paths fail | Error message shown |
+| CLI already installed but stale (points to moved binary) | Button shows "Update CLI" instead of "Install CLI" |
+| CLI already installed and valid | Button shows "CLI Installed ✓" on page load |
+
+### 16.2 Use CLI from Terminal
+
+**Preconditions:** CLI installed (§16.1), Snip app running (or packaged app available for auto-launch).
+
+| Command | Output |
+|---------|--------|
+| `snip search "login form"` | JSON array of matching screenshots with similarity scores |
+| `snip list` | JSON array of all screenshot metadata |
+| `snip get <filepath>` | JSON metadata for that screenshot (no dataURL) |
+| `snip transcribe <filepath>` | Plain text (not JSON) — extracted OCR text |
+| `snip organize <filepath>` | Human-readable message: "Queued for AI categorization: <path>" |
+| `snip categories` | JSON array of category names |
+| `snip open <filepath>` | Blocks until user finishes editing; returns JSON `{ status, path, message }` |
+| `snip --help` or `snip -h` | Usage text with all commands and examples |
+| `snip` (no args) | Same as `--help`, exits 0 |
+
+**Flags:**
+
+| Flag | Effect |
+|------|--------|
+| `--pretty` | Pretty-print JSON output (indented) |
+| `--help`, `-h` | Show help text |
+
+**Error handling:**
+
+| Condition | Expected Behavior |
+|-----------|-------------------|
+| Unknown command (e.g., `snip foobar`) | Exits 1, stderr: "Unknown command: foobar" + help text |
+| Missing required argument (e.g., `snip search`) | Exits 1, stderr: "Missing argument for search" |
+| Snip not running, no packaged app | Exits 1, stderr: "Snip is not running and could not be launched." |
+| Server returns error | Exits 1, stderr: error message from server |
+| Relative filepath argument | Resolved to absolute path before sending to server |
+
+### 16.3 CLI Auto-Launch
+
+**Preconditions:** CLI installed, Snip not running, `/Applications/Snip.app` exists.
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Run any CLI command (e.g., `snip list`) | CLI attempts socket connection, gets ENOENT/ECONNREFUSED |
+| 2 | -- | Detects `/Applications/Snip.app` exists |
+| 3 | -- | Prints "Launching Snip..." to stderr |
+| 4 | -- | Runs `open -a Snip` |
+| 5 | -- | Polls for socket file every 500ms (up to 20 attempts = 10s) |
+| 6 | -- | Socket appears, CLI retries the original command |
+| 7 | -- | Command executes and returns result |
+
+**Edge cases:**
+
+| Condition | Expected Behavior |
+|-----------|-------------------|
+| No packaged app installed | Error: "Snip is not running. Start it with: npm start" |
+| `SNIP_NO_AUTO_LAUNCH=1` env var set | Auto-launch disabled; immediate error if socket not found |
+| Socket doesn't appear within 10s | Error: "Snip did not start in time" |
+| Auto-launch succeeds but command fails | Error from the command itself (not the launch) |
+
+### 16.4 Uninstall CLI
+
+**Preconditions:** CLI installed (§16.1), Settings tab active.
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Click "CLI Installed ✓" button | CLI wrapper removed from all candidate paths (`/usr/local/bin/snip`, `~/.local/bin/snip`, `~/bin/snip`) |
+| 2 | -- | Button reverts to "Install CLI" |
+| 3 | -- | AI Providers section hides |
+| 4 | -- | Status message: "CLI removed" (auto-hides after 4s) |
+
+---
+
+## 17. AI Workflow Integration
+
+### 17.1 Detect AI Providers
+
+**Preconditions:** CLI installed (§16.1), Settings tab active.
+
+After CLI installation, the app scans for installed AI coding tools and shows them in the AI Providers section.
+
+| Provider | Detection Method |
+|----------|-----------------|
+| Claude Code | `~/.claude/CLAUDE.md` exists (or `~/.claude/` directory) |
+| Cursor | `~/.cursor/` directory exists |
+| Windsurf | `~/.windsurf/` directory exists |
+| Cline | VS Code Cline extension directory exists |
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | CLI installed or Settings page loads with CLI already installed | App calls `detectAiProviders()` |
+| 2 | -- | Each detected provider shown as a row with name and target config path |
+| 3 | -- | For each provider, app calls `checkAiProviderStatus(id)` to determine if already configured |
+| 4 | -- | Unconfigured providers show "Configure" button; configured providers show "Remove" button |
+
+### 17.2 Configure AI Provider
+
+**Preconditions:** Provider detected (§17.1), not yet configured.
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Click "Configure" on a provider row | Snip CLI instructions appended to provider's config file |
+| 2 | -- | Claude Code: marker block added to `~/.claude/CLAUDE.md` with `snip` CLI usage instructions |
+| 2a | -- | Cursor: rules written to `.cursorrules` file |
+| 2b | -- | Windsurf: rules written to Windsurf config |
+| 2c | -- | Cline: rules written to Cline config |
+| 3 | -- | Button changes to "Remove" |
+| 4 | -- | Status shows where config was written (e.g., "Added to ~/.claude/CLAUDE.md") |
+
+**Edge cases:**
+
+| Condition | Expected Behavior |
+|-----------|-------------------|
+| Config file doesn't exist yet | File created with Snip rules |
+| Config file already has Snip marker block | Block replaced with updated content (idempotent) |
+| Provider uninstalled between detect and configure | Error shown |
+
+### 17.3 Remove AI Provider Configuration
+
+**Preconditions:** Provider configured (§17.2).
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Click "Remove" on a configured provider row | Snip marker block removed from provider's config file |
+| 2 | -- | Button reverts to "Configure" |
+| 3 | -- | Rest of config file preserved (only Snip block removed) |
