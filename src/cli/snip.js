@@ -1,0 +1,257 @@
+#!/usr/bin/env node
+
+/**
+ * Snip CLI — command-line interface for Snip.
+ * Connects to the running Snip app via Unix domain socket.
+ * Auto-launches Snip if not running (packaged app only).
+ *
+ * Usage:
+ *   snip search "login form"       Search screenshots
+ *   snip list                      List all screenshots
+ *   snip get <filepath>            Get screenshot metadata
+ *   snip transcribe <filepath>     Extract text (OCR)
+ *   snip organize <filepath>       Queue for AI categorization
+ *   snip categories                List categories
+ *   snip open <filepath>           Open in editor, get annotated result
+ */
+
+var net = require('net');
+var path = require('path');
+var os = require('os');
+var fs = require('fs');
+
+var SOCKET_PATH = process.env.SNIP_SOCKET_PATH || path.join(os.homedir(), 'Library', 'Application Support', 'snip', 'snip.sock');
+
+// ── Parse args ──
+
+var args = process.argv.slice(2);
+var command = args[0];
+var flags = {};
+var positional = [];
+
+for (var i = 1; i < args.length; i++) {
+  if (args[i] === '--json') flags.json = true;
+  else if (args[i] === '--pretty') flags.pretty = true;
+  else if (args[i] === '--help' || args[i] === '-h') flags.help = true;
+  else positional.push(args[i]);
+}
+
+if (!command || command === '--help' || command === '-h' || flags.help) {
+  printHelp();
+  process.exit(0);
+}
+
+// ── Command map ──
+
+var COMMANDS = {
+  search:     { action: 'search_screenshots', paramName: 'query', needsArg: true },
+  list:       { action: 'list_screenshots' },
+  get:        { action: 'get_screenshot', paramName: 'filepath', needsArg: true },
+  transcribe: { action: 'transcribe_screenshot', paramName: 'filepath', needsArg: true },
+  organize:   { action: 'organize_screenshot', paramName: 'filepath', needsArg: true },
+  categories: { action: 'get_categories' },
+  open:       { action: 'open_in_snip', paramName: 'filepath', needsArg: true }
+};
+
+var cmd = COMMANDS[command];
+if (!cmd) {
+  process.stderr.write('Unknown command: ' + command + '\n');
+  printHelp();
+  process.exit(1);
+}
+
+// Validate required arg
+if (cmd.needsArg && positional.length === 0) {
+  process.stderr.write('Missing argument for ' + command + '\n');
+  process.exit(1);
+}
+
+// Build params
+var params = {};
+if (cmd.paramName && positional[0]) {
+  var val = positional[0];
+  if (cmd.paramName === 'filepath') {
+    val = path.resolve(val);
+  }
+  params[cmd.paramName] = val;
+}
+
+// Execute
+callSnip(cmd.action, params, false).then(function (result) {
+  formatOutput(command, result);
+  process.exit(0);
+}).catch(function (err) {
+  process.stderr.write('Error: ' + err.message + '\n');
+  process.exit(1);
+});
+
+// ── Socket connection ──
+
+function callSnip(action, params, isRetry) {
+  return new Promise(function (resolve, reject) {
+    var conn = net.createConnection(SOCKET_PATH);
+    var buffer = '';
+    var id = 'cli-' + Date.now();
+
+    conn.on('connect', function () {
+      var msg = JSON.stringify({ id: id, action: action, params: params || {} }) + '\n';
+      conn.write(msg);
+    });
+
+    conn.on('data', function (chunk) {
+      buffer += chunk.toString();
+      var newlineIdx = buffer.indexOf('\n');
+      if (newlineIdx !== -1) {
+        var line = buffer.slice(0, newlineIdx).trim();
+        conn.end();
+        try {
+          var response = JSON.parse(line);
+          if (response.error) {
+            reject(new Error(response.error));
+          } else {
+            resolve(response.result);
+          }
+        } catch (e) {
+          reject(new Error('Invalid response from Snip'));
+        }
+      }
+    });
+
+    conn.on('error', function (err) {
+      if ((err.code === 'ENOENT' || err.code === 'ECONNREFUSED') && !isRetry && !process.env.SNIP_NO_AUTO_LAUNCH) {
+        // Auto-launch Snip and retry
+        launchAndRetry(action, params).then(resolve).catch(reject);
+      } else if (err.code === 'ENOENT' || err.code === 'ECONNREFUSED') {
+        reject(new Error('Snip is not running and could not be launched.'));
+      } else {
+        reject(new Error('Connection failed: ' + err.message));
+      }
+    });
+
+    // Timeout for long-running commands (open blocks on user interaction)
+    if (action !== 'open_in_snip') {
+      setTimeout(function () {
+        conn.destroy();
+        reject(new Error('Request timed out'));
+      }, 30000);
+    }
+  });
+}
+
+function launchAndRetry(action, params) {
+  // Try to launch the packaged app
+  if (fs.existsSync('/Applications/Snip.app')) {
+    process.stderr.write('Launching Snip...\n');
+    require('child_process').exec('open -a Snip');
+  } else {
+    return Promise.reject(new Error('Snip is not running. Start it with: npm start'));
+  }
+
+  // Poll for socket to appear
+  return new Promise(function (resolve, reject) {
+    var attempts = 0;
+    var check = function () {
+      attempts++;
+      if (attempts > 20) {
+        return reject(new Error('Snip did not start in time'));
+      }
+      if (fs.existsSync(SOCKET_PATH)) {
+        // Socket appeared — retry the call
+        callSnip(action, params, true).then(resolve).catch(reject);
+      } else {
+        setTimeout(check, 500);
+      }
+    };
+    setTimeout(check, 500);
+  });
+}
+
+// ── Output formatting ──
+
+function formatOutput(command, result) {
+  if (command === 'transcribe') {
+    if (result && result.text) {
+      process.stdout.write(result.text + '\n');
+    } else if (result && result.success === false) {
+      process.stderr.write('Transcription failed: ' + (result.error || 'unknown error') + '\n');
+      process.exit(1);
+    } else {
+      printJson(result);
+    }
+    return;
+  }
+
+  if (command === 'open') {
+    var outPath = null;
+    if (result && result.outputPath) {
+      outPath = result.outputPath;
+    } else if (result && result.dataURL) {
+      var tmpDir = path.join(os.homedir(), 'Documents', 'snip', 'screenshots', '.tmp');
+      fs.mkdirSync(tmpDir, { recursive: true });
+      var filename = 'annotated-' + Date.now() + '.png';
+      outPath = path.join(tmpDir, filename);
+      var raw = Buffer.from(result.dataURL.split(',')[1], 'base64');
+      fs.writeFileSync(outPath, raw);
+    }
+    if (outPath) {
+      printJson({ status: 'edited', path: outPath, message: 'User annotated the image. Read the file at path to see the result.' });
+    }
+    return;
+  }
+
+  if (command === 'get') {
+    if (result && result.metadata) {
+      printJson(result.metadata);
+    } else {
+      printJson(result);
+    }
+    return;
+  }
+
+  if (command === 'organize') {
+    if (result && result.queued) {
+      process.stdout.write('Queued for AI categorization: ' + result.filepath + '\n');
+    } else {
+      printJson(result);
+    }
+    return;
+  }
+
+  printJson(result);
+}
+
+function printJson(data) {
+  if (flags.pretty) {
+    process.stdout.write(JSON.stringify(data, null, 2) + '\n');
+  } else {
+    process.stdout.write(JSON.stringify(data) + '\n');
+  }
+}
+
+function printHelp() {
+  process.stdout.write([
+    'Usage: snip <command> [options]',
+    '',
+    'Commands:',
+    '  search <query>        Search screenshots by description',
+    '  list                  List all saved screenshots',
+    '  get <filepath>        Get screenshot metadata',
+    '  transcribe <filepath> Extract text from a screenshot (OCR)',
+    '  organize <filepath>   Queue screenshot for AI categorization',
+    '  categories            List all categories',
+    '  open <filepath>       Open image in Snip editor for annotation',
+    '',
+    'Options:',
+    '  --pretty              Pretty-print JSON output',
+    '  --help, -h            Show this help',
+    '',
+    'Snip auto-launches if not running (packaged app).',
+    '',
+    'Examples:',
+    '  snip search "error message"',
+    '  snip list | jq \'.[].name\'',
+    '  snip transcribe ~/Documents/snip/screenshots/code/api.png',
+    '  snip open mockup.png',
+    ''
+  ].join('\n'));
+}

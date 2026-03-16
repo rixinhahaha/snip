@@ -58,6 +58,7 @@
     initThemeToggle();
     initShortcutsSettings();
     initMcpSettings();
+    initCliSettings();
     initExtensionsSettings();
     initSetupOverlay();
   }
@@ -1202,6 +1203,147 @@
       window.snip.onMcpConfigChanged(function (config) {
         updateMcpUI(config);
       });
+    }
+  }
+
+  // ── CLI + AI Integration ──
+  async function initCliSettings() {
+    var installBtn = document.getElementById('install-cli-btn');
+    var cliStatus = document.getElementById('cli-status');
+    var aiProvidersDiv = document.getElementById('ai-providers');
+
+    if (!installBtn) return;
+
+    function showCliStatus(msg, isError) {
+      cliStatus.textContent = msg;
+      cliStatus.className = 'extensions-status visible' + (isError ? ' error' : '');
+      setTimeout(function () { cliStatus.className = 'extensions-status'; }, 4000);
+    }
+
+    // Check CLI state: true = installed, 'stale' = broken wrapper, false = not installed
+    var cliState = await window.snip.checkCliInstalled();
+
+    function updateCliButton(state) {
+      if (state === true) {
+        installBtn.textContent = 'CLI Installed ✓';
+        installBtn.className = 'install-cli-btn-installed';
+        installBtn.title = 'Click to remove CLI';
+      } else if (state === 'stale') {
+        installBtn.textContent = 'Update CLI';
+        installBtn.className = 'install-cli-btn-primary';
+        installBtn.title = 'CLI path changed — click to fix';
+        showCliStatus('CLI needs update — app path changed', true);
+      } else {
+        installBtn.textContent = 'Install CLI';
+        installBtn.className = 'install-cli-btn-primary';
+        installBtn.title = '';
+      }
+      if (state === true || state === 'stale') loadAiProviders();
+    }
+
+    updateCliButton(cliState);
+
+    installBtn.addEventListener('click', async function () {
+      if (cliState === true) {
+        // Remove CLI
+        await window.snip.uninstallCli();
+        cliState = false;
+        updateCliButton(false);
+        showCliStatus('CLI removed', false);
+        aiProvidersDiv.classList.add('hidden');
+      } else {
+        // Install or update CLI
+        var result = await window.snip.installCli();
+        if (result.error) {
+          showCliStatus(result.error, true);
+        } else {
+          cliState = true;
+          updateCliButton(true);
+          var msg = 'Installed at ' + result.path;
+          if (result.addToPath) msg += ' — add to your shell: ' + result.addToPath;
+          showCliStatus(msg, !result.inPath);
+        }
+      }
+    });
+
+    async function loadAiProviders() {
+      var providers = await window.snip.detectAiProviders();
+      if (providers.length === 0) {
+        aiProvidersDiv.classList.add('hidden');
+        return;
+      }
+
+      aiProvidersDiv.classList.remove('hidden');
+      aiProvidersDiv.innerHTML = '<div style="font-size:12px;color:var(--text-secondary);margin-bottom:4px;">Add Snip to your AI tools:</div>';
+
+      var PROVIDER_FILES = {
+        'claude-code': '~/.claude/CLAUDE.md',
+        'cursor': '~/.cursor/rules/snip.mdc',
+        'windsurf': '~/.windsurf/rules/snip.md',
+        'cline': '~/.cline/rules/snip.md'
+      };
+
+      for (var pi = 0; pi < providers.length; pi++) {
+        (async function (provider) {
+          var row = document.createElement('div');
+          row.className = 'ai-provider-row';
+
+          var nameCol = document.createElement('div');
+          nameCol.className = 'ai-provider-name';
+
+          var nameText = document.createElement('span');
+          nameText.textContent = provider.name;
+          nameCol.appendChild(nameText);
+
+          var statusText = document.createElement('span');
+          statusText.className = 'ai-provider-status';
+          nameCol.appendChild(statusText);
+
+          var isConfigured = await window.snip.checkAiProviderStatus(provider.id);
+
+          function updateStatus() {
+            var file = PROVIDER_FILES[provider.id] || '';
+            if (isConfigured) {
+              statusText.textContent = 'Added to ' + file;
+            } else {
+              statusText.textContent = '';
+            }
+          }
+          updateStatus();
+
+          var btn = document.createElement('button');
+          btn.className = 'ai-provider-btn' + (isConfigured ? ' configured' : '');
+          btn.textContent = isConfigured ? 'Remove' : 'Configure';
+
+          btn.addEventListener('click', async function () {
+            if (isConfigured) {
+              var result = await window.snip.removeAiProvider(provider.id);
+              if (!result.error) {
+                isConfigured = false;
+                btn.textContent = 'Configure';
+                btn.className = 'ai-provider-btn';
+                updateStatus();
+              } else {
+                showCliStatus(result.error, true);
+              }
+            } else {
+              var result = await window.snip.configureAiProvider(provider.id);
+              if (result.configured) {
+                isConfigured = true;
+                btn.textContent = 'Remove';
+                btn.className = 'ai-provider-btn configured';
+                updateStatus();
+              } else {
+                showCliStatus(result.error, true);
+              }
+            }
+          });
+
+          row.appendChild(nameCol);
+          row.appendChild(btn);
+          aiProvidersDiv.appendChild(row);
+        })(providers[pi]);
+      }
     }
   }
 

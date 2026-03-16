@@ -82,8 +82,11 @@ src/
     extensions.json            # Registry of active bundled extensions
     EXTENSIONS.md              # Extension developer guide
 
-  mcp/                       # MCP (Model Context Protocol) server
-    server.js                  # Stdio adapter — bridges MCP JSON-RPC to Snip's Unix socket
+  cli/                       # CLI interface (primary tool interface)
+    snip.js                    # CLI binary — connects to Unix socket, JSON/text output
+
+  mcp/                       # MCP adapter (thin wrapper around CLI)
+    server.js                  # Stdio adapter — spawns CLI for tool calls, direct socket for install_extension
 
   renderer/                  # Renderer processes (no modules, globals via IIFEs)
     index.html / app.js      # Capture overlay — fullscreen transparent region selector
@@ -277,7 +280,9 @@ An MCP (Model Context Protocol) server exposes Snip's capabilities to external A
 
 1. **Unix domain socket** (`socket-server.js`) — listens at `~/Library/Application Support/snip/snip.sock` (chmod 600). Accepts newline-delimited JSON messages with `{ id, action, params }`. Registered actions: `search_screenshots`, `list_screenshots`, `get_screenshot`, `transcribe_screenshot`, `organize_screenshot`, `get_categories`, `open_in_snip`, `install_extension`. The `open_in_snip` action opens the editor with an external image, blocks until the user finishes annotating, and returns the edited PNG via a `pendingMcpResolve` promise resolved by the `editor-result` IPC channel.
 
-2. **MCP stdio adapter** (`src/mcp/server.js`) — standalone Node.js process that speaks MCP JSON-RPC 2.0 over stdio and forwards tool calls to the socket. Configure in Claude Desktop:
+2. **Snip CLI** (`src/cli/snip.js`) — primary interface. Commands: `search`, `list`, `get`, `transcribe`, `organize`, `categories`, `open`. Auto-launches Snip if not running. Connects to the socket, prints JSON/text to stdout. AI agents call this via bash.
+
+3. **MCP stdio adapter** (`src/mcp/server.js`) — thin wrapper that spawns the CLI for tool calls. Speaks MCP JSON-RPC 2.0 over stdio. Uses direct socket only for `install_extension` (complex JSON params) and `open_in_snip` with `imageDataURL` (too large for CLI args). Configure in Claude Desktop:
 ```json
 {
   "mcpServers": {
@@ -422,13 +427,20 @@ The preload script (`preload.js`) exposes `window.snip` with these methods:
 | `resetShortcuts()` | R -> M | Deletes all custom shortcuts, restores defaults |
 | `onShortcutsChanged(cb)` | M -> R | Broadcast event when shortcuts change (re-registers global shortcuts) |
 | `getMcpConfig()` | R -> M | Get MCP enabled state + per-category toggles |
-| `setMcpConfig(config)` | R -> M | Update MCP enabled/category state; starts/stops socket server on toggle |
+| `setMcpConfig(config)` | R -> M | Update MCP UI visibility + category toggles (socket always runs) |
 | `getMcpClientConfig()` | R -> M | Get resolved `command`+`args` JSON for MCP client config (dev vs packaged paths) |
 | `onMcpConfigChanged(cb)` | M -> R | Push event when MCP config changes |
 | `sendEditorResult(dataURL)` | R -> M | Send edited image (or null for cancel) back to MCP `open_in_snip` handler |
 | `getUserExtensions()` | R -> M | List user-installed extensions (name, type, permissions) |
 | `removeUserExtension(name)` | R -> M | Remove a user extension (kills sandbox, deletes files) |
 | `installExtensionFromFolder()` | R -> M | Open folder picker, validate, show approval dialog, install |
+| `installCli()` | R -> M | Write shell wrapper to `/usr/local/bin/snip` (or `~/bin/snip`) |
+| `checkCliInstalled()` | R -> M | Check if CLI wrapper exists |
+| `detectAiProviders()` | R -> M | Scan for installed AI tools (Claude Code, Cursor, Windsurf, Cline) |
+| `configureAiProvider(id)` | R -> M | Write Snip rules to a detected AI provider's config |
+| `removeAiProvider(id)` | R -> M | Remove Snip rules from an AI provider's config |
+| `checkAiProviderStatus(id)` | R -> M | Check if Snip rules are configured for a provider |
+| `uninstallCli()` | R -> M | Remove CLI wrapper from all candidate paths |
 
 *(R = Renderer, M = Main)*
 
@@ -513,7 +525,7 @@ The native Liquid Glass layer is always present (macOS 26+). Dark and Light them
 | Field | Type | Description |
 |-------|------|-------------|
 | `aiEnabled` | `boolean \| undefined` | `undefined` on first launch (triggers AI choice screen), `true` if user opted in, `false` if user opted out. When `false`, Ollama is not started and AI organization is skipped entirely. |
-| `mcpEnabled` | `boolean` | Whether the MCP socket server is active. Default `false`. |
+| `mcpEnabled` | `boolean` | Controls MCP config visibility in Settings UI. Socket server always runs. Default `false`. |
 | `mcpCategories` | `object` | Per-category toggles: `{ library, upload, transcribe, organize }`. Each is boolean, all default to `true`. Controls which MCP tools are active. |
 | `shortcuts` | `object` | Custom shortcut overrides keyed by action ID (e.g. `{ "capture": "CommandOrControl+Shift+2" }`). Only overridden shortcuts are stored; defaults come from `DEFAULT_SHORTCUTS` in `store.js`. |
 | `falApiKey` | `string` | fal.ai API key for cloud animation. Empty string if not configured. |

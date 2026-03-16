@@ -67,6 +67,8 @@ extraResources:
     to: "native/window_utils.node"
   - from: "vendor/models"
     to: "models"
+  - from: "src/cli/snip.js"
+    to: "cli/snip.js"
 
 extraMetadata:
   main: src/main/main.js

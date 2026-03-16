@@ -3,203 +3,191 @@
 /**
  * Snip MCP Server — stdio transport.
  *
- * This is a thin adapter between the MCP protocol (JSON-RPC 2.0 over stdio)
- * and the running Snip Electron app (via Unix domain socket).
+ * Thin adapter between MCP protocol (JSON-RPC 2.0 over stdio)
+ * and the Snip CLI. All tool calls spawn `snip <command>` and
+ * read stdout. No direct socket management.
  *
  * Usage:
  *   node src/mcp/server.js
- *
- * MCP client config (Claude Desktop, etc.):
- *   {
- *     "mcpServers": {
- *       "snip": {
- *         "command": "node",
- *         "args": ["/path/to/snip/src/mcp/server.js"]
- *       }
- *     }
- *   }
  */
 
-const net = require('net');
-const path = require('path');
-const os = require('os');
+var path = require('path');
+var { execFile } = require('child_process');
 
-const SOCKET_PATH = path.join(
-  os.homedir(), 'Library', 'Application Support', 'snip', 'snip.sock'
-);
+// Resolve CLI path and Node binary
+var CLI_PATH;
+var NODE_PATH;
 
-const PROTOCOL_VERSION = '2025-11-25';
-const SERVER_NAME = 'snip';
-const SERVER_VERSION = '1.0.0';
+// In packaged app: CLI is in Resources/cli/, Node is in Resources/node/
+// In dev: CLI is at src/cli/snip.js, use system node
+var isPackaged = false;
+try { isPackaged = require('fs').existsSync(path.join(__dirname, '..', '..', 'app.asar')); } catch {}
+
+if (isPackaged || __dirname.includes('app.asar')) {
+  var resourcesPath = path.resolve(__dirname, '..', '..', '..');
+  CLI_PATH = path.join(resourcesPath, 'cli', 'snip.js');
+  NODE_PATH = path.join(resourcesPath, 'node', 'node');
+  // Fallback to system node if bundled node not found
+  if (!require('fs').existsSync(NODE_PATH)) {
+    NODE_PATH = '/usr/local/bin/node';
+  }
+} else {
+  CLI_PATH = path.join(__dirname, '..', 'cli', 'snip.js');
+  NODE_PATH = process.argv[0]; // The node binary that launched this script
+}
+
+var PROTOCOL_VERSION = '2025-11-25';
+var SERVER_NAME = 'snip';
+var SERVER_VERSION = '1.0.0';
 
 // ── MCP Tool Definitions ──
 
-const TOOLS = [
+var TOOLS = [
   {
     name: 'search_screenshots',
-    description: 'Search the user\'s Snip screenshot library using natural language. USE THIS whenever the user asks to find, look up, or search for a screenshot or image they saved before. Uses semantic embeddings for relevance ranking. Returns matching entries with category, name, description, tags, relevance score, and file path. Use get_screenshot to retrieve the actual image, or open_in_snip to let the user edit it.',
+    description: 'Search Snip screenshot library by description. USE THIS to find saved screenshots.',
     inputSchema: {
       type: 'object',
-      properties: {
-        query: { type: 'string', description: 'Natural language search query (e.g. "login form", "error message", "chart")' }
-      },
+      properties: { query: { type: 'string', description: 'Search query' } },
       required: ['query']
     }
   },
   {
     name: 'list_screenshots',
-    description: 'List all screenshots saved in Snip with their metadata (category, name, description, tags, file path, timestamp). USE THIS when the user wants to browse or see all their saved snips. Use get_screenshot with a file path to retrieve an image, or open_in_snip to edit it.',
-    inputSchema: {
-      type: 'object',
-      properties: {},
-      required: []
-    }
+    description: 'List all saved screenshots with metadata.',
+    inputSchema: { type: 'object', properties: {}, required: [] }
   },
   {
     name: 'get_screenshot',
-    description: 'Retrieve a specific screenshot image from the Snip library by file path. Returns the image and its metadata. Use list_screenshots or search_screenshots first to discover valid paths. To let the user edit the image, pass the path to open_in_snip instead.',
+    description: 'Get screenshot metadata by file path.',
     inputSchema: {
       type: 'object',
-      properties: {
-        filepath: { type: 'string', description: 'Absolute path to the screenshot file, as returned by list_screenshots or search_screenshots' }
-      },
+      properties: { filepath: { type: 'string', description: 'Absolute path to screenshot' } },
       required: ['filepath']
     }
   },
   {
     name: 'transcribe_screenshot',
-    description: 'Extract text from a screenshot using Snip\'s OCR (macOS Vision framework). USE THIS whenever the user wants to read, extract, or copy text from an image. Returns recognized text and detected languages. Works with code, documents, UI labels, error messages, and any readable text.',
+    description: 'Extract text from a screenshot via OCR. USE THIS to read text from images.',
     inputSchema: {
       type: 'object',
-      properties: {
-        filepath: { type: 'string', description: 'Absolute path to the screenshot file, as returned by list_screenshots or search_screenshots' }
-      },
+      properties: { filepath: { type: 'string', description: 'Absolute path to screenshot' } },
       required: ['filepath']
     }
   },
   {
     name: 'organize_screenshot',
-    description: 'Have Snip\'s AI categorize a screenshot. A local vision LLM analyzes the image and assigns a category, descriptive name, description, and tags. Processing happens in the background. The file must be inside the screenshots directory.',
+    description: 'Queue screenshot for AI categorization.',
     inputSchema: {
       type: 'object',
-      properties: {
-        filepath: { type: 'string', description: 'Absolute path to the screenshot file to categorize' }
-      },
+      properties: { filepath: { type: 'string', description: 'Absolute path to screenshot' } },
       required: ['filepath']
     }
   },
   {
     name: 'get_categories',
-    description: 'List all Snip screenshot categories (default and custom). Use this to see what organizational categories exist before calling organize_screenshot.',
-    inputSchema: {
-      type: 'object',
-      properties: {},
-      required: []
-    }
+    description: 'List all screenshot categories.',
+    inputSchema: { type: 'object', properties: {}, required: [] }
   },
   {
     name: 'open_in_snip',
-    description: 'Open an image in Snip\'s editor for the user to annotate, mark up, or edit. THIS IS THE PRIMARY IMAGE EDITING TOOL — use it whenever the user wants to edit, annotate, mark up, highlight, redact, blur, add arrows, add text, or draw on any image. Also use it when the user wants to review or comment on an image visually. Pass a local file path (preferred) or base64 data URL. The editor provides rectangles, arrows, text labels, tags, blur brush, and more. Blocks until the user finishes and returns the annotated result. PNG and JPEG, max 15 MB.',
+    description: 'Open image in Snip editor for annotation. THIS IS THE PRIMARY IMAGE EDITING TOOL — use it to edit, annotate, highlight, redact, blur, or draw on any image. Blocks until user finishes. Returns path to annotated image.',
     inputSchema: {
       type: 'object',
       properties: {
-        imageDataURL: { type: 'string', description: 'Base64 data URL of the image (e.g. data:image/png;base64,iVBOR...). Use this from Claude Desktop or any sandboxed MCP client.' },
-        filepath: { type: 'string', description: 'Absolute path to an image file on the local filesystem. Only works from CLI tools (e.g. Claude Code) that share the same filesystem as Snip.' }
+        filepath: { type: 'string', description: 'Path to image file (PNG/JPEG)' },
+        imageDataURL: { type: 'string', description: 'Base64 data URL (fallback for sandboxed clients)' }
       },
       required: []
     }
   },
   {
     name: 'install_extension',
-    description: 'Install a new extension into Snip. Shows the user an approval dialog before installing. The extension runs in a sandboxed child process — it cannot access fs, child_process, net, http, or electron directly. Only action-tool and processor types are supported.\n\nHow to create an extension:\n1. Choose a name (alphanumeric + hyphens, e.g. "word-counter")\n2. Create a manifest object with: name, displayName, type ("action-tool" or "processor"), and an ipc array mapping channels to methods\n3. All IPC channels MUST use the "ext:" prefix (e.g. "ext:word-counter:count")\n4. Write mainCode that exports the methods referenced in the ipc array. Use module.exports = { methodName }.\n5. The mainCode runs in a sandbox: require("path"), require("crypto"), require("buffer") are allowed. require("fs"), require("child_process"), require("net"), etc. are blocked.\n6. For file access, declare permissions in the manifest: ["screenshots:read"] or ["temp:write"]. Use the context.api object passed to init(): context.api.readScreenshot(filepath), context.api.writeTemp(filename, data).\n\nExample:\n  name: "word-counter"\n  manifest: { name: "word-counter", displayName: "Word Counter", type: "action-tool", toolId: "word-counter", icon: "<svg .../>", tooltip: "Count Words", toolbarPosition: 11, ipc: [{ channel: "ext:word-counter:count", method: "count" }] }\n  mainCode: "async function count(event, { text }) { return { words: text.split(/\\\\s+/).length }; }\\nmodule.exports = { count };"',
+    description: 'Install a sandboxed extension into Snip. Requires user approval. Only action-tool and processor types. All IPC channels must use ext: prefix.\n\nExample:\n  name: "word-counter"\n  manifest: { name: "word-counter", displayName: "Word Counter", type: "action-tool", ipc: [{ channel: "ext:word-counter:count", method: "count" }] }\n  mainCode: "async function count(event, { text }) { return { words: text.split(/\\\\s+/).length }; }\\nmodule.exports = { count };"',
     inputSchema: {
       type: 'object',
       properties: {
-        name: { type: 'string', description: 'Extension name (alphanumeric + hyphens only, e.g. "word-counter")' },
-        manifest: {
-          type: 'object',
-          description: 'The extension.json manifest. Required fields: name (string), displayName (string), type ("action-tool" or "processor"). Optional: ipc (array of {channel, method}), permissions (array of "screenshots:read", "temp:write", "network"), toolId, icon (SVG string), tooltip, shortcut, toolbarPosition (number).'
-        },
-        mainCode: { type: 'string', description: 'JavaScript source code for main.js. Must use module.exports to export functions referenced by the ipc array. Runs in a sandboxed process. init(context) is called on load — context.api provides readScreenshot() and writeTemp() if permissions are declared.' }
+        name: { type: 'string', description: 'Extension name (alphanumeric + hyphens)' },
+        manifest: { type: 'object', description: 'Extension manifest object' },
+        mainCode: { type: 'string', description: 'JavaScript source for main.js' }
       },
       required: ['name', 'manifest']
     }
   }
 ];
 
-// ── Socket Connection ──
+// ── CLI execution ──
 
-let snipConn = null;
-let pendingRequests = {};
-let requestCounter = 0;
+function mapToolToCli(toolName, args) {
+  switch (toolName) {
+    case 'search_screenshots': return ['search', args.query || ''];
+    case 'list_screenshots': return ['list'];
+    case 'get_screenshot': return ['get', args.filepath || ''];
+    case 'transcribe_screenshot': return ['transcribe', args.filepath || ''];
+    case 'organize_screenshot': return ['organize', args.filepath || ''];
+    case 'get_categories': return ['categories'];
+    case 'open_in_snip':
+      // imageDataURL can't go through CLI (too large for argv, path.resolve breaks it)
+      if (!args.filepath && args.imageDataURL) return null;
+      return ['open', args.filepath || ''];
+    case 'install_extension': return null; // handled via socket directly
+    default: return null;
+  }
+}
 
-function connectToSnip() {
+function execCli(cliArgs, timeout) {
+  return new Promise(function (resolve, reject) {
+    var child = execFile(NODE_PATH, [CLI_PATH].concat(cliArgs), {
+      timeout: timeout !== undefined ? timeout : 30000,
+      maxBuffer: 50 * 1024 * 1024
+    }, function (err, stdout, stderr) {
+      if (err) {
+        reject(new Error(stderr.trim() || err.message));
+      } else {
+        resolve(stdout.trim());
+      }
+    });
+  });
+}
+
+// For install_extension, we still need direct socket (it needs to pass complex JSON)
+var net = require('net');
+var os = require('os');
+var SOCKET_PATH = path.join(os.homedir(), 'Library', 'Application Support', 'snip', 'snip.sock');
+
+function callSocket(action, params) {
   return new Promise(function (resolve, reject) {
     var conn = net.createConnection(SOCKET_PATH);
     var buffer = '';
+    var id = 'mcp-' + Date.now();
 
     conn.on('connect', function () {
-      snipConn = conn;
-      resolve(conn);
+      conn.write(JSON.stringify({ id: id, action: action, params: params || {} }) + '\n');
     });
 
     conn.on('data', function (chunk) {
       buffer += chunk.toString();
-      var newlineIdx;
-      while ((newlineIdx = buffer.indexOf('\n')) !== -1) {
-        var line = buffer.slice(0, newlineIdx).trim();
-        buffer = buffer.slice(newlineIdx + 1);
-        if (!line) continue;
-
+      var idx = buffer.indexOf('\n');
+      if (idx !== -1) {
+        var line = buffer.slice(0, idx).trim();
+        conn.end();
         try {
-          var response = JSON.parse(line);
-          var pending = pendingRequests[response.id];
-          if (pending) {
-            delete pendingRequests[response.id];
-            if (response.error) {
-              pending.reject(new Error(response.error));
-            } else {
-              pending.resolve(response.result);
-            }
-          }
-        } catch {}
+          var resp = JSON.parse(line);
+          if (resp.error) reject(new Error(resp.error));
+          else resolve(resp.result);
+        } catch { reject(new Error('Invalid response')); }
       }
     });
 
     conn.on('error', function (err) {
-      snipConn = null;
-      reject(new Error('Cannot connect to Snip app. Is it running? (' + err.message + ')'));
-    });
-
-    conn.on('close', function () {
-      snipConn = null;
-      // Reject all pending requests
-      Object.keys(pendingRequests).forEach(function (id) {
-        pendingRequests[id].reject(new Error('Connection to Snip closed'));
-        delete pendingRequests[id];
-      });
+      reject(new Error('Cannot connect to Snip: ' + err.message));
     });
   });
 }
 
-function callSnip(action, params) {
-  return new Promise(function (resolve, reject) {
-    if (!snipConn) {
-      reject(new Error('Not connected to Snip app'));
-      return;
-    }
+// ── MCP Protocol ──
 
-    var id = 'mcp-' + (++requestCounter);
-    pendingRequests[id] = { resolve: resolve, reject: reject };
-
-    var msg = JSON.stringify({ id: id, action: action, params: params || {} }) + '\n';
-    snipConn.write(msg);
-  });
-}
-
-// ── MCP Protocol Handler ──
-
-var useFramedOutput = false; // set by auto-detect in transport
+var useFramedOutput = false;
 
 function sendJsonRpc(obj) {
   var json = JSON.stringify(obj);
@@ -233,7 +221,6 @@ async function handleRequest(msg) {
       break;
 
     case 'notifications/initialized':
-      // No-op — client is ready
       break;
 
     case 'tools/list':
@@ -260,28 +247,36 @@ async function handleToolCall(id, params) {
   var args = params.arguments || {};
 
   try {
-    // Ensure connection to Snip app
-    if (!snipConn) {
-      await connectToSnip();
-    }
-
-    var result = await callSnip(toolName, args);
-
-    // Format result as MCP content
     var content;
-    if (result && result.dataURL) {
-      // Image result — return as image content
-      var match = result.dataURL.match(/^data:(image\/\w+);base64,(.+)$/);
-      if (match) {
-        content = [
-          { type: 'image', data: match[2], mimeType: match[1] },
-          { type: 'text', text: JSON.stringify({ width: result.width, height: result.height }, null, 2) }
-        ];
-      } else {
-        content = [{ type: 'text', text: JSON.stringify(result, null, 2) }];
-      }
-    } else {
+
+    if (toolName === 'install_extension') {
+      // install_extension needs direct socket (complex JSON params)
+      var result = await callSocket('install_extension', args);
       content = [{ type: 'text', text: JSON.stringify(result, null, 2) }];
+    } else {
+      var cliArgs = mapToolToCli(toolName, args);
+      if (!cliArgs) {
+        // Fallback to direct socket for tools that can't go through CLI (e.g., open_in_snip with imageDataURL)
+        var socketResult = await callSocket(toolName === 'open_in_snip' ? 'open_in_snip' : toolName, args);
+        content = [{ type: 'text', text: JSON.stringify(socketResult, null, 2) }];
+        sendResult(id, { content: content });
+        return;
+      }
+
+      // open_in_snip blocks indefinitely — no timeout
+      var timeout = toolName === 'open_in_snip' ? 0 : 30000;
+      var stdout = await execCli(cliArgs, timeout);
+
+      if (toolName === 'open_in_snip') {
+        // stdout is a file path — return it
+        content = [{ type: 'text', text: 'Annotated image saved to: ' + stdout }];
+      } else if (toolName === 'transcribe_screenshot') {
+        // stdout is plain text
+        content = [{ type: 'text', text: stdout }];
+      } else {
+        // stdout is JSON
+        content = [{ type: 'text', text: stdout }];
+      }
     }
 
     sendResult(id, { content: content });
@@ -293,55 +288,37 @@ async function handleToolCall(id, params) {
   }
 }
 
-// ── Stdio Transport ──
+// ── Stdio Transport (auto-detect framing) ──
 
 function startStdioTransport() {
-  let buffer = '';
-  let contentLength = null;
-  let framed = null; // null = auto-detect, true = Content-Length framing, false = newline-delimited
+  var buffer = '';
+  var contentLength = null;
+  var framed = null;
 
   function processMessage(body) {
     try {
       var msg = JSON.parse(body);
       handleRequest(msg).catch(function (err) {
-        if (msg.id !== undefined) {
-          sendError(msg.id, -32603, err.message);
-        }
+        if (msg.id !== undefined) sendError(msg.id, -32603, err.message);
       });
-    } catch (err) {
-      // Invalid JSON — skip
-    }
+    } catch {}
   }
 
   function processFramed() {
     while (buffer.length > 0) {
       if (contentLength === null) {
-        // Look for header separator (accept \r\n\r\n and \n\n)
         var headerEnd = buffer.indexOf('\r\n\r\n');
         var sepLen = 4;
-        if (headerEnd === -1) {
-          headerEnd = buffer.indexOf('\n\n');
-          sepLen = 2;
-        }
+        if (headerEnd === -1) { headerEnd = buffer.indexOf('\n\n'); sepLen = 2; }
         if (headerEnd === -1) return;
-
         var header = buffer.slice(0, headerEnd);
         var match = header.match(/Content-Length:\s*(\d+)/i);
-        if (!match) {
-          buffer = buffer.slice(headerEnd + sepLen);
-          continue;
-        }
+        if (!match) { buffer = buffer.slice(headerEnd + sepLen); continue; }
         contentLength = parseInt(match[1]);
-        if (contentLength > 10 * 1024 * 1024) {
-          buffer = buffer.slice(headerEnd + sepLen);
-          contentLength = null;
-          continue;
-        }
+        if (contentLength > 10 * 1024 * 1024) { buffer = buffer.slice(headerEnd + sepLen); contentLength = null; continue; }
         buffer = buffer.slice(headerEnd + sepLen);
       }
-
       if (buffer.length < contentLength) return;
-
       var body = buffer.slice(0, contentLength);
       buffer = buffer.slice(contentLength);
       contentLength = null;
@@ -350,48 +327,27 @@ function startStdioTransport() {
   }
 
   function processLines() {
-    var newlineIdx;
-    while ((newlineIdx = buffer.indexOf('\n')) !== -1) {
-      var line = buffer.slice(0, newlineIdx).trim();
-      buffer = buffer.slice(newlineIdx + 1);
-      if (!line) continue;
-      processMessage(line);
+    var idx;
+    while ((idx = buffer.indexOf('\n')) !== -1) {
+      var line = buffer.slice(0, idx).trim();
+      buffer = buffer.slice(idx + 1);
+      if (line) processMessage(line);
     }
   }
 
   process.stdin.on('data', function (chunk) {
     buffer += chunk.toString();
-
-    // Guard against unbounded buffer growth
-    if (buffer.length > 16 * 1024 * 1024) {
-      buffer = '';
-      return;
-    }
-
-    // Auto-detect framing on first data
+    if (buffer.length > 16 * 1024 * 1024) { buffer = ''; return; }
     if (framed === null) {
       var trimmed = buffer.trimStart();
-      if (trimmed.startsWith('{')) {
-        framed = false; // newline-delimited JSON
-        useFramedOutput = false;
-      } else {
-        framed = true; // Content-Length framed
-        useFramedOutput = true;
-      }
+      if (trimmed.startsWith('{')) { framed = false; useFramedOutput = false; }
+      else { framed = true; useFramedOutput = true; }
     }
-
-    if (framed) {
-      processFramed();
-    } else {
-      processLines();
-    }
+    if (framed) processFramed();
+    else processLines();
   });
 
-  process.stdin.on('end', function () {
-    process.exit(0);
-  });
+  process.stdin.on('end', function () { process.exit(0); });
 }
-
-// ── Main ──
 
 startStdioTransport();

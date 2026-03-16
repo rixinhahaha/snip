@@ -345,20 +345,10 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
   });
 
   ipcMain.handle('set-mcp-config', async (event, update) => {
-    var before = getMcpConfig();
     setMcpConfig(update);
     var after = getMcpConfig();
 
-    // Start or stop the socket server based on toggle
-    if (after.enabled && !before.enabled) {
-      var { startMcpServer } = require('./main');
-      startMcpServer();
-    } else if (!after.enabled && before.enabled) {
-      var { stopSocketServer } = require('./socket-server');
-      stopSocketServer();
-    }
-
-    // Broadcast change to all windows
+    // Broadcast change to all windows (MCP toggle controls UI visibility only)
     for (const win of BrowserWindow.getAllWindows()) {
       if (!win.isDestroyed()) win.webContents.send('mcp-config-changed', after);
     }
@@ -389,6 +379,194 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
         }
       }
     };
+  });
+
+  // CLI + AI Integration
+  ipcMain.handle('install-cli', async () => {
+    var nodePath, cliPath;
+    if (app.isPackaged) {
+      nodePath = path.join(process.resourcesPath, 'node', 'node');
+      cliPath = path.join(process.resourcesPath, 'cli', 'snip.js');
+    } else {
+      var { findNodeBinary } = require('./node-binary');
+      nodePath = findNodeBinary() || '/usr/local/bin/node';
+      cliPath = path.join(__dirname, '..', 'cli', 'snip.js');
+    }
+
+    // Sanitize paths for shell safety (escape double quotes)
+    var safeNode = nodePath.replace(/"/g, '\\"');
+    var safeCli = cliPath.replace(/"/g, '\\"');
+    var wrapper = '#!/bin/sh\n# Snip CLI — installed by Snip.app\nexec "' + safeNode + '" "' + safeCli + '" "$@"\n';
+    var home = require('os').homedir();
+    var targets = [
+      '/usr/local/bin/snip',
+      path.join(home, '.local', 'bin', 'snip'),
+      path.join(home, 'bin', 'snip')
+    ];
+
+    for (var target of targets) {
+      try {
+        fs.mkdirSync(path.dirname(target), { recursive: true });
+        fs.writeFileSync(target, wrapper, { mode: 0o755 });
+        // Check if the directory is in PATH
+        var dir = path.dirname(target);
+        var inPath = (process.env.PATH || '').split(':').includes(dir);
+        return {
+          installed: true,
+          path: target,
+          inPath: inPath,
+          addToPath: inPath ? null : 'export PATH="' + dir + ':$PATH"'
+        };
+      } catch {}
+    }
+    return { error: 'Could not install CLI. Run manually: sudo ln -sf "' + safeCli + '" /usr/local/bin/snip' };
+  });
+
+  ipcMain.handle('detect-ai-providers', async () => {
+    var home = require('os').homedir();
+    var providers = [];
+    if (fs.existsSync(path.join(home, '.claude'))) {
+      providers.push({ id: 'claude-code', name: 'Claude Code' });
+    }
+    if (fs.existsSync(path.join(home, '.cursor')) || fs.existsSync(path.join(home, 'Library', 'Application Support', 'Cursor'))) {
+      providers.push({ id: 'cursor', name: 'Cursor' });
+    }
+    if (fs.existsSync(path.join(home, '.windsurf')) || fs.existsSync(path.join(home, 'Library', 'Application Support', 'Windsurf'))) {
+      providers.push({ id: 'windsurf', name: 'Windsurf' });
+    }
+    if (fs.existsSync(path.join(home, '.cline'))) {
+      providers.push({ id: 'cline', name: 'Cline' });
+    }
+    return providers;
+  });
+
+  // Shared: map provider ID → file path for Snip rules
+  var SNIP_MARKER_START = '<!-- snip-start -->';
+  var SNIP_MARKER_END = '<!-- snip-end -->';
+
+  function getProviderFilePath(providerId) {
+    var home = require('os').homedir();
+    switch (providerId) {
+      case 'claude-code': return path.join(home, '.claude', 'CLAUDE.md');
+      case 'cursor': return path.join(home, '.cursor', 'rules', 'snip.mdc');
+      case 'windsurf': return path.join(home, '.windsurf', 'rules', 'snip.md');
+      case 'cline': return path.join(home, '.cline', 'rules', 'snip.md');
+      default: return null;
+    }
+  }
+
+  var snipRulesContent = [
+    '# Snip — Image Editor',
+    'For any image editing, annotation, markup, highlighting, or visual feedback, use the `snip` CLI.',
+    '- `snip open <filepath>` — Opens image in Snip editor. Blocks until done. Returns JSON: `{"status":"edited","path":"...","message":"..."}`. Read the file at `path` to see the annotated result. If the user cancels, the command exits with code 1.',
+    '- `snip search "<query>"` — Search screenshot library. Returns JSON array.',
+    '- `snip list` — List saved screenshots with metadata. Returns JSON array.',
+    '- `snip transcribe <filepath>` — Extract text via OCR. Returns plain text.',
+    '- `snip categories` — List categories. Returns JSON array.',
+    '- `snip open` auto-launches Snip if not running.',
+    'Always prefer `snip open` when the user wants to show, point out, or mark up something visually.',
+    ''
+  ].join('\n');
+
+  ipcMain.handle('check-ai-provider-status', async (event, providerId) => {
+    var filePath = getProviderFilePath(providerId);
+    if (!filePath) return false;
+    if (providerId === 'claude-code') {
+      // Check for marker in CLAUDE.md
+      try {
+        var content = fs.readFileSync(filePath, 'utf8');
+        return content.includes(SNIP_MARKER_START);
+      } catch { return false; }
+    }
+    return fs.existsSync(filePath);
+  });
+
+  ipcMain.handle('configure-ai-provider', async (event, providerId) => {
+    var filePath = getProviderFilePath(providerId);
+    if (!filePath) return { error: 'Unknown provider' };
+
+    try {
+      if (providerId === 'claude-code') {
+        // Append to CLAUDE.md with markers
+        var block = '\n' + SNIP_MARKER_START + '\n' + snipRulesContent + SNIP_MARKER_END + '\n';
+        // Check if already configured
+        var existing = '';
+        try { existing = fs.readFileSync(filePath, 'utf8'); } catch {}
+        if (existing.includes(SNIP_MARKER_START)) {
+          return { configured: true, provider: 'Claude Code' }; // already there
+        }
+        fs.mkdirSync(path.dirname(filePath), { recursive: true });
+        fs.appendFileSync(filePath, block);
+      } else {
+        fs.mkdirSync(path.dirname(filePath), { recursive: true });
+        fs.writeFileSync(filePath, snipRulesContent);
+      }
+      return { configured: true, provider: providerId };
+    } catch (err) {
+      return { error: err.message };
+    }
+  });
+
+  ipcMain.handle('remove-ai-provider', async (event, providerId) => {
+    var filePath = getProviderFilePath(providerId);
+    if (!filePath) return { error: 'Unknown provider' };
+
+    try {
+      if (providerId === 'claude-code') {
+        // Remove the marked block from CLAUDE.md
+        var content = '';
+        try { content = fs.readFileSync(filePath, 'utf8'); } catch { return { removed: true }; }
+        var startIdx = content.indexOf(SNIP_MARKER_START);
+        var endIdx = content.indexOf(SNIP_MARKER_END);
+        if (startIdx === -1) return { removed: true }; // already gone
+        if (endIdx === -1 || endIdx < startIdx) return { removed: true }; // corrupt markers, leave file alone
+        // Remove the block including surrounding newlines
+        var cutStart = startIdx;
+        if (cutStart > 0 && content[cutStart - 1] === '\n') cutStart--;
+        var cutEnd = endIdx + SNIP_MARKER_END.length;
+        if (cutEnd < content.length && content[cutEnd] === '\n') cutEnd++;
+        var before = content.slice(0, cutStart);
+        var after = content.slice(cutEnd);
+        fs.writeFileSync(filePath, before + after);
+      } else {
+        fs.rmSync(filePath, { force: true });
+      }
+      return { removed: true };
+    } catch (err) {
+      return { error: err.message };
+    }
+  });
+
+  ipcMain.handle('check-cli-installed', async () => {
+    var home = require('os').homedir();
+    var targets = ['/usr/local/bin/snip', path.join(home, '.local', 'bin', 'snip'), path.join(home, 'bin', 'snip')];
+    for (var target of targets) {
+      if (fs.existsSync(target)) {
+        // Verify the wrapper still points to a valid node binary
+        try {
+          var content = fs.readFileSync(target, 'utf8');
+          var match = content.match(/exec "([^"]+)"/);
+          if (match && match[1] && !fs.existsSync(match[1])) {
+            return 'stale'; // wrapper exists but points to deleted app
+          }
+        } catch {}
+        return true;
+      }
+    }
+    return false;
+  });
+
+  ipcMain.handle('uninstall-cli', async () => {
+    var home = require('os').homedir();
+    var targets = ['/usr/local/bin/snip', path.join(home, '.local', 'bin', 'snip'), path.join(home, 'bin', 'snip')];
+    var removed = false;
+    for (var target of targets) {
+      try {
+        fs.rmSync(target, { force: true });
+        removed = true;
+      } catch {}
+    }
+    return { removed: removed };
   });
 
   // Settings: User Extensions

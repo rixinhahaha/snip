@@ -123,6 +123,15 @@ contextBridge.exposeInMainWorld('snip', {
   getAnimationConfig: () => ipcRenderer.invoke('get-animation-config'),
   setAnimationConfig: (config) => ipcRenderer.invoke('set-animation-config', config),
 
+  // CLI + AI Integration
+  installCli: () => ipcRenderer.invoke('install-cli'),
+  uninstallCli: () => ipcRenderer.invoke('uninstall-cli'),
+  checkCliInstalled: () => ipcRenderer.invoke('check-cli-installed'),
+  detectAiProviders: () => ipcRenderer.invoke('detect-ai-providers'),
+  configureAiProvider: (id) => ipcRenderer.invoke('configure-ai-provider', id),
+  removeAiProvider: (id) => ipcRenderer.invoke('remove-ai-provider', id),
+  checkAiProviderStatus: (id) => ipcRenderer.invoke('check-ai-provider-status', id),
+
   // Settings: User Extensions
   getUserExtensions: () => ipcRenderer.invoke('get-user-extensions'),
   removeUserExtension: (name) => ipcRenderer.invoke('remove-user-extension', name),

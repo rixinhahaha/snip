@@ -408,10 +408,8 @@ app.whenReady().then(() => {
   // Pre-warm overlay window for fast first capture
   prewarmOverlay();
 
-  // Start MCP socket server if enabled in settings
-  if (getMcpConfig().enabled) {
-    startMcpServer();
-  }
+  // Always start socket server (CLI depends on it; MCP toggle only controls UI visibility)
+  startSocketHandlers();
 
   // Open home window on startup
   showHomeWindow();
@@ -465,13 +463,25 @@ function requireCategory(category) {
 var pendingMcpResolve = null; // { resolve, reject, webContentsId, win }
 
 ipcMain.on('editor-result', function (event, dataURL) {
-  if (!pendingMcpResolve) return;
+  if (!pendingMcpResolve || typeof pendingMcpResolve !== 'object') return;
   // Only accept results from the editor window that was opened for this upload
   if (event.sender.id !== pendingMcpResolve.webContentsId) return;
   var { resolve, reject, win } = pendingMcpResolve;
   pendingMcpResolve = null;
   if (dataURL && typeof dataURL === 'string' && dataURL.startsWith('data:image/')) {
-    resolve({ dataURL: dataURL });
+    // Save annotated image to Snip temp space for CLI access
+    try {
+      var store = require('./store');
+      var tmpDir = path.join(store.getScreenshotsDir(), '.tmp');
+      require('fs').mkdirSync(tmpDir, { recursive: true });
+      var filename = 'annotated-' + Date.now() + '.png';
+      var outputPath = path.join(tmpDir, filename);
+      var raw = Buffer.from(dataURL.split(',')[1], 'base64');
+      require('fs').writeFileSync(outputPath, raw);
+      resolve({ dataURL: dataURL, outputPath: outputPath });
+    } catch (e) {
+      resolve({ dataURL: dataURL });
+    }
   } else if (dataURL) {
     reject(new Error('Invalid editor result'));
   } else {
@@ -481,7 +491,7 @@ ipcMain.on('editor-result', function (event, dataURL) {
   if (win && !win.isDestroyed()) win.destroy();
 });
 
-function startMcpServer() {
+function startSocketHandlers() {
   startSocketServer({
     search_screenshots: async function (params) {
       requireCategory('library');
@@ -536,8 +546,8 @@ function startMcpServer() {
       // Check editor is not already busy
       if (pendingMcpResolve) throw new Error('Editor is busy with another upload');
 
-      // Reserve the slot immediately to prevent concurrent uploads
-      pendingMcpResolve = { resolve: null, reject: null, webContentsId: null, win: null };
+      // Reserve the slot with a truthy sentinel (not destructurable — prevents crash if editor-result fires early)
+      pendingMcpResolve = true;
 
       try {
 
@@ -635,7 +645,7 @@ function startMcpServer() {
           var { setPendingEditorData } = require('./ipc-handlers');
           setPendingEditorData(null);
 
-          if (pendingMcpResolve) {
+          if (pendingMcpResolve && typeof pendingMcpResolve === 'object' && pendingMcpResolve.reject) {
             pendingMcpResolve.reject(new Error('Editor closed without saving'));
             pendingMcpResolve = null;
           }
@@ -723,4 +733,4 @@ function startMcpServer() {
   });
 }
 
-module.exports = { startMcpServer };
+module.exports = { startSocketHandlers };
