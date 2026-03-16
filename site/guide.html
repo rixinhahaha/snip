@@ -69,8 +69,14 @@
       },
       {
         "@type": "HowToStep",
-        "name": "MCP Server Setup (Optional)",
-        "text": "Enable the MCP Server in Settings to connect AI assistants like Claude Desktop or Cursor. Copy the config JSON and paste it into your MCP client's configuration file.",
+        "name": "CLI Setup (Recommended)",
+        "text": "Install the snip CLI from Settings to let AI coding tools (Claude Code, Cursor, Windsurf) use Snip directly from the terminal. Click Configure next to your detected AI tool.",
+        "url": "https://snipit.dev/guide#cli-setup"
+      },
+      {
+        "@type": "HowToStep",
+        "name": "MCP Server Setup (Alternative)",
+        "text": "For clients that can't run CLI commands (e.g., Claude Desktop), enable MCP in Settings and copy the config JSON into your client's configuration file.",
         "url": "https://snipit.dev/guide#mcp-setup"
       }
     ]
@@ -752,21 +758,77 @@
       </div>
     </section>
 
-    <!-- Quick Reference -->
+    <!-- CLI Setup (Recommended) -->
+    <section class="guide-section" id="cli-setup">
+      <div class="guide-section-header">
+        <div class="guide-section-icon">
+          <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+        </div>
+        <div>
+          <h2>CLI Setup <span class="guide-optional-badge">Recommended</span></h2>
+          <p>Let AI coding tools use Snip via the command line</p>
+        </div>
+      </div>
+
+      <div class="guide-why">
+        <strong>Why CLI?</strong>
+        <p>The <code>snip</code> CLI gives AI coding tools (Claude Code, Cursor, Windsurf, Cline) direct access to Snip — search your library, extract text, open images for annotation. Lower latency and token cost than MCP. Auto-launches Snip if not running.</p>
+      </div>
+
+      <div class="guide-image">
+        <video autoplay loop muted playsinline width="720" loading="lazy">
+          <source src="assets/cli-setup.mp4" type="video/mp4">
+        </video>
+      </div>
+
+      <div class="guide-steps">
+        <div class="guide-step">
+          <div class="guide-step-num">1</div>
+          <div class="guide-step-content">
+            <h3>Install the CLI</h3>
+            <p>Open Snip Settings &rarr; <strong>AI Workflow Integration</strong> &rarr; click <strong>Install CLI</strong>. This adds the <code>snip</code> command to your terminal.</p>
+          </div>
+        </div>
+        <div class="guide-step">
+          <div class="guide-step-num">2</div>
+          <div class="guide-step-content">
+            <h3>Configure your AI tool</h3>
+            <p>After installing, Snip detects which AI tools you have. Click <strong>Configure</strong> next to each one. This tells your AI to use <code>snip</code> for image editing.</p>
+          </div>
+        </div>
+        <div class="guide-step">
+          <div class="guide-step-num">3</div>
+          <div class="guide-step-content">
+            <h3>Try it</h3>
+            <p>In your terminal: <code>snip list</code> to see your screenshots, or <code>snip open image.png</code> to open the editor. In your AI tool, ask it to "annotate this image" — it will use Snip automatically.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="guide-callout">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        <div>
+          <strong>Available commands</strong>
+          <p><code>snip open</code> (annotate), <code>snip search</code> (find), <code>snip list</code> (browse), <code>snip transcribe</code> (OCR), <code>snip organize</code> (categorize), <code>snip categories</code>, <code>snip --help</code></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- MCP Setup (Alternative) -->
     <section class="guide-section" id="mcp-setup">
       <div class="guide-section-header">
         <div class="guide-section-icon">
           <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
         </div>
         <div>
-          <h2>MCP Server <span class="guide-optional-badge">Optional</span></h2>
-          <p>Connect AI assistants to Snip</p>
+          <h2>MCP Server <span class="guide-optional-badge">Alternative</span></h2>
+          <p>For clients that can't run CLI commands (e.g., Claude Desktop)</p>
         </div>
       </div>
 
       <div class="guide-why">
-        <strong>What is MCP?</strong>
-        <p>The Model Context Protocol lets AI assistants (Claude Desktop, Claude Code, Cursor, Windsurf) interact with Snip directly — searching your screenshot library, extracting text, opening images for annotation, and more.</p>
+        <strong>When to use MCP instead of CLI</strong>
+        <p>Most AI coding tools work better with the CLI above. Use MCP only if your client can't run shell commands — for example, Claude Desktop's web-based interface.</p>
       </div>
 
       <div class="guide-image">
@@ -779,30 +841,22 @@
         <div class="guide-step">
           <div class="guide-step-num">1</div>
           <div class="guide-step-content">
-            <h3>Enable the MCP server</h3>
-            <p>Open Snip Settings &rarr; scroll to <strong>MCP Server</strong> &rarr; toggle it on. The status dot turns green when the server is listening.</p>
+            <h3>Show the MCP config</h3>
+            <p>Open Snip Settings &rarr; <strong>AI Workflow Integration</strong> &rarr; <strong>MCP Server</strong> &rarr; toggle it on to reveal the config.</p>
           </div>
         </div>
         <div class="guide-step">
           <div class="guide-step-num">2</div>
           <div class="guide-step-content">
-            <h3>Copy the client config</h3>
-            <p>Click the <strong>Copy</strong> button next to the JSON config snippet. This contains the correct paths for your machine.</p>
+            <h3>Copy the config</h3>
+            <p>Click <strong>Copy</strong> next to the JSON snippet.</p>
           </div>
         </div>
         <div class="guide-step">
           <div class="guide-step-num">3</div>
           <div class="guide-step-content">
-            <h3>Add to your MCP client</h3>
-            <p><strong>Claude Desktop:</strong> paste the <code>snip</code> entry into <span class="guide-path">~/Library/Application Support/Claude/claude_desktop_config.json</span> under <code>mcpServers</code>.</p>
-            <p><strong>Claude Code:</strong> run <code>claude mcp add --transport stdio snip -- node /path/to/snip/src/mcp/server.js</code></p>
-          </div>
-        </div>
-        <div class="guide-step">
-          <div class="guide-step-num">4</div>
-          <div class="guide-step-content">
-            <h3>Control per-tool access</h3>
-            <p>Use the category toggles in Settings to enable/disable tool groups: Library Access, Open in Snip, Transcribe, and Organize.</p>
+            <h3>Add to Claude Desktop</h3>
+            <p>Paste the <code>snip</code> entry into <span class="guide-path">~/Library/Application Support/Claude/claude_desktop_config.json</span> under <code>mcpServers</code>.</p>
           </div>
         </div>
       </div>
@@ -811,7 +865,7 @@
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
         <div>
           <strong>Extensions</strong>
-          <p>User extensions can be installed via Settings &rarr; <strong>Install from Folder</strong> or by AI agents via the MCP <code>install_extension</code> tool. They run in a sandboxed child process with blocked module access and require your approval before installation.</p>
+          <p>User extensions can be installed via Settings &rarr; <strong>Install from Folder</strong> or by AI agents via the MCP <code>install_extension</code> tool. They run in a sandboxed child process and require your approval before installation.</p>
         </div>
       </div>
     </section>

@@ -57,7 +57,7 @@
     "screenshot": "https://snipit.dev/assets/og-image.png",
     "softwareRequirements": "macOS 14+ with Apple M-series chip",
     "downloadUrl": "https://github.com/rixinhahaha/snip/releases",
-    "featureList": "Screen capture, Annotation tools, AI-powered organization, Semantic search, Object segmentation, Blur brush, Auto-tagging, Auto-categorization, AI upscaling, Text transcription (OCR), MCP server for AI assistants, Extension system",
+    "featureList": "Screen capture, Annotation tools, AI-powered organization, Semantic search, Object segmentation, Blur brush, Auto-tagging, Auto-categorization, AI upscaling, Text transcription (OCR), CLI for AI agents, MCP server, Extension system",
     "softwareVersion": "1.0.15"
   }
   </script>
@@ -579,13 +579,13 @@
     </div>
   </section>
 
-  <!-- MCP Server -->
-  <section class="mcp-demo" id="mcp">
+  <!-- AI Workflow -->
+  <section class="mcp-demo" id="ai-workflow">
     <div class="section-inner">
       <div class="section-header">
-        <div class="section-badge">MCP Server <span class="badge-new">New</span></div>
+        <div class="section-badge">AI Workflow</div>
         <h2>Connect your AI.<br>Control your snips.</h2>
-        <p>Expose Snip to AI assistants via the Model Context Protocol. Search your library, extract text, open images for annotation — all from your AI workflow.</p>
+        <p>The <code>snip</code> CLI lets AI coding tools call Snip directly from your terminal. Search your library, extract text, open images for annotation — lower latency and token cost than MCP.</p>
       </div>
       <div class="mcp-demo-video-wrapper">
         <video autoplay loop muted playsinline>
@@ -594,48 +594,41 @@
       </div>
       <div class="mcp-tools-grid">
         <div class="mcp-tool-card">
-          <strong>search_screenshots</strong>
-          <span>Semantic search across your library</span>
-        </div>
-        <div class="mcp-tool-card">
-          <strong>list_screenshots</strong>
-          <span>Browse all saved snips with metadata</span>
-        </div>
-        <div class="mcp-tool-card">
-          <strong>get_screenshot</strong>
-          <span>Retrieve a specific image by path</span>
-        </div>
-        <div class="mcp-tool-card">
-          <strong>transcribe_screenshot</strong>
-          <span>Extract text via native macOS OCR</span>
-        </div>
-        <div class="mcp-tool-card">
-          <strong>organize_screenshot</strong>
-          <span>AI categorization with local LLM</span>
-        </div>
-        <div class="mcp-tool-card">
-          <strong>open_in_snip</strong>
+          <strong>snip open &lt;file&gt;</strong>
           <span>Open image in editor, get annotated result</span>
         </div>
         <div class="mcp-tool-card">
-          <strong>install_extension</strong>
-          <span>Install sandboxed extensions via AI</span>
+          <strong>snip search "query"</strong>
+          <span>Semantic search across your library</span>
         </div>
         <div class="mcp-tool-card">
-          <strong>get_categories</strong>
+          <strong>snip list</strong>
+          <span>Browse all saved snips with metadata</span>
+        </div>
+        <div class="mcp-tool-card">
+          <strong>snip transcribe &lt;file&gt;</strong>
+          <span>Extract text via native macOS OCR</span>
+        </div>
+        <div class="mcp-tool-card">
+          <strong>snip organize &lt;file&gt;</strong>
+          <span>AI categorization with local LLM</span>
+        </div>
+        <div class="mcp-tool-card">
+          <strong>snip categories</strong>
           <span>List all screenshot categories</span>
         </div>
       </div>
       <div class="mcp-setup">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
         <div>
           <strong>Quick Setup</strong>
-          <p>Works with Claude Desktop, Claude Code, Cursor, Windsurf, and any MCP-compatible client.</p>
+          <p>Works with Claude Code, Cursor, Windsurf, Cline, and any AI tool that can run shell commands.</p>
           <ol>
-            <li>Open Snip Settings &rarr; toggle <strong>MCP Server</strong> on</li>
-            <li>Click <strong>Copy</strong> to copy the client config</li>
-            <li>Paste into your MCP client's config file</li>
+            <li>Open Snip Settings &rarr; <strong>Install CLI</strong></li>
+            <li>Click <strong>Configure</strong> next to your detected AI tool</li>
+            <li>Your AI can now call <code>snip open</code>, <code>snip search</code>, etc.</li>
           </ol>
+          <p style="font-size:13px;color:var(--text-secondary);margin-top:12px;">For clients that can't run CLI commands (e.g., Claude Desktop), Snip also supports <strong>MCP</strong>. Enable it in Settings and copy the config.</p>
         </div>
       </div>
     </div>
