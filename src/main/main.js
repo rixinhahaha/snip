@@ -404,13 +404,38 @@ app.whenReady().then(() => {
 
   // Open home window on startup
   showHomeWindow();
+
+  // Auto-update (packaged app only)
+  if (app.isPackaged) {
+    const { initAutoUpdater } = require('./auto-updater');
+    initAutoUpdater();
+  }
 });
 
 var isQuitting = false;
 app.on('will-quit', (e) => {
   if (isQuitting) return; // already shutting down
   isQuitting = true;
+
+  // If auto-updater is installing, let the quit proceed (it handles relaunch)
+  var updatingInstall = false;
+  try { updatingInstall = require('./auto-updater').isPendingInstall(); } catch (_) {}
+  if (updatingInstall) {
+    // Synchronous cleanup only — let quitAndInstall manage the quit
+    try { require('./auto-updater').cancelAutoUpdater(); } catch (_) {}
+    unregisterShortcuts();
+    flushConfig();
+    extensionRegistry.killWorkers();
+    stopSocketServer();
+    // Kill Ollama synchronously (SIGTERM fires immediately even though stopOllama is async)
+    try { stopOllama(); } catch (_) {}
+    // Safety net: if quitAndInstall fails, force exit after 5s
+    setTimeout(() => app.exit(0), 5000);
+    return;
+  }
+
   e.preventDefault();
+  try { require('./auto-updater').cancelAutoUpdater(); } catch (_) {}
   unregisterShortcuts();
   flushConfig();
   extensionRegistry.killWorkers();

@@ -33,35 +33,23 @@ jobs:
       - name: Download bundled Node.js binary
         run: node scripts/download-node.js --arch arm64
 
-      - name: Build, sign & notarize
+      - name: Build, sign, notarize & publish
         env:
           CSC_LINK: ${{ secrets.CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-        run: npx electron-builder --mac dmg --arm64 --publish never
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx electron-builder --mac dmg zip --arm64 --publish always
 
-      - uses: actions/upload-artifact@v4
-        with:
-          name: dmg-arm64
-          path: dist/*.dmg
-
-  release:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/download-artifact@v4
-
-      - uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            dmg-arm64/*.dmg
-          draft: false
-          generate_release_notes: true
+      - name: Generate release notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release edit "$GITHUB_REF_NAME" --generate-notes
 
   update-cask:
-    needs: release
+    needs: build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -71,9 +59,13 @@ jobs:
 
       - name: Update cask version and checksums
         run: |
+          set -euo pipefail
           VERSION=${GITHUB_REF#refs/tags/v}
           DMG_ARM64="https://github.com/rixinhahaha/snip/releases/download/v${VERSION}/Snip-${VERSION}-arm64.dmg"
-          SHA_ARM64=$(curl -sL "$DMG_ARM64" | shasum -a 256 | cut -d' ' -f1)
+          # Wait for release asset to be available (GitHub propagation delay)
+          for i in 1 2 3 4 5; do curl -o /dev/null -sf "$DMG_ARM64" && break; echo "Waiting for release asset..."; sleep 30; done
+          if ! curl -o /dev/null -sf "$DMG_ARM64"; then echo "Release asset not available after retries"; exit 1; fi
+          SHA_ARM64=$(curl -sLf "$DMG_ARM64" | shasum -a 256 | cut -d' ' -f1)
 
           cat > Casks/snip.rb << EOF
           cask "snip" do

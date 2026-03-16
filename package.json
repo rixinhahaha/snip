@@ -27,6 +27,7 @@
     "@huggingface/transformers": "^3.3.0",
     "chokidar": "^4.0.0",
     "electron-liquid-glass": "^1.1.1",
+    "electron-updater": "^6.8.3",
     "fabric": "^7.0.0",
     "ffmpeg-static": "^5.3.0",
     "gifenc": "^1.0.3",

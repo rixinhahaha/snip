@@ -11,6 +11,9 @@ mac:
     - target: dmg
       arch:
         - arm64
+    - target: zip
+      arch:
+        - arm64
   darkModeSupport: true
   hardenedRuntime: true
   gatekeeperAssess: false
@@ -69,6 +72,11 @@ extraResources:
     to: "models"
   - from: "src/cli/snip.js"
     to: "cli/snip.js"
+
+publish:
+  provider: github
+  owner: rixinhahaha
+  repo: snip
 
 extraMetadata:
   main: src/main/main.js
