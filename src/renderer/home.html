@@ -313,9 +313,30 @@
           </div>
         </div>
 
-        <div class="settings-section" id="mcp-section">
-          <h3>MCP Server</h3>
-          <p>Expose Snip's capabilities to AI assistants via the Model Context Protocol (MCP).</p>
+        <div class="settings-section" id="ai-workflow-section">
+          <h3>AI Workflow Integration</h3>
+          <p>Let AI assistants use Snip for image editing, annotation, and screenshot search.</p>
+
+          <div class="ai-subsection">
+            <h4>CLI</h4>
+            <p class="ai-subsection-desc">Recommended for AI coding tools that can run shell commands (Claude Code, Cursor, Windsurf, Cline). Lower latency and token cost than MCP.</p>
+            <div id="cli-section" class="cli-section-top">
+              <div class="cli-install-row">
+                <button id="install-cli-btn" class="install-cli-btn-primary">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/>
+                  </svg>
+                  Install CLI
+                </button>
+                <span id="cli-status" class="extensions-status"></span>
+              </div>
+              <div id="ai-providers" class="ai-providers hidden"></div>
+            </div>
+          </div>
+
+          <div class="ai-subsection">
+            <h4>MCP Server</h4>
+            <p class="ai-subsection-desc">For clients that can't run CLI commands (e.g., Claude Desktop, web-based AI tools).</p>
           <div class="ai-toggle-row">
             <span class="ai-toggle-label">MCP Server</span>
             <span id="mcp-status-dot" class="status-dot stopped"></span>
@@ -370,6 +391,7 @@
                 <span class="mcp-copy-label">Copy</span>
               </button>
             </div>
+          </div>
           </div>
         </div>
 

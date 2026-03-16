@@ -5,6 +5,9 @@
   "author": "rixinw",
   "license": "MIT",
   "main": "src/main/main.js",
+  "bin": {
+    "snip": "src/cli/snip.js"
+  },
   "scripts": {
     "start": "electron .",
     "dev": "ELECTRON_ENABLE_LOGGING=1 electron .",
