@@ -201,4 +201,17 @@ function setOllamaHost(host) {
   }
 }
 
-module.exports = { startWatcher, queueNewFile, setOllamaHost, generateEmbeddingForEntry };
+function restartWatcher() {
+  if (watcher) {
+    watcher.close();
+    watcher = null;
+  }
+  if (worker) {
+    worker.terminate();
+    worker = null;
+  }
+  pendingFiles.clear();
+  startWatcher();
+}
+
+module.exports = { startWatcher, restartWatcher, queueNewFile, setOllamaHost, generateEmbeddingForEntry };

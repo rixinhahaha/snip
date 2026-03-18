@@ -84,6 +84,12 @@ contextBridge.exposeInMainWorld('snip', {
   // Home
   refreshIndex: () => ipcRenderer.invoke('refresh-index'),
   getScreenshotsDir: () => ipcRenderer.invoke('get-screenshots-dir'),
+  getDefaultScreenshotsDir: () => ipcRenderer.invoke('get-default-screenshots-dir'),
+  chooseScreenshotsDir: () => ipcRenderer.invoke('choose-screenshots-dir'),
+  setScreenshotsDir: (newDir, migration) => ipcRenderer.invoke('set-screenshots-dir', { newDir, migration }),
+  onScreenshotsDirChanged: (callback) => {
+    ipcRenderer.on('screenshots-dir-changed', (event, dir) => callback(dir));
+  },
   listFolder: (subdir) => ipcRenderer.invoke('list-folder', subdir),
   openScreenshotsFolder: () => ipcRenderer.invoke('open-screenshots-folder'),
   deleteScreenshot: (filepath) => ipcRenderer.invoke('delete-screenshot', filepath),
@@ -112,6 +118,9 @@ contextBridge.exposeInMainWorld('snip', {
   // Setup overlay
   onShowSetupOverlay: (callback) => {
     ipcRenderer.on('show-setup-overlay', () => callback());
+  },
+  onShowPermissionView: (callback) => {
+    ipcRenderer.on('show-permission-view', () => callback());
   },
 
   // External URL

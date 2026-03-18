@@ -313,9 +313,11 @@ async function triggerCapture(opts) {
     await captureScreen(createOverlayWindow, getOverlayWindow, { mode });
   } catch (err) {
     console.error('[Snip] Capture failed:', err.message);
-    // Permission errors show their own dialog from capturer.js —
-    // only restore the home window for unexpected failures.
-    if (!err.message.includes('permission') && !err.message.includes('Permission')) {
+    if (err.message.includes('permission') || err.message.includes('Permission')) {
+      // Show the in-app permission view instead of a native dialog
+      showHomeWindow();
+      sendToHomeWindow('show-permission-view');
+    } else {
       showHomeWindow();
     }
   }
@@ -460,7 +462,8 @@ app.on('second-instance', () => {
 var screenshotsDir = null;
 
 function requireScreenshotPath(filepath) {
-  if (!screenshotsDir) screenshotsDir = require('./store').getScreenshotsDir();
+  // Always re-read in case the user changed the save location
+  screenshotsDir = require('./store').getScreenshotsDir();
   if (!filepath) throw new Error('Missing filepath parameter');
   var resolved = path.resolve(filepath);
   var base = path.resolve(screenshotsDir);

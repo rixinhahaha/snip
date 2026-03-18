@@ -175,6 +175,15 @@
           </div>
         </div>
 
+        <div class="settings-section">
+          <h3>Save Location</h3>
+          <p>Where your snips are stored on disk.</p>
+          <div class="save-location-card">
+            <div class="save-location-path" id="settings-screenshots-path">~/Documents/snip/screenshots/</div>
+            <button id="settings-change-location-btn" class="save-location-change-btn">Change</button>
+          </div>
+        </div>
+
         <div class="settings-section" id="ai-assistant-section">
           <h3>Local AI Assistant</h3>
           <div class="ai-toggle-row">
@@ -456,6 +465,36 @@
       <button id="setup-perm-skip-btn" class="setup-btn-skip">Skip for now <kbd class="setup-kbd">Esc</kbd></button>
     </div>
 
+    <!-- Save location view -->
+    <div id="setup-location-view" class="setup-view hidden">
+      <div class="setup-header">
+        <div class="setup-header-icon">
+          <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+            <path d="M8 14a4 4 0 014-4h8l4 4h12a4 4 0 014 4v16a4 4 0 01-4 4H12a4 4 0 01-4-4V14z" stroke="var(--accent)" stroke-width="2.5" fill="none"/>
+            <circle cx="24" cy="26" r="5" stroke="var(--accent)" stroke-width="2" opacity="0.6"/>
+            <path d="M24 23v6M21 26h6" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round" opacity="0.8"/>
+          </svg>
+        </div>
+        <h2>Save Location</h2>
+        <p>Choose where your snips are saved on disk.</p>
+      </div>
+      <div class="setup-location-path-card">
+        <span class="setup-location-label">Current location</span>
+        <span id="setup-location-path" class="setup-location-path"></span>
+      </div>
+      <div class="setup-location-btns">
+        <button id="setup-location-choose-btn" class="setup-btn-icon setup-btn-glow">
+          Choose Folder <kbd class="setup-kbd">Enter</kbd>
+        </button>
+        <button id="setup-location-skip-btn" class="setup-btn-skip">
+          Use default <kbd class="setup-kbd">Esc</kbd>
+        </button>
+      </div>
+      <div id="setup-location-warning" class="setup-location-warning hidden">
+        Snips will be saved to the default location shown above.
+      </div>
+    </div>
+
     <!-- AI choice view (first-launch opt-in/out) -->
     <div id="setup-ai-choice-view" class="setup-view hidden">
       <div class="setup-header">
@@ -642,6 +681,29 @@
       </svg>
       Move to Trash
     </button>
+  </div>
+
+  <!-- Migration dialog -->
+  <div id="migration-dialog" class="migration-dialog hidden">
+    <div class="migration-dialog-content">
+      <h3>What about existing snips?</h3>
+      <p class="migration-from-to" id="migration-from-to"></p>
+      <div class="migration-options">
+        <button class="migration-option" data-action="copy">
+          <div class="migration-option-title">Copy snips</div>
+          <div class="migration-option-desc">Copy all snips to the new location. Originals stay in place.</div>
+        </button>
+        <button class="migration-option" data-action="move">
+          <div class="migration-option-title">Move snips</div>
+          <div class="migration-option-desc">Move all snips to the new location. Originals are removed.</div>
+        </button>
+        <button class="migration-option" data-action="none">
+          <div class="migration-option-title">Start fresh</div>
+          <div class="migration-option-desc">Start with an empty library. Existing snips stay where they are.</div>
+        </button>
+      </div>
+      <button id="migration-cancel" class="setup-btn-skip">Cancel <kbd class="setup-kbd">Esc</kbd></button>
+    </div>
   </div>
 
   <script src="home.js"></script>

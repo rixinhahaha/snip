@@ -411,7 +411,11 @@ The preload script (`preload.js`) exposes `window.snip` with these methods:
 | `revealInFinder(path)` | R -> M | Reveal file in Finder |
 | `searchScreenshots(query)` | R -> M | Semantic/text search with relevance scores |
 | `refreshIndex()` | R -> M | Prune stale entries + regenerate missing embeddings |
-| `getScreenshotsDir()` | R -> M | Get screenshots directory path |
+| `getScreenshotsDir()` | R -> M | Get screenshots directory path (respects custom location) |
+| `getDefaultScreenshotsDir()` | R -> M | Get default screenshots path (`~/Documents/snip/screenshots/`) |
+| `chooseScreenshotsDir()` | R -> M | Open native folder picker for save location; returns path or null |
+| `setScreenshotsDir(newDir, migration)` | R -> M | Change save location with migration (`copy`, `move`, or `none`). Restarts file watcher |
+| `onScreenshotsDirChanged(cb)` | M -> R | Push event when save location changes |
 | `listFolder(subdir)` | R -> M | List folder contents |
 | `openScreenshotsFolder()` | R -> M | Open screenshots dir in Finder |
 | `deleteScreenshot(path)` | R -> M | Move screenshot to Trash + remove from index |
@@ -534,9 +538,9 @@ The native Liquid Glass layer is always present (macOS 26+). Dark and Light them
 
 | Data | Dev Path | Packaged Path |
 |------|----------|---------------|
-| Screenshots | `~/Documents/snip/screenshots/<category>/` | same |
-| Animations | `~/Documents/snip/screenshots/animations/` | same |
-| Index | `~/Documents/snip/screenshots/.index.json` | same |
+| Screenshots | `~/Documents/snip/screenshots/<category>/` (default, configurable via `screenshotsDir`) | same |
+| Animations | `<screenshotsDir>/animations/` | same |
+| Index | `<screenshotsDir>/.index.json` | same |
 | Config | `~/Library/Application Support/snip/snip-config.json` | same |
 | MCP Socket | `~/Library/Application Support/snip/snip.sock` | same |
 | User Extensions | `~/Library/Application Support/snip/extensions/` | same |
@@ -554,6 +558,7 @@ The native Liquid Glass layer is always present (macOS 26+). Dark and Light them
 | `shortcuts` | `object` | Custom shortcut overrides keyed by action ID (e.g. `{ "capture": "CommandOrControl+Shift+2" }`). Only overridden shortcuts are stored; defaults come from `DEFAULT_SHORTCUTS` in `store.js`. |
 | `falApiKey` | `string` | fal.ai API key for cloud animation. Empty string if not configured. |
 | `tagDescriptions` | `object` | Custom descriptions per tag/category name (e.g. `{ "code": "Code editors and terminals" }`). Used by the AI organizer prompt. |
+| `screenshotsDir` | `string \| undefined` | Custom save location for screenshots. When `undefined` or absent, defaults to `~/Documents/snip/screenshots/`. Set during onboarding or from Settings. |
 
 | Ollama binary | `/usr/local/bin/ollama`, `/opt/homebrew/bin/ollama`, or `/Applications/Ollama.app/Contents/Resources/ollama` | same (user-installed) |
 | Ollama models | `~/.ollama/models/` | same (shared with system Ollama) |

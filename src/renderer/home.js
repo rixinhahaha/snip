@@ -14,6 +14,13 @@
 
   var currentSubdir = ''; // relative path within screenshots dir
 
+  // Shorten absolute macOS paths for display: /Users/<name>/... → ~/...
+  function shortenPath(p) {
+    var parts = p.split('/');
+    if (parts[1] === 'Users' && parts.length > 3) return '~/' + parts.slice(3).join('/');
+    return p;
+  }
+
   // ── Navigation ──
   var searchInitialized = false;
 
@@ -54,6 +61,7 @@
       window.snip.onTagsChanged(function() { loadTags(); });
     }
     initThemeToggle();
+    initSaveLocationSettings();
     initShortcutsSettings();
     initMcpSettings();
     initCliSettings();
@@ -1073,6 +1081,8 @@
   var setupFailCount = 0;
   var sparkleInterval = null;
   var setupFromSettings = false;
+  var isFirstLaunch = false;
+  var permissionFromCapture = false;
   var INSTALL_LABELS = {
     'downloading': 'Downloading Ollama...',
     'extracting': 'Unpacking...',
@@ -1133,6 +1143,109 @@
     btn.style.display = '';
     btn.disabled = false;
     document.getElementById('setup-' + section + '-progress').classList.add('hidden');
+  }
+
+  // ── Save Location settings ──
+  async function initSaveLocationSettings() {
+    var pathEl = document.getElementById('settings-screenshots-path');
+    var changeBtn = document.getElementById('settings-change-location-btn');
+    if (!pathEl || !changeBtn) return;
+
+    async function loadCurrentPath() {
+      var dir = await window.snip.getScreenshotsDir();
+      pathEl.textContent = shortenPath(dir);
+    }
+
+    await loadCurrentPath();
+
+    // Listen for external changes
+    if (window.snip.onScreenshotsDirChanged) {
+      window.snip.onScreenshotsDirChanged(function() { loadCurrentPath(); loadFolder(currentSubdir); });
+    }
+
+    changeBtn.addEventListener('click', async function() {
+      var chosen = await window.snip.chooseScreenshotsDir();
+      if (!chosen) return;
+
+      // Check if there are existing files
+      var currentDir = await window.snip.getScreenshotsDir();
+      var entries = await window.snip.listFolder('');
+      var hasFiles = entries.some(function(e) {
+        return e.name !== '.index.json' && e.name !== '.tmp' && !e.name.startsWith('.');
+      });
+
+      if (hasFiles) {
+        showMigrationDialog(currentDir, chosen);
+      } else {
+        // No existing files — just switch
+        var result = await window.snip.setScreenshotsDir(chosen, 'none');
+        if (result.error) {
+          window.snip.showNotification(result.error);
+        } else {
+          await loadCurrentPath();
+          loadFolder('');
+        }
+      }
+    });
+  }
+
+  function showMigrationDialog(fromDir, toDir) {
+    var dialog = document.getElementById('migration-dialog');
+    var fromToEl = document.getElementById('migration-from-to');
+    var cancelBtn = document.getElementById('migration-cancel');
+
+    fromToEl.textContent = shortenPath(fromDir) + '  →  ' + shortenPath(toDir);
+    dialog.classList.remove('hidden');
+
+    function cleanup() {
+      dialog.classList.add('hidden');
+      dialog.removeEventListener('click', handleClick);
+      document.removeEventListener('keydown', handleKey);
+    }
+
+    async function doMigration(action) {
+      // Show loading state
+      var optionsDiv = dialog.querySelector('.migration-options');
+      var origHtml = optionsDiv.innerHTML;
+      optionsDiv.innerHTML = '<div class="migration-loading"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.5"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>' +
+        (action === 'copy' ? 'Copying snips...' : action === 'move' ? 'Moving snips...' : 'Switching...') + '</div>';
+      cancelBtn.classList.add('hidden');
+
+      var result = await window.snip.setScreenshotsDir(toDir, action);
+      cleanup();
+      optionsDiv.innerHTML = origHtml;
+      cancelBtn.classList.remove('hidden');
+
+      if (result.error) {
+        window.snip.showNotification(result.error);
+      } else {
+        // Refresh settings path and file grid
+        var pathEl = document.getElementById('settings-screenshots-path');
+        if (pathEl) {
+          var dir = await window.snip.getScreenshotsDir();
+          pathEl.textContent = shortenPath(dir);
+        }
+        loadFolder('');
+      }
+    }
+
+    function handleClick(e) {
+      var optionBtn = e.target.closest('.migration-option');
+      if (optionBtn) {
+        doMigration(optionBtn.dataset.action);
+        return;
+      }
+      if (e.target === cancelBtn || cancelBtn.contains(e.target) || e.target === dialog) {
+        cleanup();
+      }
+    }
+
+    function handleKey(e) {
+      if (e.key === 'Escape') { cleanup(); }
+    }
+
+    dialog.addEventListener('click', handleClick);
+    document.addEventListener('keydown', handleKey);
   }
 
   // ── MCP Server settings ──
@@ -1439,6 +1552,31 @@
     var modelBtn = document.getElementById('setup-model-btn');
     var skipBtn = document.getElementById('setup-skip-btn');
 
+    // Save location buttons
+    var locationChooseBtn = document.getElementById('setup-location-choose-btn');
+    var locationSkipBtn = document.getElementById('setup-location-skip-btn');
+
+    locationChooseBtn.addEventListener('click', async function() {
+      var chosen = await window.snip.chooseScreenshotsDir();
+      if (chosen) {
+        await window.snip.setScreenshotsDir(chosen, 'none');
+        // Update displayed path
+        var pathEl = document.getElementById('setup-location-path');
+        if (pathEl) pathEl.textContent = shortenPath(chosen);
+      }
+      showSetupView('ai-choice');
+    });
+
+    locationSkipBtn.addEventListener('click', function() {
+      // Show warning briefly, then proceed
+      var warning = document.getElementById('setup-location-warning');
+      warning.classList.remove('hidden');
+      setTimeout(function() {
+        warning.classList.add('hidden');
+        showSetupView('ai-choice');
+      }, 1500);
+    });
+
     // AI choice buttons
     var aiEnableBtn = document.getElementById('setup-ai-enable-btn');
     var aiSkipBtn = document.getElementById('setup-ai-skip-btn');
@@ -1509,6 +1647,14 @@
           }
           return;
         }
+        return;
+      }
+
+      // Location screen — Enter to choose folder, Esc to skip (use default)
+      var locationView = document.getElementById('setup-location-view');
+      if (locationView && !locationView.classList.contains('hidden')) {
+        if (e.key === 'Enter') { locationChooseBtn.click(); return; }
+        if (e.key === 'Escape') { locationSkipBtn.click(); return; }
         return;
       }
 
@@ -1588,6 +1734,16 @@
       });
     }
 
+    if (window.snip.onShowPermissionView) {
+      window.snip.onShowPermissionView(async function() {
+        permissionFromCapture = true;
+        var permStatus = await window.snip.getScreenPermission();
+        document.getElementById('setup-overlay').classList.remove('hidden');
+        showSetupView('permission');
+        applyPermissionState(permStatus);
+      });
+    }
+
     window._showSetupOverlay = function() {
       setupFromSettings = true;
       showSetupOverlay();
@@ -1602,21 +1758,25 @@
     // Sync toggle to current state
     updateAiSettingsVisibility(aiEnabled === true ? true : false);
 
-    // First launch — check permission first, then AI choice
-    if (aiEnabled === undefined || aiEnabled === null) {
-      var permStatus = await window.snip.getScreenPermission();
+    isFirstLaunch = (aiEnabled === undefined || aiEnabled === null);
+
+    // Always check permission — show permission view if not granted
+    var permStatus = await window.snip.getScreenPermission();
+    if (permStatus !== 'granted') {
       document.getElementById('setup-overlay').classList.remove('hidden');
-      if (permStatus !== 'granted') {
-        showSetupView('permission');
-        applyPermissionState(permStatus);
-      } else {
-        showSetupView('ai-choice');
-      }
+      showSetupView('permission');
+      applyPermissionState(permStatus);
       return;
     }
 
-    // AI disabled or already enabled — no overlay on launch.
-    // User can manage setup from Settings if needed.
+    // Permission granted — show rest of onboarding only on first launch
+    if (isFirstLaunch) {
+      document.getElementById('setup-overlay').classList.remove('hidden');
+      showSetupView('location');
+      return;
+    }
+
+    // Returning user with permission — no overlay
     return;
   }
 
@@ -1678,8 +1838,13 @@
   }
 
   function skipPermissionView() {
-    // Dismiss overlay entirely — reactive dialog in capturer.js handles permission later
-    hideSetupOverlay();
+    if (isFirstLaunch && !permissionFromCapture) {
+      // First launch — proceed to save location step
+      showSetupView('location');
+    } else {
+      // Subsequent launch or capture-triggered — just dismiss
+      hideSetupOverlay();
+    }
   }
 
   async function showSetupOverlay() {
@@ -1700,6 +1865,7 @@
     document.getElementById('setup-overlay').classList.add('hidden');
     stopSparkles();
     setupFromSettings = false;
+    permissionFromCapture = false;
   }
 
   async function refreshSetupOverlay() {
@@ -1717,7 +1883,7 @@
   }
 
   function showSetupView(viewName) {
-    var views = { permission: 'setup-permission-view', 'ai-choice': 'setup-ai-choice-view', steps: 'setup-steps-view', welcome: 'setup-welcome-view', failed: 'setup-failed-view' };
+    var views = { permission: 'setup-permission-view', location: 'setup-location-view', 'ai-choice': 'setup-ai-choice-view', steps: 'setup-steps-view', welcome: 'setup-welcome-view', failed: 'setup-failed-view' };
     var keys = Object.keys(views);
     for (var i = 0; i < keys.length; i++) {
       document.getElementById(views[keys[i]]).classList.add('hidden');
@@ -1735,6 +1901,14 @@
       stopSparkles();
     } else if (viewName === 'ai-choice') {
       document.getElementById(views['ai-choice']).classList.remove('hidden');
+      startSparkles();
+    } else if (viewName === 'location') {
+      document.getElementById(views.location).classList.remove('hidden');
+      // Show the default/current path
+      window.snip.getDefaultScreenshotsDir().then(function(defaultDir) {
+        var el = document.getElementById('setup-location-path');
+        if (el) el.textContent = shortenPath(defaultDir);
+      });
       startSparkles();
     } else if (viewName === 'permission') {
       document.getElementById(views.permission).classList.remove('hidden');

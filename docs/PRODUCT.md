@@ -112,6 +112,7 @@ Power users on macOS who take 5-50 screenshots per day: developers, designers, P
 - Refresh button to sync index with files on disk and regenerate embeddings
 
 ### Settings
+- **Save Location**: Choose where snips are saved on disk. Configurable during onboarding or from Settings. When changing, users can copy, move, or start fresh with existing snips. Defaults to `~/Documents/snip/screenshots/`
 - AI Assistant status and model info
 - Animation settings: fal.ai API key input, info panel (provider, resolution, max duration, output formats, save location, AI preset status)
 - Three themes: Dark, Light, Glass

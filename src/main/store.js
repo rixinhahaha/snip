@@ -112,10 +112,26 @@ function initStore() {
   }
 }
 
-function getScreenshotsDir() {
-  if (screenshotsDirOverride) return screenshotsDirOverride;
+function getDefaultScreenshotsDir() {
   const { app } = require('electron');
   return path.join(app.getPath('documents'), 'snip', 'screenshots');
+}
+
+function getScreenshotsDir() {
+  if (screenshotsDirOverride) return screenshotsDirOverride;
+  var cfg = loadConfig();
+  if (cfg.screenshotsDir) return cfg.screenshotsDir;
+  return getDefaultScreenshotsDir();
+}
+
+function setScreenshotsDir(dirPath) {
+  var cfg = loadConfig();
+  if (!dirPath || dirPath === getDefaultScreenshotsDir()) {
+    delete cfg.screenshotsDir;
+  } else {
+    cfg.screenshotsDir = dirPath;
+  }
+  saveConfig();
 }
 
 function getOllamaModel() {
@@ -388,6 +404,8 @@ module.exports = {
   reloadConfig,
   setExternalPaths,
   getScreenshotsDir,
+  getDefaultScreenshotsDir,
+  setScreenshotsDir,
   getOllamaModel,
   setOllamaModel,
   getOllamaUrl,

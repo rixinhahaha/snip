@@ -2123,3 +2123,181 @@ kbd {
   20% { opacity: 0.8; }
   100% { opacity: 0; transform: translateY(-80px) scale(1.2); }
 }
+
+/* Save location — onboarding step */
+.setup-location-path-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-card);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 24px;
+  text-align: center;
+  width: 100%;
+}
+
+.setup-location-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.setup-location-path {
+  display: block;
+  font-family: 'Menlo', 'SF Mono', monospace;
+  font-size: 12px;
+  color: var(--text-primary);
+  word-break: break-all;
+}
+
+.setup-location-btns {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.setup-location-warning {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 12px;
+  text-align: center;
+  animation: setup-fade-in 0.25s ease;
+}
+
+/* Save location — settings section */
+.save-location-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-card);
+  border-radius: 10px;
+  padding: 12px 16px;
+}
+
+.save-location-path {
+  flex: 1;
+  font-family: 'Menlo', 'SF Mono', monospace;
+  font-size: 12px;
+  color: var(--text-primary);
+  word-break: break-all;
+}
+
+.save-location-change-btn {
+  background: transparent;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+
+.save-location-change-btn:hover {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* Migration dialog */
+.migration-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  animation: setup-fade-in 0.2s ease;
+}
+
+.migration-dialog-content {
+  background: var(--bg-primary);
+  border: 1px solid var(--glass-specular);
+  border-radius: 16px;
+  padding: 32px 28px;
+  max-width: 420px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.3);
+}
+
+.migration-dialog-content h3 {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-bright);
+  margin-bottom: 8px;
+}
+
+.migration-from-to {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 20px;
+  word-break: break-all;
+}
+
+.migration-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.migration-option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-card);
+  border-radius: 10px;
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.migration-option:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.migration-option-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-bright);
+  margin-bottom: 2px;
+}
+
+.migration-option-desc {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+/* Migration dialog loading state */
+.migration-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.migration-loading svg {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}

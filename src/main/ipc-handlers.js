@@ -1,11 +1,12 @@
-const { ipcMain, clipboard, nativeImage, app, Notification, shell, BrowserWindow, screen, systemPreferences, desktopCapturer } = require('electron');
+const { ipcMain, clipboard, nativeImage, app, Notification, shell, BrowserWindow, screen, systemPreferences, desktopCapturer, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const {
-  getScreenshotsDir, getOllamaModel, setOllamaModel, getOllamaUrl, setOllamaUrl,
+  getScreenshotsDir, getDefaultScreenshotsDir, setScreenshotsDir,
+  getOllamaModel, setOllamaModel, getOllamaUrl, setOllamaUrl,
   getAllCategories, addCustomCategory, removeCustomCategory,
   getAllTagsWithDescriptions, setTagDescription, addCustomCategoryWithDescription,
-  readIndex, removeFromIndex, removeFromIndexByDir, rebuildIndex,
+  readIndex, writeIndex, removeFromIndex, removeFromIndexByDir, rebuildIndex,
   getTheme, setTheme,
   getAiEnabled, setAiEnabled,
   getFalApiKey, setFalApiKey,
@@ -777,6 +778,122 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
   ipcMain.handle('open-screenshots-folder', async () => {
     shell.openPath(getScreenshotsDir());
     return true;
+  });
+
+  // Save location: get default path
+  ipcMain.handle('get-default-screenshots-dir', async () => {
+    return getDefaultScreenshotsDir();
+  });
+
+  // Save location: open native folder picker
+  ipcMain.handle('choose-screenshots-dir', async () => {
+    var result = await dialog.showOpenDialog({
+      title: 'Choose Save Location',
+      defaultPath: getScreenshotsDir(),
+      properties: ['openDirectory', 'createDirectory']
+    });
+    if (result.canceled || !result.filePaths[0]) return null;
+    return result.filePaths[0];
+  });
+
+  // Save location: change directory with optional migration
+  ipcMain.handle('set-screenshots-dir', async (event, { newDir, migration }) => {
+    // Validate migration option
+    if (!['copy', 'move', 'none'].includes(migration)) {
+      return { error: 'Invalid migration option' };
+    }
+
+    var oldDir = getScreenshotsDir();
+    var resolvedNew = path.resolve(newDir);
+    var resolvedOld = path.resolve(oldDir);
+
+    // Validate: same directory
+    if (resolvedNew === resolvedOld) {
+      return { success: true, noChange: true };
+    }
+
+    // Validate: writable (also ensures resolvedNew exists for realpath below)
+    try {
+      await fs.promises.mkdir(resolvedNew, { recursive: true });
+      var testFile = path.join(resolvedNew, '.snip-write-test');
+      await fs.promises.writeFile(testFile, 'test');
+      await fs.promises.unlink(testFile);
+    } catch (err) {
+      return { error: 'Cannot write to selected folder: ' + err.message };
+    }
+
+    // Resolve symlinks for accurate containment check
+    try { resolvedNew = await fs.promises.realpath(resolvedNew); } catch (_) {}
+    try { resolvedOld = await fs.promises.realpath(resolvedOld); } catch (_) {}
+
+    // Validate: new dir is not inside old dir (would create recursive structure)
+    if (resolvedNew.startsWith(resolvedOld + path.sep)) {
+      return { error: 'Cannot use a subfolder of the current save location' };
+    }
+
+    // Re-check same directory after symlink resolution
+    if (resolvedNew === resolvedOld) {
+      return { success: true, noChange: true };
+    }
+
+    var { restartWatcher } = require('./organizer/watcher');
+
+    try {
+      if (migration === 'copy' || migration === 'move') {
+        // Copy files from old to new, skipping symlinks (async to avoid blocking main process)
+        var entries = await fs.promises.readdir(resolvedOld, { withFileTypes: true });
+        for (var i = 0; i < entries.length; i++) {
+          var entry = entries[i];
+          if (entry.name === '.index.json' || entry.name === '.tmp') continue;
+          if (entry.name.startsWith('.snip-write-test')) continue;
+          var src = path.join(resolvedOld, entry.name);
+          // Skip symlinks to avoid copying files outside the screenshots tree
+          var stat = await fs.promises.lstat(src);
+          if (stat.isSymbolicLink()) continue;
+          var dest = path.join(resolvedNew, entry.name);
+          if (stat.isDirectory()) {
+            await fs.promises.cp(src, dest, { recursive: true });
+          } else if (stat.isFile()) {
+            await fs.promises.copyFile(src, dest);
+          }
+        }
+
+        // Rewrite index paths (use path.sep to avoid prefix-collision with similarly-named dirs)
+        var index = readIndex();
+        var oldPrefix = resolvedOld + path.sep;
+        for (var j = 0; j < index.length; j++) {
+          if (index[j].path && index[j].path.startsWith(oldPrefix)) {
+            index[j].path = resolvedNew + path.sep + index[j].path.slice(oldPrefix.length);
+          }
+        }
+        // Write index to new location (setScreenshotsDir changes where getIndexPath points)
+        setScreenshotsDir(resolvedNew);
+        writeIndex(index);
+
+        // Remove old files if moving
+        if (migration === 'move') {
+          for (var k = 0; k < entries.length; k++) {
+            var rmSrc = path.join(resolvedOld, entries[k].name);
+            try { await fs.promises.rm(rmSrc, { recursive: true, force: true }); } catch (_) {}
+          }
+          try { await fs.promises.unlink(path.join(resolvedOld, '.index.json')); } catch (_) {}
+        }
+      } else {
+        // 'none' — start fresh
+        setScreenshotsDir(resolvedNew);
+        writeIndex([]);
+      }
+    } catch (err) {
+      return { error: 'Migration failed: ' + err.message };
+    }
+
+    // Restart watcher on new directory
+    restartWatcher();
+
+    // Broadcast change to all windows
+    broadcastToWindows('screenshots-dir-changed', resolvedNew);
+
+    return { success: true };
   });
 
   // Delete a screenshot (move to Trash) and remove from index
