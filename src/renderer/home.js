@@ -1081,6 +1081,8 @@
   var setupFailCount = 0;
   var sparkleInterval = null;
   var setupFromSettings = false;
+  var isFirstLaunch = false;
+  var permissionFromCapture = false;
   var INSTALL_LABELS = {
     'downloading': 'Downloading Ollama...',
     'extracting': 'Unpacking...',
@@ -1732,6 +1734,16 @@
       });
     }
 
+    if (window.snip.onShowPermissionView) {
+      window.snip.onShowPermissionView(async function() {
+        permissionFromCapture = true;
+        var permStatus = await window.snip.getScreenPermission();
+        document.getElementById('setup-overlay').classList.remove('hidden');
+        showSetupView('permission');
+        applyPermissionState(permStatus);
+      });
+    }
+
     window._showSetupOverlay = function() {
       setupFromSettings = true;
       showSetupOverlay();
@@ -1746,21 +1758,25 @@
     // Sync toggle to current state
     updateAiSettingsVisibility(aiEnabled === true ? true : false);
 
-    // First launch — check permission first, then location, then AI choice
-    if (aiEnabled === undefined || aiEnabled === null) {
-      var permStatus = await window.snip.getScreenPermission();
+    isFirstLaunch = (aiEnabled === undefined || aiEnabled === null);
+
+    // Always check permission — show permission view if not granted
+    var permStatus = await window.snip.getScreenPermission();
+    if (permStatus !== 'granted') {
       document.getElementById('setup-overlay').classList.remove('hidden');
-      if (permStatus !== 'granted') {
-        showSetupView('permission');
-        applyPermissionState(permStatus);
-      } else {
-        showSetupView('location');
-      }
+      showSetupView('permission');
+      applyPermissionState(permStatus);
       return;
     }
 
-    // AI disabled or already enabled — no overlay on launch.
-    // User can manage setup from Settings if needed.
+    // Permission granted — show rest of onboarding only on first launch
+    if (isFirstLaunch) {
+      document.getElementById('setup-overlay').classList.remove('hidden');
+      showSetupView('location');
+      return;
+    }
+
+    // Returning user with permission — no overlay
     return;
   }
 
@@ -1822,8 +1838,13 @@
   }
 
   function skipPermissionView() {
-    // Move to save location step instead of dismissing
-    showSetupView('location');
+    if (isFirstLaunch && !permissionFromCapture) {
+      // First launch — proceed to save location step
+      showSetupView('location');
+    } else {
+      // Subsequent launch or capture-triggered — just dismiss
+      hideSetupOverlay();
+    }
   }
 
   async function showSetupOverlay() {
@@ -1844,6 +1865,7 @@
     document.getElementById('setup-overlay').classList.add('hidden');
     stopSparkles();
     setupFromSettings = false;
+    permissionFromCapture = false;
   }
 
   async function refreshSetupOverlay() {

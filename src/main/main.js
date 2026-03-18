@@ -313,9 +313,11 @@ async function triggerCapture(opts) {
     await captureScreen(createOverlayWindow, getOverlayWindow, { mode });
   } catch (err) {
     console.error('[Snip] Capture failed:', err.message);
-    // Permission errors show their own dialog from capturer.js —
-    // only restore the home window for unexpected failures.
-    if (!err.message.includes('permission') && !err.message.includes('Permission')) {
+    if (err.message.includes('permission') || err.message.includes('Permission')) {
+      // Show the in-app permission view instead of a native dialog
+      showHomeWindow();
+      sendToHomeWindow('show-permission-view');
+    } else {
       showHomeWindow();
     }
   }

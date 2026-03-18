@@ -119,6 +119,9 @@ contextBridge.exposeInMainWorld('snip', {
   onShowSetupOverlay: (callback) => {
     ipcRenderer.on('show-setup-overlay', () => callback());
   },
+  onShowPermissionView: (callback) => {
+    ipcRenderer.on('show-permission-view', () => callback());
+  },
 
   // External URL
   openExternalUrl: (url) => ipcRenderer.invoke('open-external-url', url),

@@ -1,4 +1,4 @@
-const { app, BrowserWindow, desktopCapturer, screen, dialog, shell } = require('electron');
+const { app, BrowserWindow, desktopCapturer, screen } = require('electron');
 const path = require('path');
 
 // Load native addon for macOS Space behavior.
@@ -16,25 +16,6 @@ try {
 // Stored NativeImage from the last capture — converted to dataURL on demand (deferred)
 let storedNativeImage = null;
 
-/**
- * Show a dialog directing the user to grant Screen Recording permission.
- */
-function showPermissionDialog(detail) {
-  var parent = BrowserWindow.getFocusedWindow() || BrowserWindow.getAllWindows().find(function (w) { return !w.isDestroyed(); }) || null;
-  var showFn = parent ? dialog.showMessageBox.bind(dialog, parent) : dialog.showMessageBox.bind(dialog);
-  showFn({
-    type: 'warning',
-    title: 'Screen Recording Permission Required',
-    message: 'Snip needs Screen Recording permission to capture snips.',
-    detail: detail || 'Open System Settings > Privacy & Security > Screen Recording, then enable Snip.',
-    buttons: ['Open System Settings', 'Cancel'],
-    defaultId: 0
-  }).then(function (result) {
-    if (result.response === 0) {
-      shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture');
-    }
-  });
-}
 
 /**
  * Get the window list for the given display (sync, must run before overlay appears).
@@ -84,14 +65,12 @@ async function captureScreenImage(cursorDisplay) {
     });
   } catch (err) {
     console.error('[Snip] Screen capture failed:', err.message);
-    showPermissionDialog('Screen capture failed. Grant Screen Recording permission in System Settings > Privacy & Security > Screen Recording, then restart Snip.');
     throw err;
   }
 
   if (sources.length === 0) {
     console.error('[Snip] No screen sources found.');
-    showPermissionDialog('No screen sources found. Grant Screen Recording permission in System Settings > Privacy & Security > Screen Recording, then restart Snip.');
-    throw new Error('No screen sources available');
+    throw new Error('No screen sources available — permission likely not granted');
   }
 
   // Match source to the cursor's display; fall back to first source
@@ -103,7 +82,6 @@ async function captureScreenImage(cursorDisplay) {
   // Use cheap checks instead of toPNG() which encodes the entire image (~300ms).
   function rejectBlankCapture(logMsg) {
     console.error(logMsg);
-    showPermissionDialog('Snip captured a blank screen. Grant Screen Recording permission in System Settings > Privacy & Security > Screen Recording, then restart Snip.');
     storedNativeImage = null;
     throw new Error('Screen capture returned blank — permission likely not granted');
   }

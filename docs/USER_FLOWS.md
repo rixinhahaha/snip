@@ -695,25 +695,25 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 
 ### 8.0 Screen Recording Permission
 
-On first launch, Snip checks Screen Recording permission **before** showing the AI choice. Since granting permission requires an app restart, this must come first.
+Snip checks Screen Recording permission **on every launch** (not just the first). If permission is not granted, the permission view is shown regardless of whether onboarding has been completed. No permission state is saved to config — `systemPreferences.getMediaAccessStatus('screen')` is queried live.
 
-**First Launch — Permission not granted:**
+**Any launch — Permission not granted:**
 
 | Step | Action | Expected Result |
 |------|--------|-----------------|
-| 1 | App launches, `aiEnabled` not set in config | Permission check via `systemPreferences.getMediaAccessStatus('screen')` |
+| 1 | App launches | Permission check via `systemPreferences.getMediaAccessStatus('screen')` |
 | 2 | Status is `not-determined` | Overlay shows Screen Recording view with **"Allow"** button |
 | 3 | Click "Allow" (or press Enter) | Triggers `desktopCapturer.getSources()` → macOS shows native permission dialog |
 | 4a | User allows | **"Restart Snip"** button shown with hint "Restart is needed for Screen Recording to take effect." |
 | 4b | User denies | Switches to denied state: **"Open System Settings"** + **"Restart Snip"** buttons + hint |
 | 5 | Click "Restart Snip" | App relaunches via `app.relaunch(); app.exit(0)` |
-| 6 | After restart, permission = `granted` | Permission view skipped, proceeds to Save Location (§8.0.1) |
+| 6 | After restart, permission = `granted` | Permission view skipped. First launch → Save Location (§8.0.1). Returning user → no overlay |
 
-**First Launch — Permission already granted (e.g. MDM pre-configured):**
+**Permission already granted:**
 
 | Condition | Expected Behavior |
 |-----------|-------------------|
-| `getMediaAccessStatus('screen')` returns `granted` | Permission view skipped entirely, goes to Save Location (§8.0.1) |
+| `getMediaAccessStatus('screen')` returns `granted` | Permission view skipped. First launch → Save Location (§8.0.1). Returning user → no overlay |
 
 **Denied state:**
 
@@ -728,8 +728,17 @@ On first launch, Snip checks Screen Recording permission **before** showing the 
 
 | Step | Action | Expected Result |
 |------|--------|-----------------|
-| 1 | Press Esc or click "Skip for now" | Proceeds to Save Location step (§8.0.1) |
-| 2 | User tries to capture | Existing reactive dialog in `capturer.js` handles permission (§2.6) |
+| 1 | Press Esc or click "Skip for now" on first launch | Proceeds to Save Location step (§8.0.1) |
+| 1b | Press Esc or click "Skip for now" on subsequent launch | Overlay dismissed |
+| 2 | User tries to capture without permission | Home window opens with permission view (no native dialog) |
+
+**Capture-time permission check:**
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | User presses capture shortcut without Screen Recording permission | Capture fails (blank/empty image detected in `capturer.js`) |
+| 2 | -- | Home window opens and shows the permission view |
+| 3 | User grants permission and restarts | Capture works normally |
 
 ### 8.0.1 Save Location
 
