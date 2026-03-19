@@ -19,7 +19,7 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 | 3 | -- | `~/Documents/snip/screenshots/` directory created automatically |
 | 4 | -- | Config file created at `~/Library/Application Support/snip/snip-config.json` with default categories |
 | 5 | -- | Home window opens; if first launch and Screen Recording not granted, permission view shown first (see §8.0) |
-| 5a | -- | If permission granted (or skipped), shows save location view (§8.0.1), then Welcome screen |
+| 5a | -- | If permission granted (or skipped), shows save location view (§8.0.1), then CLI install (§8.0.2), then Welcome screen |
 | 6 | -- | SAM segmentation model begins loading in background (logged: `[Segmentation Worker] Loading SlimSAM model...`) |
 | 7 | -- | File watcher starts monitoring screenshots directory (logged: `[Organizer] Watching: ...`) |
 | 8 | -- | AI disabled by default — Ollama is not started on first launch |
@@ -744,9 +744,28 @@ After the Screen Recording permission step (or if permission is already granted)
 |------|--------|-----------------|
 | 1 | Permission granted or skipped | Overlay shows "Save Location" view with current default path (`~/Documents/snip/screenshots/`) |
 | 2a | Click "Choose Folder" (or press Enter) | Native macOS folder picker opens |
-| 3a | User selects a folder | Path saved to config as `screenshotsDir`; `aiEnabled` set to `false`; proceeds to Welcome screen |
+| 3a | User selects a folder | Path saved to config as `screenshotsDir`; `aiEnabled` set to `false`; proceeds to CLI install (§8.0.2) |
 | 3b | User cancels folder picker | Stays on save location view (no change) |
-| 2b | Click "Use default" (or press Esc) | Warning shown briefly: "Snips will be saved to the default location shown above." After 1.5s, `aiEnabled` set to `false`; proceeds to Welcome screen |
+| 2b | Click "Use default" (or press Esc) | Warning shown briefly: "Snips will be saved to the default location shown above." After 1.5s, `aiEnabled` set to `false`; proceeds to CLI install (§8.0.2) |
+
+### 8.0.2 CLI Installation
+
+After the Save Location step, the user is offered CLI installation to enable AI coding tool integration. If CLI is already installed (verified by checking for our wrapper signature), this step is auto-skipped.
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Save Location step completes | Checks `checkCliInstalled()` |
+| 1a | CLI already installed (returns `true`) | Auto-skip to Welcome screen |
+| 1b | CLI not installed (returns `false` or `'stale'`) | Show CLI Install view |
+| 2 | CLI Install view shown | Terminal icon + "Install CLI" title + tool badges (Claude Code, Cursor, Windsurf, Cline) |
+| 3a | Click "Install" (or press Enter) | Calls `installCli()`, creates shell wrapper at `/usr/local/bin/snip` (or fallback) |
+| 4a | Install succeeds | Green checkmark with install path shown. Detects AI providers |
+| 4a-i | Providers detected (Claude Code, Cursor, etc.) | Provider rows shown with "Configure" buttons. "Continue" button replaces "Skip" |
+| 4a-ii | Click "Configure" on a provider | Snip rules added to that provider's config file. Button changes to "Remove" |
+| 4a-iii | Click "Continue" (or press Enter) | Proceeds to Welcome screen |
+| 4a-iv | No providers detected | Auto-advances to Welcome after 1.5s |
+| 4b | Install fails | Error message shown inline with "Try again" button |
+| 3b | Click "Skip for now" (or press Esc) | Proceeds to Welcome screen |
 
 **Changing Save Location from Settings (§8.4.1):**
 
@@ -792,7 +811,7 @@ AI organization is **disabled by default**. On first launch, `aiEnabled` is set 
 
 The setup wizard appears as a **full-window inline overlay** inside the home window (not a separate popup). It can be opened from the Settings "Set up" button when AI is enabled.
 
-**Overlay structure:** Four views — Permission (first launch, if not granted), Steps (install/running/model), Welcome, Failed. Only one visible at a time. Step cards show numbered indicators (pending -> active -> done with checkmark).
+**Overlay structure:** Five views — Permission (first launch, if not granted), CLI Install (first launch, if not already installed), Steps (install/running/model), Welcome, Failed. Only one visible at a time. Step cards show numbered indicators (pending -> active -> done with checkmark).
 
 | Step | Action | Expected Result |
 |------|--------|-----------------|

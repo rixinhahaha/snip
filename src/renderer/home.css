@@ -1514,6 +1514,12 @@ input:focus { border-color: var(--accent); }
   margin-bottom: 12px;
 }
 
+.ai-providers-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
 .ai-providers {
   display: flex;
   flex-direction: column;
@@ -2158,6 +2164,66 @@ kbd {
   margin-top: 12px;
   text-align: center;
   animation: setup-fade-in 0.25s ease;
+}
+
+/* CLI install — onboarding step */
+.setup-cli-tools {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-bottom: 24px;
+}
+
+.setup-cli-tool-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-card);
+  border-radius: 16px;
+}
+
+.setup-cli-btns {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.setup-cli-result {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.setup-cli-success-icon {
+  color: var(--success);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.setup-cli-result span:last-child {
+  color: var(--text-secondary);
+  font-family: 'Menlo', 'SF Mono', monospace;
+  font-size: 12px;
+}
+
+.setup-cli-error-text {
+  color: var(--error);
+  font-family: inherit;
+}
+
+.setup-cli-providers {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  margin-top: 8px;
 }
 
 /* Save location — settings section */

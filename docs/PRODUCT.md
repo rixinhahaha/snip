@@ -147,7 +147,7 @@ Power users on macOS who take 5-50 screenshots per day: developers, designers, P
 ## Product Principles
 
 1. **Clipboard-first**: Most users want the screenshot on their clipboard immediately. Saving to disk is secondary.
-2. **Zero-config by default**: On first launch, Snip proactively requests Screen Recording permission (with restart if granted), lets the user choose a save location, and is ready to use. No AI setup required.
+2. **Zero-config by default**: On first launch, Snip proactively requests Screen Recording permission (with restart if granted), lets the user choose a save location, and offers CLI installation for AI coding tools. No AI setup required.
 3. **AI is optional**: AI organization is disabled by default. The app works fully without it — capture, annotate, save, and browse all function normally. Only smart naming, tagging, and organization require AI. Users can enable AI later from Settings, which guides Ollama install and model download.
 4. **Non-intrusive**: Tray-only, no Dock icon, no Space switching, hides during capture.
 5. **AI is invisible labor**: Users don't "invoke AI" — it just happens in the background after save.

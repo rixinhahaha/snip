@@ -538,15 +538,17 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
     var targets = ['/usr/local/bin/snip', path.join(home, '.local', 'bin', 'snip'), path.join(home, 'bin', 'snip')];
     for (var target of targets) {
       if (fs.existsSync(target)) {
-        // Verify the wrapper still points to a valid node binary
         try {
           var content = fs.readFileSync(target, 'utf8');
+          // Verify this is our wrapper, not another app's binary
+          if (content.indexOf('Snip CLI') === -1) continue;
+          // Verify the wrapper still points to a valid node binary
           var match = content.match(/exec "([^"]+)"/);
           if (match && match[1] && !fs.existsSync(match[1])) {
             return 'stale'; // wrapper exists but points to deleted app
           }
-        } catch {}
-        return true;
+          return true;
+        } catch { continue; }
       }
     }
     return false;
