@@ -64,7 +64,7 @@
       });
 
       setupTools();
-      await checkSegmentSupport();
+      await Promise.all([checkSegmentSupport(), checkUpscaleSupport()]);
       _editorReady = true;
     }
 
@@ -105,6 +105,19 @@
       }
     } catch (err) {
       console.warn('[Snip] Failed to check segment support:', err.message);
+    }
+  }
+
+  async function checkUpscaleSupport() {
+    try {
+      if (window.snip.checkUpscaleSupport) {
+        var result = await window.snip.checkUpscaleSupport();
+        if (result && result.supported) {
+          Toolbar.enableUpscaleTool();
+        }
+      }
+    } catch (err) {
+      console.warn('[Snip] Failed to check upscale support:', err.message);
     }
   }
 

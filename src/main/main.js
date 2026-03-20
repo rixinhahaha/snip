@@ -363,6 +363,10 @@ app.whenReady().then(() => {
   // Register core IPC handlers FIRST (protects channels from extension squatting)
   registerIpcHandlers(getOverlayWindow, createEditorWindow, reregisterShortcuts, rebuildTrayMenu);
 
+  // Migrate bundled models to addon directory (one-time, for users upgrading from older versions)
+  var addonManager = require('./addon-manager');
+  addonManager.migrateFromBundled();
+
   // Load extension registry and register extension IPC handlers AFTER core
   extensionRegistry.loadAll();
   extensionRegistry.setContext({

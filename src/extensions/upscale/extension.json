@@ -8,9 +8,11 @@
   "tooltip": "Upscale (U)",
   "shortcut": "u",
   "toolbarPosition": 8,
+  "hidden": true,
   "toolbarGroups": [],
   "main": "main.js",
   "ipc": [
+    { "channel": "check-upscale-support", "method": "checkSupport" },
     { "channel": "upscale-image", "method": "upscaleImage" }
   ]
 }

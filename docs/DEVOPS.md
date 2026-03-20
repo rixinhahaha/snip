@@ -26,13 +26,12 @@ npm install
 # Compile native modules for Electron's ABI
 npm run rebuild
 
-# Download HuggingFace models (run once, ~75 MB total)
-#   - MiniLM (~23 MB) — embedding model for semantic search
-#   - SlimSAM (~50 MB) — segmentation model for object selection
-#   - Swin2SR (~5.7 MB) — 2x image upscaling model
+# (Optional) Download HuggingFace models for local dev (~150 MB total)
+# Models are NOT bundled in the binary — downloaded on demand via Settings → Add-ons.
+# Only needed for dev if you want to test AI features without using the addon system.
 npm run download-models
 
-# Download Node.js binary for SAM subprocess (run once, ~100 MB)
+# Download Node.js binary for child process workers (run once, ~100 MB)
 npm run download-node
 
 # Launch in dev mode (verbose logging)
@@ -60,7 +59,8 @@ The app runs as a **tray-only** process (no Dock icon). Look for the scissors ic
 | `npm run sign:adhoc` | Ad-hoc `codesign` for local use (no Developer ID needed) |
 | `./scripts/build-signed.sh` | Production build (arm64): loads `.env` creds, validates cert, builds + signs + notarizes |
 | `node scripts/generate-app-icon.js` | Regenerate `assets/icon.png` and `assets/icon.icns` from SVG template |
-| `npm run download-models` | Download HuggingFace models: MiniLM (~23 MB), SlimSAM (~50 MB), Swin2SR (~5.7 MB). Note: Ollama and minicpm-v are NOT bundled — installed at runtime. |
+| `npm run download-models` | Download HuggingFace models to `vendor/models/` for dev use. NOT bundled in binary — users download via Settings → Add-ons. |
+| `node scripts/build-runtime-bundle.js` | Build the AI runtime tarball (`dist/snip-ai-runtime-darwin-arm64.tar.gz`) for GitHub release. Contains transformers.js + onnxruntime stripped to arm64-only. |
 | `npm run download-node` | Download standalone Node.js 22 LTS binary (~100 MB) for SAM segmentation subprocess (arm64 only). |
 
 ---
@@ -207,7 +207,8 @@ The cask is hosted at [`rixinhahaha/homebrew-snip`](https://github.com/rixinhaha
 | Config | `~/Library/Application Support/snip/snip-config.json` | Electron defaults |
 | Ollama binary | `/usr/local/bin/ollama`, `/opt/homebrew/bin/ollama`, or `/Applications/Ollama.app/Contents/Resources/ollama` | User-installed (or installed via in-app setup wizard) |
 | Ollama models | `~/.ollama/models/` | Shared with system Ollama; minicpm-v pulled on first launch |
-| HF models (MiniLM + SlimSAM + Swin2SR) | `vendor/models/` (dev) / `Resources/models/` (packaged) | Bundled — `npm run download-models` (~75 MB) |
+| AI add-on models | `vendor/models/` (dev) / `~/Library/Application Support/snip/addons/models/` (user) | Downloaded on demand via Settings → Add-ons |
+| AI runtime (transformers.js + onnxruntime) | `node_modules/` (dev) / `~/Library/Application Support/snip/addons/runtime/` (user) | Downloaded on demand with first add-on install |
 | Node.js binary (SAM subprocess) | `vendor/node/{arch}/node` (dev) / `Resources/node/node` (packaged) | Bundled — `npm run download-node` (~100 MB) |
 | Animation presets | Inlined in `src/main/animation/animation.js` | 6 static text-prompt presets (fallback when Ollama AI presets unavailable) |
 

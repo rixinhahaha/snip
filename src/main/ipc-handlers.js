@@ -665,6 +665,49 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
     return { installed: true, name: manifest.name };
   });
 
+  // Settings: Add-ons (optional AI features)
+  var addonManager = require('./addon-manager');
+
+  function isValidAddonName(name) {
+    return typeof name === 'string' && addonManager.ADDON_DEFS.hasOwnProperty(name);
+  }
+
+  ipcMain.handle('get-addon-status', async () => {
+    return addonManager.getStatus();
+  });
+
+  ipcMain.handle('install-addon', async (event, addonName) => {
+    if (!isValidAddonName(addonName)) return { success: false, error: 'Invalid addon name' };
+    try {
+      await addonManager.installAddon(addonName, function (progress) {
+        broadcastToWindows('addon-download-progress', {
+          addon: addonName,
+          phase: progress.phase,
+          percent: progress.percent || 0,
+          received: progress.received || 0,
+          total: progress.total || 0
+        });
+      });
+      broadcastToWindows('addon-status-changed', addonManager.getStatus());
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle('remove-addon', async (event, addonName) => {
+    if (!isValidAddonName(addonName)) return { success: false, error: 'Invalid addon name' };
+    addonManager.removeAddon(addonName);
+    broadcastToWindows('addon-status-changed', addonManager.getStatus());
+    return { success: true };
+  });
+
+  ipcMain.handle('cancel-addon-download', async (event, addonName) => {
+    if (!isValidAddonName(addonName)) return { success: false, error: 'Invalid addon name' };
+    addonManager.cancelDownload(addonName);
+    return { success: true };
+  });
+
   // Settings: Categories
   ipcMain.handle('get-categories', async () => {
     return getAllCategories();

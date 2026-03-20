@@ -877,13 +877,13 @@ The setup wizard appears as a **full-window inline overlay** inside the home win
 | "Continue in background" | Shown when download is active, dismisses overlay |
 | App works without Ollama | Capture/annotate work normally, no AI organization |
 
-### 8.3 AI Assistant Settings
+### 8.3 AI Organization Settings
 
 | Step | Action | Expected Result |
 |------|--------|-----------------|
-| 1 | Navigate to Settings page | "Local AI Assistant" section shown with AI Organization toggle |
-| 2 | Toggle AI Organization off | AI features disabled, details section hidden, saved to config |
-| 3 | Toggle AI Organization on | Details section shown with Ollama checklist |
+| 1 | Navigate to Settings page | "AI Features" section shown with Organization subsection and AI Organization toggle |
+| 2 | Toggle AI Organization off | Organization details hidden, Snip Tags subsection hidden, saved to config |
+| 3 | Toggle AI Organization on | Organization details shown with Ollama checklist, Snip Tags subsection shown |
 | 4 | -- | Checklist shows three items: Ollama installed, Ollama running, Model downloaded |
 | 5 | Each item shows ✓ (ready) or ○ (pending) | Based on live `get-ollama-status` IPC result |
 | 6 | If not all ready | "Set up" button visible → click opens setup overlay |

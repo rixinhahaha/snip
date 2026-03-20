@@ -66,6 +66,7 @@
     initMcpSettings();
     initCliSettings();
     initExtensionsSettings();
+    initAddonsSettings();
     initSetupOverlay();
   }
 
@@ -335,15 +336,20 @@
   function updateAiSettingsVisibility(enabled) {
     var details = document.getElementById('ai-details');
     var toggle = document.getElementById('ai-toggle-input');
+    var tagsSubsection = document.getElementById('tags-subsection');
     if (details) {
       details.style.display = enabled === false ? 'none' : '';
     }
     if (toggle) {
       toggle.checked = enabled !== false;
     }
+    // Hide tags subsection when AI organization is disabled
+    if (tagsSubsection) {
+      tagsSubsection.style.display = enabled === false ? 'none' : '';
+    }
   }
 
-  // ── Settings: Local AI Assistant (Ollama) ──
+  // ── Settings: AI Organization (Ollama) ──
 
   var MODEL_SPECS = {
     'minicpm-v': { params: '8B', size: '~5.1 GB', quant: 'Q4_K_M', description: 'Best balance of accuracy and speed for screenshot analysis.' }
@@ -645,17 +651,17 @@
 
   // ── Keyboard Shortcuts settings ──
   var SHORTCUT_DEFINITIONS = [
-    { action: 'quick-snip', name: 'Quick Snip', context: 'Global', configurable: true },
-    { action: 'capture', name: 'Snip and Annotate', context: 'Global', configurable: true },
-    { action: 'search', name: 'Search snips', context: 'Global', configurable: true },
+    { action: 'quick-snip', name: 'Quick Snip', context: 'Global', configurable: true, primary: true },
+    { action: 'capture', name: 'Snip and Annotate', context: 'Global', configurable: true, primary: true },
+    { action: 'search', name: 'Search snips', context: 'Global', configurable: true, primary: true },
     { action: null, name: 'Select tool', context: 'Annotation', configurable: false, display: 'V' },
     { action: null, name: 'Rectangle tool', context: 'Annotation', configurable: false, display: 'R' },
     { action: null, name: 'Text tool', context: 'Annotation', configurable: false, display: 'T' },
     { action: null, name: 'Arrow tool', context: 'Annotation', configurable: false, display: 'A' },
     { action: null, name: 'Tag tool', context: 'Annotation', configurable: false, display: 'G' },
     { action: null, name: 'Blur Brush tool', context: 'Annotation', configurable: false, display: 'B' },
-    { action: null, name: 'Segment tool', context: 'Annotation', configurable: false, display: 'S' },
-    { action: null, name: 'Upscale', context: 'Annotation', configurable: false, display: 'U' },
+    { action: null, name: 'Segment tool', context: 'Annotation', configurable: false, display: 'S', addon: 'segment' },
+    { action: null, name: 'Upscale', context: 'Annotation', configurable: false, display: 'U', addon: 'upscale' },
     { action: null, name: 'Transcribe', context: 'Annotation', configurable: false, display: 'W' },
     { action: null, name: 'Confirm / full screen', context: 'Selection', configurable: false, display: 'Enter' },
     { action: null, name: 'Cancel selection', context: 'Selection', configurable: false, display: 'Esc' },
@@ -664,9 +670,9 @@
     { action: null, name: 'Redo', context: 'Annotation', configurable: false, display: 'Cmd + Shift + Z' },
     { action: null, name: 'Delete selected', context: 'Annotation', configurable: false, display: 'Delete' },
     { action: null, name: 'Copy & close', context: 'Annotation', configurable: false, display: 'Esc' },
-    { action: null, name: 'Save GIF', context: 'GIF Preview', configurable: false, display: 'Enter / Cmd + S' },
-    { action: null, name: 'Redo animation', context: 'GIF Preview', configurable: false, display: 'R' },
-    { action: null, name: 'Discard animation', context: 'GIF Preview', configurable: false, display: 'Esc' }
+    { action: null, name: 'Save GIF', context: 'GIF Preview', configurable: false, display: 'Enter / Cmd + S', addon: 'segment' },
+    { action: null, name: 'Redo animation', context: 'GIF Preview', configurable: false, display: 'R', addon: 'segment' },
+    { action: null, name: 'Discard animation', context: 'GIF Preview', configurable: false, display: 'Esc', addon: 'segment' }
   ];
 
   var recordingAction = null;
@@ -683,14 +689,21 @@
       .replace(/\+/g, ' + ');
   }
 
+  var _shortcutsAddonStatus = null;
+  var _shortcutsExpanded = false;
+
   async function initShortcutsSettings() {
+    // Fetch addon status to filter addon-dependent shortcuts
+    if (window.snip.getAddonStatus) {
+      _shortcutsAddonStatus = await window.snip.getAddonStatus();
+    }
+
     var shortcuts = await window.snip.getShortcuts();
     renderShortcuts(shortcuts);
 
     document.getElementById('shortcuts-reset-btn').addEventListener('click', async function() {
       stopRecording();
       await window.snip.resetShortcuts();
-      // The broadcast from reset-shortcuts will trigger onShortcutsChanged which re-renders
       var status = document.getElementById('shortcuts-status');
       status.textContent = 'Restored defaults';
       status.classList.add('visible');
@@ -699,64 +712,113 @@
 
     if (window.snip.onShortcutsChanged) {
       window.snip.onShortcutsChanged(function(updated) {
-        // Skip re-render if user is actively recording — avoid orphaning the keydown handler
         if (recordingAction !== null) return;
         renderShortcuts(updated);
       });
     }
+
+    // Re-render shortcuts when addon status changes
+    if (window.snip.onAddonStatusChanged) {
+      window.snip.onAddonStatusChanged(function(status) {
+        _shortcutsAddonStatus = status;
+        window.snip.getShortcuts().then(function(sc) { renderShortcuts(sc); });
+      });
+    }
+  }
+
+  function isAddonShortcutAvailable(def) {
+    if (!def.addon) return true;
+    if (!_shortcutsAddonStatus || !_shortcutsAddonStatus.addons) return false;
+    var addon = _shortcutsAddonStatus.addons[def.addon];
+    return addon && addon.installed;
+  }
+
+  function buildShortcutRow(def, shortcuts) {
+    var row = document.createElement('div');
+    row.className = 'shortcut-row' + (def.configurable ? '' : ' readonly');
+
+    var name = document.createElement('span');
+    name.className = 'shortcut-row-name';
+    name.textContent = def.name;
+
+    var context = document.createElement('span');
+    context.className = 'shortcut-row-context';
+    context.textContent = def.context;
+
+    var keySpan = document.createElement('span');
+    keySpan.className = 'shortcut-row-key';
+
+    if (def.configurable) {
+      var currentAccel = shortcuts[def.action] || '';
+      keySpan.textContent = acceleratorToDisplay(currentAccel);
+
+      var editBtn = document.createElement('button');
+      editBtn.className = 'shortcut-edit-btn';
+      editBtn.title = 'Edit shortcut';
+      editBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>';
+
+      (function(d, ks, eb, sc) {
+        eb.addEventListener('click', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (recordingAction !== null) return;
+          startRecording(d, ks, eb, sc);
+        });
+      })(def, keySpan, editBtn, shortcuts);
+
+      row.appendChild(name);
+      row.appendChild(context);
+      row.appendChild(keySpan);
+      row.appendChild(editBtn);
+    } else {
+      keySpan.textContent = def.display;
+      row.appendChild(name);
+      row.appendChild(context);
+      row.appendChild(keySpan);
+    }
+
+    return row;
   }
 
   function renderShortcuts(shortcuts) {
     var list = document.getElementById('shortcuts-list');
     list.innerHTML = '';
 
-    SHORTCUT_DEFINITIONS.forEach(function(def) {
-      var row = document.createElement('div');
-      row.className = 'shortcut-row' + (def.configurable ? '' : ' readonly');
+    // Filter out shortcuts for addons that aren't installed
+    var defs = SHORTCUT_DEFINITIONS.filter(isAddonShortcutAvailable);
 
-      var name = document.createElement('span');
-      name.className = 'shortcut-row-name';
-      name.textContent = def.name;
+    // Separate primary (global) shortcuts from secondary (tool/annotation)
+    var primaryDefs = defs.filter(function(d) { return d.primary; });
+    var secondaryDefs = defs.filter(function(d) { return !d.primary; });
 
-      var context = document.createElement('span');
-      context.className = 'shortcut-row-context';
-      context.textContent = def.context;
+    // Render primary shortcuts
+    for (var i = 0; i < primaryDefs.length; i++) {
+      list.appendChild(buildShortcutRow(primaryDefs[i], shortcuts));
+    }
 
-      var keySpan = document.createElement('span');
-      keySpan.className = 'shortcut-row-key';
+    // Add toggle link + collapsible secondary section
+    if (secondaryDefs.length > 0) {
+      var toggle = document.createElement('button');
+      toggle.className = 'shortcuts-toggle';
+      toggle.textContent = _shortcutsExpanded ? '\u25BE Hide' : '\u25B8 Show all shortcuts';
 
-      if (def.configurable) {
-        var currentAccel = shortcuts[def.action] || '';
-        keySpan.textContent = acceleratorToDisplay(currentAccel);
+      var secondaryWrap = document.createElement('div');
+      secondaryWrap.className = 'shortcuts-secondary';
+      secondaryWrap.style.display = _shortcutsExpanded ? '' : 'none';
 
-        var editBtn = document.createElement('button');
-        editBtn.className = 'shortcut-edit-btn';
-        editBtn.title = 'Edit shortcut';
-        editBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>';
-
-        (function(d, ks, eb, sc) {
-          eb.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            // Only allow one recording at a time — ignore if already recording
-            if (recordingAction !== null) return;
-            startRecording(d, ks, eb, sc);
-          });
-        })(def, keySpan, editBtn, shortcuts);
-
-        row.appendChild(name);
-        row.appendChild(context);
-        row.appendChild(keySpan);
-        row.appendChild(editBtn);
-      } else {
-        keySpan.textContent = def.display;
-        row.appendChild(name);
-        row.appendChild(context);
-        row.appendChild(keySpan);
+      for (var j = 0; j < secondaryDefs.length; j++) {
+        secondaryWrap.appendChild(buildShortcutRow(secondaryDefs[j], shortcuts));
       }
 
-      list.appendChild(row);
-    });
+      toggle.addEventListener('click', function() {
+        _shortcutsExpanded = !_shortcutsExpanded;
+        secondaryWrap.style.display = _shortcutsExpanded ? '' : 'none';
+        toggle.textContent = _shortcutsExpanded ? '\u25BE Hide' : '\u25B8 Show all shortcuts';
+      });
+
+      list.appendChild(toggle);
+      list.appendChild(secondaryWrap);
+    }
   }
 
   function startRecording(def, keySpan, editBtn, shortcuts) {
@@ -1561,6 +1623,193 @@
         loadAndRender();
       }
     });
+  }
+
+  // ── Add-ons settings (optional AI features) ──
+  async function initAddonsSettings() {
+    var listEl = document.getElementById('addons-list');
+    var runtimeNote = document.getElementById('addons-runtime-note');
+    var animSubsection = document.getElementById('animation-subsection');
+    if (!listEl || !window.snip.getAddonStatus) return;
+
+    var downloadingAddons = {};
+    var progressCleanup = null;
+
+    function renderAddons(status) {
+      listEl.innerHTML = '';
+
+      // Show runtime note if runtime not yet installed
+      if (runtimeNote) {
+        runtimeNote.classList.toggle('hidden', status.runtime);
+      }
+
+      // Show/hide animation subsection based on segment addon status
+      if (animSubsection) {
+        var segmentInstalled = status.addons.segment && status.addons.segment.installed;
+        animSubsection.style.display = segmentInstalled ? '' : 'none';
+      }
+
+      var addonNames = Object.keys(status.addons);
+      for (var i = 0; i < addonNames.length; i++) {
+        var name = addonNames[i];
+        var addon = status.addons[name];
+        listEl.appendChild(createAddonCard(name, addon, status.runtime));
+      }
+    }
+
+    function createAddonCard(name, addon, runtimeInstalled) {
+      var card = document.createElement('div');
+      card.className = 'addon-card';
+      card.id = 'addon-card-' + name;
+
+      var header = document.createElement('div');
+      header.className = 'addon-card-header';
+
+      var nameEl = document.createElement('span');
+      nameEl.className = 'addon-card-name';
+      nameEl.textContent = addon.displayName;
+
+      var sizeEl = document.createElement('span');
+      sizeEl.className = 'addon-card-size';
+      sizeEl.textContent = addon.modelSize;
+
+      header.appendChild(nameEl);
+      header.appendChild(sizeEl);
+
+      var desc = document.createElement('div');
+      desc.className = 'addon-card-desc';
+      desc.textContent = addon.description;
+
+      var actions = document.createElement('div');
+      actions.className = 'addon-card-actions';
+      actions.id = 'addon-actions-' + name;
+
+      if (downloadingAddons[name]) {
+        // Downloading state
+        var progressWrap = document.createElement('div');
+        progressWrap.style.flex = '1';
+
+        var progressText = document.createElement('div');
+        progressText.className = 'addon-progress-text';
+        progressText.id = 'addon-progress-text-' + name;
+        progressText.textContent = 'Downloading...';
+
+        var progressBar = document.createElement('div');
+        progressBar.className = 'addon-progress';
+        var progressFill = document.createElement('div');
+        progressFill.className = 'addon-progress-fill';
+        progressFill.id = 'addon-progress-fill-' + name;
+        progressBar.appendChild(progressFill);
+
+        progressWrap.appendChild(progressText);
+        progressWrap.appendChild(progressBar);
+
+        var cancelBtn = document.createElement('button');
+        cancelBtn.className = 'addon-cancel-btn';
+        cancelBtn.textContent = 'Cancel';
+        cancelBtn.addEventListener('click', function (addonName) {
+          return function () {
+            window.snip.cancelAddonDownload(addonName);
+            delete downloadingAddons[addonName];
+            refreshAddons();
+          };
+        }(name));
+
+        actions.appendChild(progressWrap);
+        actions.appendChild(cancelBtn);
+      } else if (addon.installed) {
+        // Installed state
+        var badge = document.createElement('span');
+        badge.className = 'addon-installed-badge';
+        badge.textContent = '\u2713 Installed';
+
+        var removeBtn = document.createElement('button');
+        removeBtn.className = 'addon-remove-btn';
+        removeBtn.textContent = 'Remove';
+        removeBtn.addEventListener('click', function (addonName) {
+          return async function () {
+            await window.snip.removeAddon(addonName);
+            refreshAddons();
+          };
+        }(name));
+
+        actions.appendChild(badge);
+        var spacer = document.createElement('span');
+        spacer.style.flex = '1';
+        actions.appendChild(spacer);
+        actions.appendChild(removeBtn);
+      } else {
+        // Not installed state
+        var installBtn = document.createElement('button');
+        installBtn.className = 'addon-install-btn';
+        installBtn.textContent = 'Install';
+        installBtn.addEventListener('click', function (addonName) {
+          return async function () {
+            downloadingAddons[addonName] = true;
+            refreshAddons();
+            var result = await window.snip.installAddon(addonName);
+            delete downloadingAddons[addonName];
+            if (result && !result.success) {
+              showAddonError(addonName, result.error);
+            }
+            refreshAddons();
+          };
+        }(name));
+
+        var spacer2 = document.createElement('span');
+        spacer2.style.flex = '1';
+        actions.appendChild(spacer2);
+        actions.appendChild(installBtn);
+      }
+
+      card.appendChild(header);
+      card.appendChild(desc);
+      card.appendChild(actions);
+      return card;
+    }
+
+    function showAddonError(name, error) {
+      var actions = document.getElementById('addon-actions-' + name);
+      if (!actions) return;
+      var errEl = document.createElement('div');
+      errEl.className = 'addon-error';
+      errEl.textContent = error || 'Download failed';
+      actions.appendChild(errEl);
+      setTimeout(function () { if (errEl.parentNode) errEl.parentNode.removeChild(errEl); }, 5000);
+    }
+
+    async function refreshAddons() {
+      var status = await window.snip.getAddonStatus();
+      renderAddons(status);
+    }
+
+    // Listen for download progress
+    if (window.snip.onAddonProgress) {
+      progressCleanup = window.snip.onAddonProgress(function (progress) {
+        var fillEl = document.getElementById('addon-progress-fill-' + progress.addon);
+        var textEl = document.getElementById('addon-progress-text-' + progress.addon);
+        if (fillEl) {
+          fillEl.style.width = progress.percent + '%';
+        }
+        if (textEl) {
+          if (progress.phase === 'runtime') {
+            textEl.textContent = 'Downloading AI runtime... ' + progress.percent + '%';
+          } else if (progress.phase === 'runtime-extract') {
+            textEl.textContent = 'Extracting runtime...';
+          } else if (progress.phase === 'model') {
+            textEl.textContent = 'Downloading model... ' + progress.percent + '%';
+          }
+        }
+      });
+    }
+
+    // Listen for status changes (e.g., from another window)
+    if (window.snip.onAddonStatusChanged) {
+      window.snip.onAddonStatusChanged(function () { refreshAddons(); });
+    }
+
+    // Initial render
+    refreshAddons();
   }
 
   function initSetupOverlay() {

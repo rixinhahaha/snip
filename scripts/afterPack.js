@@ -4,13 +4,11 @@
  * Runs after the app directory is assembled but BEFORE electron-builder signs
  * the app bundle. This hook:
  *   1. Copies the arch-specific bundled Node.js binary into Resources/node/
- *   2. Removes canvas native module (unused transitive dep)
- *   2b. Removes onnxruntime-web (Electron uses onnxruntime-node)
- *   3. Removes non-macOS onnxruntime binaries (used by @huggingface/transformers)
- *   4. Removes wrong-arch darwin binaries (keep only the target arch)
+ *   2. Removes unused native modules (canvas)
+ *   3. Removes AI runtime deps that may leak in as transitive deps
+ *      (transformers, onnxruntime, ffmpeg — these are downloaded on demand via addon system)
+ *   4. Removes wrong-arch native binaries (sharp, electron-liquid-glass)
  *   5. Pre-signs remaining .node and .dylib files with Developer ID cert
- *
- * Note: Ollama is NOT bundled — users install it separately via ollama.com.
  */
 
 const path = require('path');
@@ -84,39 +82,15 @@ module.exports = async function afterPack(context) {
   var nmDir = path.join(unpackedDir, 'node_modules');
 
   removeDir(path.join(nmDir, 'canvas'), 'canvas (unused transitive dep)');
-  removeDir(path.join(nmDir, 'onnxruntime-web'), 'onnxruntime-web (unused — Electron uses onnxruntime-node)');
 
-  // ---------------------------------------------------------------
-  // 3. Remove non-macOS onnxruntime binaries
-  // ---------------------------------------------------------------
-  var onnxBinDir = path.join(nmDir, 'onnxruntime-node', 'bin', 'napi-v3');
-  if (fs.existsSync(onnxBinDir)) {
-    var platforms = fs.readdirSync(onnxBinDir);
-    for (var p = 0; p < platforms.length; p++) {
-      var platform = platforms[p];
-      if (platform !== 'darwin') {
-        removeDir(path.join(onnxBinDir, platform), 'onnxruntime ' + platform + ' binaries');
-      }
-    }
-
-    // ---------------------------------------------------------------
-    // 3b. Remove wrong-arch darwin binaries
-    // ---------------------------------------------------------------
-    if (targetArch !== 'universal') {
-      var darwinDir = path.join(onnxBinDir, 'darwin');
-      if (fs.existsSync(darwinDir)) {
-        var arches = fs.readdirSync(darwinDir);
-        for (var a = 0; a < arches.length; a++) {
-          if (arches[a] !== targetArch) {
-            removeDir(
-              path.join(darwinDir, arches[a]),
-              'onnxruntime darwin/' + arches[a] + ' (building for ' + targetArch + ')'
-            );
-          }
-        }
-      }
-    }
-  }
+  // onnxruntime-node, onnxruntime-web, @huggingface/transformers, ffmpeg-static
+  // are no longer bundled — they're downloaded on demand via the addon system.
+  // Clean up any that might have leaked in as transitive deps.
+  removeDir(path.join(nmDir, 'onnxruntime-web'), 'onnxruntime-web (not bundled)');
+  removeDir(path.join(nmDir, 'onnxruntime-node'), 'onnxruntime-node (not bundled — addon runtime)');
+  removeDir(path.join(nmDir, 'onnxruntime-common'), 'onnxruntime-common (not bundled — addon runtime)');
+  removeDir(path.join(nmDir, '@huggingface'), '@huggingface (not bundled — addon runtime)');
+  removeDir(path.join(nmDir, 'ffmpeg-static'), 'ffmpeg-static (not bundled — addon runtime)');
 
   // ---------------------------------------------------------------
   // 3c. Remove wrong-arch electron-liquid-glass prebuilds
