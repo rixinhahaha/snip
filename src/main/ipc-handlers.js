@@ -451,30 +451,44 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
     }
   }
 
+  var SNIP_RULES_VERSION = 'snip-rules-v2';
+
   var snipRulesContent = [
-    '# Snip — Image Editor',
-    'For any image editing, annotation, markup, highlighting, or visual feedback, use the `snip` CLI.',
-    '- `snip open <filepath>` — Opens image in Snip editor. Blocks until done. Returns JSON: `{"status":"done","path":"...","message":"..."}`. Read the file at `path` to see the result. If the user cancels, the command exits with code 1.',
+    '# Snip — Visual Communication Tool',
+    '<!-- ' + SNIP_RULES_VERSION + ' -->',
+    'Use `snip` CLI for visual communication with the user: editing images, reviewing diagrams, getting spatial feedback.',
+    '',
+    '## Commands',
+    '- `snip open <filepath>` — Open image for user review. Blocks until done. Returns JSON with `status` (approved/changes_requested), `edited`, `path`, optional `text`.',
+    '- `snip open <filepath> --message "context"` — Same, but displays a context message to the user (e.g., what you need feedback on).',
+    '- `snip render --format mermaid --message "context"` — Render Mermaid diagram from stdin, open for review. Pipe diagram code: `echo \'graph LR; A-->B\' | snip render --format mermaid`',
     '- `snip search "<query>"` — Search screenshot library. Returns JSON array.',
     '- `snip list` — List saved screenshots with metadata. Returns JSON array.',
     '- `snip transcribe <filepath>` — Extract text via OCR. Returns plain text.',
     '- `snip categories` — List categories. Returns JSON array.',
     '- `snip open` auto-launches Snip if not running.',
-    'Always prefer `snip open` when the user wants to show, point out, or mark up something visually.',
+    '',
+    '## When to use visual communication',
+    '- **Show a diagram** when your changes affect architecture, data flow, or multi-file structure. Render a Mermaid diagram for the user to review before proceeding.',
+    '- **Open an image** when the user wants to show, point out, or mark up something visually. Always prefer `snip open` over asking the user to describe what they see.',
+    '- **Use `--message`** to tell the user what you need feedback on (e.g., "Does the auth flow look right?").',
     ''
   ].join('\n');
 
   ipcMain.handle('check-ai-provider-status', async (event, providerId) => {
     var filePath = getProviderFilePath(providerId);
     if (!filePath) return false;
-    if (providerId === 'claude-code') {
-      // Check for marker in CLAUDE.md
-      try {
-        var content = fs.readFileSync(filePath, 'utf8');
-        return content.includes(SNIP_MARKER_START);
-      } catch { return false; }
-    }
-    return fs.existsSync(filePath);
+    try {
+      var content = fs.readFileSync(filePath, 'utf8');
+      if (providerId === 'claude-code') {
+        if (!content.includes(SNIP_MARKER_START)) return false;
+      }
+      // Check for Snip rules identifier
+      if (!content.includes('# Snip')) return false;
+      // Check version — outdated if rules present but version tag missing
+      if (!content.includes(SNIP_RULES_VERSION)) return 'outdated';
+      return true;
+    } catch { return false; }
   });
 
   ipcMain.handle('configure-ai-provider', async (event, providerId) => {
@@ -483,16 +497,21 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
 
     try {
       if (providerId === 'claude-code') {
-        // Append to CLAUDE.md with markers
         var block = '\n' + SNIP_MARKER_START + '\n' + snipRulesContent + SNIP_MARKER_END + '\n';
-        // Check if already configured
         var existing = '';
         try { existing = fs.readFileSync(filePath, 'utf8'); } catch {}
-        if (existing.includes(SNIP_MARKER_START)) {
-          return { configured: true, provider: 'Claude Code' }; // already there
-        }
         fs.mkdirSync(path.dirname(filePath), { recursive: true });
-        fs.appendFileSync(filePath, block);
+        var startIdx = existing.indexOf(SNIP_MARKER_START);
+        var endIdx = existing.indexOf(SNIP_MARKER_END);
+        if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+          // Replace existing block with updated rules
+          endIdx += SNIP_MARKER_END.length;
+          if (startIdx > 0 && existing[startIdx - 1] === '\n') startIdx--;
+          if (endIdx < existing.length && existing[endIdx] === '\n') endIdx++;
+          fs.writeFileSync(filePath, existing.slice(0, startIdx) + block + existing.slice(endIdx));
+        } else {
+          fs.appendFileSync(filePath, block);
+        }
       } else {
         fs.mkdirSync(path.dirname(filePath), { recursive: true });
         fs.writeFileSync(filePath, snipRulesContent);

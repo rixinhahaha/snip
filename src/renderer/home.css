@@ -1758,6 +1758,16 @@ input:focus { border-color: var(--accent); }
   background: rgba(239, 68, 68, 0.08);
 }
 
+.ai-provider-btn.outdated {
+  color: var(--accent, #8b5cf6);
+  border-color: var(--accent, #8b5cf6);
+  background: rgba(139, 92, 246, 0.1);
+}
+
+.ai-provider-btn.outdated:hover {
+  background: rgba(139, 92, 246, 0.2);
+}
+
 kbd {
   display: inline-block;
   padding: 2px 7px;

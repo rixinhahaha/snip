@@ -1420,7 +1420,10 @@
     fragment.appendChild(label);
 
     for (var pi = 0; pi < providers.length; pi++) {
-      (function(provider, isConfigured) {
+      (function(provider, status) {
+        var isConfigured = status === true;
+        var isOutdated = status === 'outdated';
+
         var row = document.createElement('div');
         row.className = 'ai-provider-row';
 
@@ -1437,31 +1440,50 @@
 
         function updateStatus() {
           var file = PROVIDER_FILES[provider.id] || '';
-          statusText.textContent = isConfigured ? 'Added to ' + file : '';
+          if (isOutdated) {
+            statusText.textContent = 'Update available — new capabilities';
+          } else if (isConfigured) {
+            statusText.textContent = 'Added to ' + file;
+          } else {
+            statusText.textContent = '';
+          }
         }
         updateStatus();
 
+        function updateBtn() {
+          if (isOutdated) {
+            btn.textContent = 'Update';
+            btn.className = 'ai-provider-btn outdated';
+          } else if (isConfigured) {
+            btn.textContent = 'Remove';
+            btn.className = 'ai-provider-btn configured';
+          } else {
+            btn.textContent = 'Configure';
+            btn.className = 'ai-provider-btn';
+          }
+        }
+
         var btn = document.createElement('button');
-        btn.className = 'ai-provider-btn' + (isConfigured ? ' configured' : '');
-        btn.textContent = isConfigured ? 'Remove' : 'Configure';
+        updateBtn();
 
         btn.addEventListener('click', async function() {
-          if (isConfigured) {
+          if (isConfigured && !isOutdated) {
             var result = await window.snip.removeAiProvider(provider.id);
             if (!result.error) {
               isConfigured = false;
-              btn.textContent = 'Configure';
-              btn.className = 'ai-provider-btn';
+              isOutdated = false;
+              updateBtn();
               updateStatus();
             } else if (onError) {
               onError(result.error);
             }
           } else {
+            // Configure or Update (both call configureAiProvider which replaces existing)
             var result = await window.snip.configureAiProvider(provider.id);
             if (result.configured) {
               isConfigured = true;
-              btn.textContent = 'Remove';
-              btn.className = 'ai-provider-btn configured';
+              isOutdated = false;
+              updateBtn();
               updateStatus();
             } else if (onError) {
               onError(result.error);

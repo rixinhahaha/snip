@@ -574,7 +574,84 @@ kbd {
   font-size: 0.9rem;
 }
 
-/* --- How It Works --- */
+/* --- How It Works (two-column flows) --- */
+
+.how-it-works-flows {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 48px;
+  margin-top: 48px;
+}
+
+.flow-title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin-bottom: 4px;
+  color: var(--accent);
+}
+
+.flow-subtitle {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  margin-bottom: 24px;
+}
+
+@media (max-width: 768px) {
+  .how-it-works-flows {
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
+}
+
+/* --- More Features Banner --- */
+
+.more-features-banner {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 40px 36px;
+  background: var(--bg-card);
+  border: 1px dashed var(--accent-dim);
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.3s ease;
+}
+
+.more-features-banner:hover {
+  border-color: var(--accent);
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+}
+
+.more-features-content {
+  flex: 1;
+}
+
+.more-features-content h2 {
+  font-size: 1.3rem;
+  margin: 12px 0 8px;
+}
+
+.more-features-content p {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.more-features-arrow {
+  flex-shrink: 0;
+  color: var(--accent);
+  opacity: 0.5;
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.more-features-banner:hover .more-features-arrow {
+  opacity: 1;
+  transform: translateX(4px);
+}
+
+/* --- How It Works (legacy) --- */
 .how-it-works {
   padding: 120px 0;
   position: relative;

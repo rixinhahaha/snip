@@ -3,28 +3,28 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Snip — macOS Screenshot Tool with Annotation & AI Organization</title>
-  <meta name="description" content="Free, open-source macOS screenshot tool. Capture, annotate, upscale, and transcribe text — all on device. AI-powered organization, semantic search, MCP server for AI assistants, and an extensible plugin system.">
+  <title>Snip — Stop Describing What You See | Visual AI Tool for macOS</title>
+  <meta name="description" content="Free, open-source macOS app. Screenshot a bug, circle it, paste to your AI agent. Or let the agent render a diagram and get your spatial feedback. CLI and MCP integration. Local AI organization.">
   <meta name="theme-color" content="#8B5CF6">
 
   <!-- Open Graph -->
-  <meta property="og:title" content="Snip — macOS Screenshot Tool with AI Organization">
-  <meta property="og:description" content="Capture, annotate, upscale, and transcribe screenshots — all on device. AI names, tags, and organizes every snip. Semantic search finds anything instantly.">
+  <meta property="og:title" content="Snip — Stop Describing What You See">
+  <meta property="og:description" content="Screenshot a bug, circle it, paste to your AI agent. Or let the agent render a diagram and get your feedback. The visual channel between you and AI.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://snipit.dev/">
   <meta property="og:image" content="https://snipit.dev/assets/og-image.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
-  <meta property="og:image:alt" content="Snip screenshot tool showing capture, annotation, and AI organization features">
+  <meta property="og:image:alt" content="Snip — visual communication layer between humans and AI agents">
   <meta property="og:site_name" content="Snip">
   <meta property="og:locale" content="en_US">
 
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Snip — macOS Screenshot Tool with AI Organization">
-  <meta name="twitter:description" content="Capture, annotate, upscale, and transcribe screenshots — all on device. AI organizes every snip with semantic search.">
+  <meta name="twitter:title" content="Snip — Stop Describing What You See">
+  <meta name="twitter:description" content="Screenshot a bug, circle it, paste to your AI agent. The visual channel between you and AI. Free, open source, macOS.">
   <meta name="twitter:image" content="https://snipit.dev/assets/og-image.png">
-  <meta name="twitter:image:alt" content="Snip screenshot tool for macOS">
+  <meta name="twitter:image:alt" content="Snip — visual AI tool for macOS">
 
   <link rel="canonical" href="https://snipit.dev/">
 
@@ -36,7 +36,7 @@
 
   <link rel="icon" type="image/png" href="assets/icon.png">
   <link rel="apple-touch-icon" href="assets/icon.png">
-  <link rel="preload" as="image" href="assets/hero-poster.jpg">
+  <link rel="preload" as="image" href="assets/workflow-poster.jpg">
   <link rel="stylesheet" href="styles.css">
 
   <!-- Structured Data -->
@@ -45,7 +45,7 @@
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "Snip",
-    "description": "macOS screenshot tool with annotation, AI upscaling, OCR transcription, and AI-powered organization. Capture, annotate, upscale, and find any screenshot instantly.",
+    "description": "Visual communication layer between humans and AI agents. Capture, annotate, render diagrams, review visuals. CLI and MCP integration for any AI agent. Local AI organization and semantic search.",
     "url": "https://snipit.dev/",
     "applicationCategory": "UtilitiesApplication",
     "operatingSystem": "macOS 14+",
@@ -57,8 +57,8 @@
     "screenshot": "https://snipit.dev/assets/og-image.png",
     "softwareRequirements": "macOS 14+ with Apple M-series chip",
     "downloadUrl": "https://github.com/rixinhahaha/snip/releases",
-    "featureList": "Screen capture, Annotation tools, AI-powered organization, Semantic search, Object segmentation, Blur brush, Auto-tagging, Auto-categorization, AI upscaling, Text transcription (OCR), CLI for AI agents, MCP server, Extension system",
-    "softwareVersion": "1.0.15"
+    "featureList": "Screen capture, Annotation tools, Diagram rendering (Mermaid), Review Mode (approve/request changes), Agent context messages, Structured feedback, AI-powered organization, Semantic search, CLI for AI agents, MCP server, Object segmentation, AI upscaling, Text transcription (OCR), Extension system",
+    "softwareVersion": "1.1.1"
   }
   </script>
 </head>
@@ -103,10 +103,9 @@
         <span>Snip</span>
       </a>
       <div class="nav-links">
-        <a href="#features">Features</a>
+        <a href="#ai-workflow">AI Workflow</a>
         <a href="#how-it-works">How It Works</a>
-        <a href="#tools">Tools</a>
-        <a href="#ai">AI</a>
+        <a href="#features">More Features</a>
         <a href="guide.html">Guide</a>
         <a href="https://github.com/rixinhahaha/snip" class="nav-cta" target="_blank" rel="noopener noreferrer">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
@@ -136,12 +135,11 @@
       <div class="sparkle-star sparkle-star-8"></div>
     </div>
     <div class="hero-content">
-      <div class="hero-badge"><svg width="14" height="14" viewBox="0 0 814 1000" fill="currentColor" aria-hidden="true"><path d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76.5 0-103.7 40.8-165.9 40.8s-105.6-57.8-155.5-127.4c-58.3-81.3-105.6-207.4-105.6-326.5 0-192 124.7-293.6 247.2-293.6 65.2 0 119.6 42.8 160.5 42.8 39.2 0 100.2-45.3 174.5-45.3 28.2 0 129.6 2.6 196.5 99.8zm-269.5-86.7c31.9-38.5 54.6-92 54.6-145.5 0-7.4-.8-14.8-2.6-20.7-52 1.9-113.6 34.6-150.8 78.4-28.2 32.6-57.2 86-57.2 140.2 0 8.1 1.3 16.1 1.9 18.7 3.2.6 8.4 1.3 13.5 1.3 46.6 0 105.6-31.2 140.6-72.4z"/></svg> macOS Screenshot Tool</div>
-      <h1>Capture. Annotate.<br><span class="hero-gradient">Find anything.</span></h1>
+      <div class="hero-badge"><svg width="14" height="14" viewBox="0 0 814 1000" fill="currentColor" aria-hidden="true"><path d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76.5 0-103.7 40.8-165.9 40.8s-105.6-57.8-155.5-127.4c-58.3-81.3-105.6-207.4-105.6-326.5 0-192 124.7-293.6 247.2-293.6 65.2 0 119.6 42.8 160.5 42.8 39.2 0 100.2-45.3 174.5-45.3 28.2 0 129.6 2.6 196.5 99.8zm-269.5-86.7c31.9-38.5 54.6-92 54.6-145.5 0-7.4-.8-14.8-2.6-20.7-52 1.9-113.6 34.6-150.8 78.4-28.2 32.6-57.2 86-57.2 140.2 0 8.1 1.3 16.1 1.9 18.7 3.2.6 8.4 1.3 13.5 1.3 46.6 0 105.6-31.2 140.6-72.4z"/></svg> Visual AI Tool for macOS</div>
+      <h1>Stop describing<br><span class="hero-gradient">what you see.</span></h1>
       <p class="hero-subtitle">
-        Snip captures your screen, lets you annotate with powerful tools,
-        and uses on-device AI to organize every screenshot automatically.
-        Find any snip later by just describing it — and now your AI assistant can use Snip too.
+        A screenshot with an arrow beats a paragraph of explanation.
+        Snip is the visual channel between you and AI.
       </p>
       <div class="hero-actions">
         <a href="https://github.com/rixinhahaha/snip/releases/latest" class="btn btn-primary download-link" rel="noopener noreferrer">
@@ -167,8 +165,8 @@
     </div>
     <div class="hero-visual">
       <div class="hero-video-wrapper">
-        <video class="hero-video" autoplay loop muted playsinline poster="assets/hero-poster.jpg">
-          <source src="assets/hero-demo.mp4" type="video/mp4">
+        <video class="hero-video" autoplay loop muted playsinline poster="assets/workflow-poster.jpg">
+          <source src="assets/workflow-demo.mp4" type="video/mp4">
         </video>
       </div>
     </div>
@@ -182,447 +180,50 @@
   </section>
 
   <!-- Features -->
-  <section class="features" id="features">
-    <div class="section-inner">
-      <div class="section-header">
-        <div class="section-badge">Features</div>
-        <h2>Everything you need.<br>Nothing you don't.</h2>
-        <p>Built for power users who take screenshots every day. Fast capture, rich annotation, AI-powered organization.</p>
-      </div>
-      <div class="features-grid">
-        <div class="feature-card">
-          <div class="feature-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-          </div>
-          <h3>Instant Capture</h3>
-          <p>Hit <kbd>Cmd+Shift+2</kbd> anywhere. Select a region or grab the full screen. Or use <kbd>Cmd+Shift+1</kbd> for a quick snip — select and copy straight to clipboard.</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-          </div>
-          <h3>Powerful Annotation</h3>
-          <p>Rectangles, arrows, text, tags, blur brush, and AI-powered object segmentation. Zoom and pan the canvas for pixel-perfect edits.</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
-          </div>
-          <h3>AI Organization</h3>
-          <p>A local vision AI names, categorizes, and tags every saved screenshot automatically. No cloud. No API keys. Runs entirely on your Mac.</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-          </div>
-          <h3>Semantic Search</h3>
-          <p>Find any screenshot by describing what was in it. "slack message about deployment" finds the right one. Local embeddings, no API calls.</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-          </div>
-          <h3>Native macOS Feel</h3>
-          <p>Menu bar app with Liquid Glass UI. No Dock icon. Works across Spaces. Stays out of your way until you need it.</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L9.5 9.5L2 12l7.5 2.5L12 22l2.5-7.5L22 12l-7.5-2.5L12 2z"/></svg>
-          </div>
-          <h3>Animate</h3>
-          <p>Segment any object from your screenshot, then animate it into a GIF with AI-generated motion presets. Bring your screenshots to life.</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
-          </div>
-          <h3>Upscale</h3>
-          <p>Enhance resolution with on-device AI. Powered by Swin2SR — runs locally, no API keys needed.</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>
-          </div>
-          <h3>Transcribe</h3>
-          <p>Extract text from any screenshot with macOS Vision OCR. One click, instantly copyable.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- How It Works -->
-  <section class="how-it-works" id="how-it-works">
-    <div class="section-inner">
-      <div class="section-header">
-        <div class="section-badge">How It Works</div>
-        <h2>Four steps. Five seconds.</h2>
-        <p>From capture to clipboard in a flash. Save to disk and AI handles the rest.</p>
-      </div>
-      <div class="steps">
-        <div class="step">
-          <div class="step-number">1</div>
-          <div class="step-content">
-            <h3>Capture</h3>
-            <p><kbd>Cmd+Shift+2</kbd> opens a fullscreen overlay. Click a window or drag a region — capture completes instantly.</p>
-          </div>
-        </div>
-        <div class="step">
-          <div class="step-number">2</div>
-          <div class="step-content">
-            <h3>Annotate</h3>
-            <p>Add rectangles, arrows, text, blur, or use AI segmentation to isolate objects. Zoom in for precision. All with keyboard shortcuts.</p>
-          </div>
-        </div>
-        <div class="step">
-          <div class="step-number">3</div>
-          <div class="step-content">
-            <h3>Copy or Save</h3>
-            <p>Press <kbd>Esc</kbd> to copy to clipboard. Press <kbd>Cmd+S</kbd> to save to disk and trigger AI organization.</p>
-          </div>
-        </div>
-        <div class="step">
-          <div class="step-number">4</div>
-          <div class="step-content">
-            <h3>Find Later</h3>
-            <p>AI names, categorizes, and indexes your screenshots. Search by description with <kbd>Cmd+Shift+S</kbd>.</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Feature Showcase -->
-  <section class="showcase">
-    <div class="section-inner">
-      <div class="showcase-grid">
-        <div class="showcase-item">
-          <img src="assets/hero-capture.jpg" alt="Capture overlay - drag to select a region" width="960" height="621" loading="lazy">
-          <div class="showcase-label">Drag to select any region</div>
-        </div>
-        <div class="showcase-item">
-          <img src="assets/hero-editor.jpg" alt="Editor with annotation toolbar and segment tool" width="960" height="621" loading="lazy">
-          <div class="showcase-label">Annotate with powerful tools</div>
-        </div>
-        <div class="showcase-item">
-          <img src="assets/hero-segment.jpg" alt="AI segmentation with Apply Cutout" width="960" height="621" loading="lazy">
-          <div class="showcase-label">AI-powered object segmentation</div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Tools -->
-  <section class="tools-section" id="tools">
-    <div class="section-inner">
-      <div class="section-header">
-        <div class="section-badge">Annotation Tools</div>
-        <h2>Pro tools. Zero friction.</h2>
-        <p>Every tool you need to annotate screenshots effectively. Most accessible by a single keypress.</p>
-      </div>
-      <div class="tools-grid">
-        <div class="tool-card">
-          <div class="tool-key">V</div>
-          <h3>Select</h3>
-          <p>Move, resize, and delete annotations</p>
-        </div>
-        <div class="tool-card">
-          <div class="tool-key">R</div>
-          <h3>Rectangle</h3>
-          <p>Outline, highlight, or blur modes</p>
-        </div>
-        <div class="tool-card">
-          <div class="tool-key">T</div>
-          <h3>Text</h3>
-          <p>Editable text with font and size pickers</p>
-        </div>
-        <div class="tool-card">
-          <div class="tool-key">A</div>
-          <h3>Arrow</h3>
-          <p>Point at anything with clean arrows</p>
-        </div>
-        <div class="tool-card">
-          <div class="tool-key">G</div>
-          <h3>Tag</h3>
-          <p>Two-click callout with leader line</p>
-        </div>
-        <div class="tool-card">
-          <div class="tool-key">B</div>
-          <h3>Blur Brush</h3>
-          <p>Paint to pixelate sensitive information</p>
-        </div>
-        <div class="tool-card">
-          <div class="tool-key">S</div>
-          <h3>Segment</h3>
-          <p>AI-powered object selection with tagging</p>
-        </div>
-        <div class="tool-card">
-          <div class="tool-key">U</div>
-          <h3>Upscale</h3>
-          <p>Enhance resolution with on-device AI</p>
-        </div>
-        <div class="tool-card">
-          <div class="tool-key">W</div>
-          <h3>Transcribe</h3>
-          <p>Extract text from screenshots via OCR</p>
-        </div>
-        <div class="tool-card tool-card-accent">
-          <div class="tool-key">&#10024;</div>
-          <h3>Animate</h3>
-          <p>Segment an object, then animate it into a GIF — powered by fal.ai</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Segment Tagging -->
-  <section class="segment-tag-demo" id="segment-tagging">
-    <div class="section-inner">
-      <div class="section-header">
-        <div class="section-badge">Segment Tagging</div>
-        <h2>Tag what you see.<br>Instantly.</h2>
-        <p>Use AI segmentation to select any object, then add a labeled tag with a leader line — perfect for annotating UI components, diagrams, or anything on screen.</p>
-      </div>
-      <div class="segment-tag-visual">
-        <div class="segment-tag-video-wrapper">
-          <video class="segment-tag-video" autoplay loop muted playsinline poster="assets/segment-tag-poster.jpg">
-            <source src="assets/segment-tag-demo.mp4" type="video/mp4">
-          </video>
-        </div>
-        <div class="segment-tag-steps">
-          <div class="segment-tag-step">
-            <div class="segment-tag-step-num">1</div>
-            <div><strong>Segment</strong><span>Click any object to isolate it with AI</span></div>
-          </div>
-          <div class="segment-tag-step">
-            <div class="segment-tag-step-num">2</div>
-            <div><strong>Tag</strong><span>Click "Tag" to auto-label with a colored outline and leader line</span></div>
-          </div>
-          <div class="segment-tag-step">
-            <div class="segment-tag-step-num">3</div>
-            <div><strong>Customize</strong><span>Drag tags, edit labels, adjust colors and thickness</span></div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Upscale Demo -->
-  <section class="upscale-demo" id="upscale">
-    <div class="section-inner">
-      <div class="section-header">
-        <div class="section-badge">Upscale</div>
-        <h2>Enhance resolution.<br>On device.</h2>
-        <p>Enhance any screenshot with AI super-resolution. Runs entirely on your Mac.</p>
-      </div>
-      <div class="upscale-demo-visual">
-        <div class="upscale-demo-video-wrapper">
-          <video class="upscale-demo-video" autoplay loop muted playsinline>
-            <source src="assets/upscale-demo.mp4" type="video/mp4">
-          </video>
-        </div>
-        <div class="upscale-demo-steps">
-          <div class="upscale-step">
-            <div class="upscale-step-num">1</div>
-            <div><strong>Capture</strong><span>Take a screenshot as usual</span></div>
-          </div>
-          <div class="upscale-step">
-            <div class="upscale-step-num">2</div>
-            <div><strong>Upscale</strong><span>Press <kbd>U</kbd> to enhance resolution with AI</span></div>
-          </div>
-          <div class="upscale-step">
-            <div class="upscale-step-num">3</div>
-            <div><strong>Save</strong><span>Copy or save the high-res result</span></div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Transcribe Demo -->
-  <section class="transcribe-demo" id="transcribe">
-    <div class="section-inner">
-      <div class="section-header">
-        <div class="section-badge">Transcribe</div>
-        <h2>Extract text.<br>Instantly.</h2>
-        <p>One-click OCR powered by macOS Vision. Copy any text from any screenshot.</p>
-      </div>
-      <div class="transcribe-demo-visual">
-        <div class="transcribe-demo-video-wrapper">
-          <img class="transcribe-demo-video" src="assets/transcribe.jpg" alt="Transcribe feature extracting text from a screenshot via OCR" width="960" height="621" loading="lazy">
-        </div>
-        <div class="transcribe-demo-steps">
-          <div class="transcribe-step">
-            <div class="transcribe-step-num">1</div>
-            <div><strong>Capture</strong><span>Take a screenshot as usual</span></div>
-          </div>
-          <div class="transcribe-step">
-            <div class="transcribe-step-num">2</div>
-            <div><strong>Transcribe</strong><span>Press <kbd>W</kbd> to extract all text via OCR</span></div>
-          </div>
-          <div class="transcribe-step">
-            <div class="transcribe-step-num">3</div>
-            <div><strong>Copy</strong><span>Click to copy any text to clipboard</span></div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Animate Demo -->
-  <section class="animate-demo" id="animate">
-    <div class="section-inner">
-      <div class="section-header">
-        <div class="section-badge badge-animate">Animate <span class="badge-sparkles" aria-hidden="true"><svg class="badge-sparkle badge-sparkle-1" width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0L14.6 9.4L24 12L14.6 14.6L12 24L9.4 14.6L0 12L9.4 9.4Z"/></svg><svg class="badge-sparkle badge-sparkle-2" width="7" height="7" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0L14.6 9.4L24 12L14.6 14.6L12 24L9.4 14.6L0 12L9.4 9.4Z"/></svg><svg class="badge-sparkle badge-sparkle-3" width="6" height="6" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0L14.6 9.4L24 12L14.6 14.6L12 24L9.4 14.6L0 12L9.4 9.4Z"/></svg></span></div>
-        <h2>Bring your screenshots<br>to life.</h2>
-        <p>Segment any object, pick an AI-generated motion preset, and turn it into an animated GIF in seconds. Powered by <a href="https://fal.ai" target="_blank" rel="noopener noreferrer" class="inline-link">fal.ai</a> — bring your own API key.</p>
-      </div>
-      <div class="animate-demo-visual">
-        <div class="animate-demo-video-wrapper">
-          <video class="animate-demo-video" autoplay loop muted playsinline poster="assets/animate-poster.jpg">
-            <source src="assets/animate-demo.mp4" type="video/mp4">
-          </video>
-        </div>
-        <div class="animate-demo-steps">
-          <div class="animate-step">
-            <div class="animate-step-num">1</div>
-            <div><strong>Segment</strong><span>Click any object to isolate it</span></div>
-          </div>
-          <div class="animate-step">
-            <div class="animate-step-num">2</div>
-            <div><strong>Pick a preset</strong><span>AI suggests contextual motions</span></div>
-          </div>
-          <div class="animate-step">
-            <div class="animate-step-num">3</div>
-            <div><strong>Export</strong><span>Save as GIF or animated PNG</span></div>
-          </div>
-        </div>
-      </div>
-      <div class="animate-setup">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
-        <div>
-          <strong>Bring Your Own Key</strong>
-          <p>Animate uses <a href="https://fal.ai" target="_blank" rel="noopener noreferrer" class="inline-link">fal.ai</a> for AI-powered animation generation. To enable it:</p>
-          <ol>
-            <li>Get a free API key at <a href="https://fal.ai/dashboard/keys" target="_blank" rel="noopener noreferrer" class="inline-link">fal.ai/dashboard/keys</a></li>
-            <li>Open Snip Settings &rarr; Animation</li>
-            <li>Paste your key and hit Save</li>
-          </ol>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- AI Section -->
-  <section class="ai-section" id="ai">
-    <div class="section-inner">
-      <div class="section-header">
-        <div class="section-badge">On-Device AI</div>
-        <h2>Your screenshots,<br>organized by AI.</h2>
-        <p>A local vision LLM runs entirely on your Mac. No data leaves your machine.</p>
-      </div>
-      <!-- Search & Tagging Screenshot -->
-      <div class="ai-screenshot">
-        <div class="ai-screenshot-img-wrapper">
-          <img src="assets/search-view.jpg" alt="Snip search view showing AI-generated tag cloud and organized screenshot gallery" width="1200" height="824" loading="lazy">
-          <div class="ai-callout ai-callout-tags">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/></svg>
-            AI-generated tags
-          </div>
-          <div class="ai-callout ai-callout-search">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-            Semantic search
-          </div>
-          <div class="ai-callout ai-callout-gallery">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
-            Auto-organized gallery
-          </div>
-        </div>
-      </div>
-
-      <div class="ai-features">
-        <div class="ai-card">
-          <div class="ai-card-header">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/></svg>
-            <h3>Auto-Tagging</h3>
-          </div>
-          <p>AI generates relevant tags for every screenshot — "IRS", "tax form", "social media", "code architecture" — making them instantly discoverable through the tag cloud.</p>
-        </div>
-        <div class="ai-card">
-          <div class="ai-card-header">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-            <h3>Auto-Categorize</h3>
-          </div>
-          <p>Screenshots are sorted into folders: code, chat, web, design, documents, terminal, and more. Create custom categories too.</p>
-        </div>
-        <div class="ai-card">
-          <div class="ai-card-header">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-            <h3>Smart Naming</h3>
-          </div>
-          <p>No more "Screenshot 2024-01-15 at 3.45.23 PM". Every snip gets a descriptive name like "api-endpoint-response-fix".</p>
-        </div>
-        <div class="ai-card">
-          <div class="ai-card-header">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-            <h3>Semantic Search</h3>
-          </div>
-          <p>384-dimensional embeddings make every screenshot searchable by meaning, not just filename. Powered by Transformers.js, all local.</p>
-        </div>
-      </div>
-      <div class="ai-privacy">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-        <div>
-          <strong>100% Private</strong>
-          <p>All AI processing happens on your Mac using Ollama and Metal GPU acceleration. Zero data sent to the cloud. No API keys needed for core features.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- AI Workflow -->
+  <!-- AI Workflow — primary value prop -->
   <section class="mcp-demo" id="ai-workflow">
     <div class="section-inner">
       <div class="section-header">
         <div class="section-badge">AI Workflow</div>
-        <h2>Connect your AI.<br>Control your snips.</h2>
-        <p>The <code>snip</code> CLI lets AI coding tools call Snip directly from your terminal. Search your library, extract text, open images for annotation — lower latency and token cost than MCP.</p>
+        <h2>Show, don't tell.<br>Review, don't imagine.</h2>
+        <p>Circle a bug and paste to your agent — one screenshot replaces a paragraph. Or let your agent render a diagram and get your spatial feedback. The <code>snip</code> CLI and MCP server let any AI agent use Snip as their visual I/O.</p>
       </div>
       <div class="mcp-demo-video-wrapper">
-        <video autoplay loop muted playsinline>
-          <source src="assets/mcp-demo.mp4" type="video/mp4">
+        <video autoplay loop muted playsinline poster="assets/workflow-poster.jpg">
+          <source src="assets/workflow-demo.mp4" type="video/mp4">
         </video>
       </div>
       <div class="mcp-tools-grid">
         <div class="mcp-tool-card">
           <strong>snip open &lt;file&gt;</strong>
-          <span>Open image in editor, get annotated result</span>
+          <span>Open for review — approve, annotate, or request changes</span>
+        </div>
+        <div class="mcp-tool-card">
+          <strong>snip render --format mermaid</strong>
+          <span>Render a diagram from code, open for review</span>
         </div>
         <div class="mcp-tool-card">
           <strong>snip search "query"</strong>
           <span>Semantic search across your library</span>
         </div>
         <div class="mcp-tool-card">
-          <strong>snip list</strong>
-          <span>Browse all saved snips with metadata</span>
-        </div>
-        <div class="mcp-tool-card">
           <strong>snip transcribe &lt;file&gt;</strong>
           <span>Extract text via native macOS OCR</span>
         </div>
         <div class="mcp-tool-card">
-          <strong>snip organize &lt;file&gt;</strong>
-          <span>AI categorization with local LLM</span>
+          <strong>snip list</strong>
+          <span>Browse all saved snips with metadata</span>
         </div>
         <div class="mcp-tool-card">
-          <strong>snip categories</strong>
-          <span>List all screenshot categories</span>
+          <strong>snip organize &lt;file&gt;</strong>
+          <span>AI categorization with local LLM</span>
         </div>
       </div>
       <div class="mcp-setup">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
         <div>
           <strong>Quick Setup</strong>
-          <p>Works with Claude Code, Cursor, Windsurf, Cline, and any AI tool that can run shell commands.</p>
+          <p>Works with Claude Code, Cursor, Windsurf, Cline, and any AI agent that can run shell commands.</p>
           <ol>
             <li>Open Snip Settings &rarr; <strong>Install CLI</strong></li>
             <li>Click <strong>Configure</strong> next to your detected AI tool</li>
@@ -631,6 +232,102 @@
           <p style="font-size:13px;color:var(--text-secondary);margin-top:12px;">For clients that can't run CLI commands (e.g., Claude Desktop), Snip also supports <strong>MCP</strong>. Enable it in Settings and copy the config.</p>
         </div>
       </div>
+    </div>
+  </section>
+
+  <!-- How It Works — two flows side by side -->
+  <section class="how-it-works" id="how-it-works">
+    <div class="section-inner">
+      <div class="section-header">
+        <div class="section-badge">How It Works</div>
+        <h2>Two directions. One tool.</h2>
+      </div>
+      <div class="how-it-works-flows">
+        <div class="flow-column">
+          <h3 class="flow-title">You &rarr; Agent</h3>
+          <p class="flow-subtitle">Show what you see</p>
+          <div class="steps">
+            <div class="step">
+              <div class="step-number">1</div>
+              <div class="step-content">
+                <h3>Capture</h3>
+                <p><kbd>Cmd+Shift+2</kbd> — select a region or click a window.</p>
+              </div>
+            </div>
+            <div class="step">
+              <div class="step-number">2</div>
+              <div class="step-content">
+                <h3>Annotate</h3>
+                <p>Circle the bug, arrow the fix, type what's wrong.</p>
+              </div>
+            </div>
+            <div class="step">
+              <div class="step-number">3</div>
+              <div class="step-content">
+                <h3>Copy</h3>
+                <p>Press <kbd>Esc</kbd> — annotated image on your clipboard.</p>
+              </div>
+            </div>
+            <div class="step">
+              <div class="step-number">4</div>
+              <div class="step-content">
+                <h3>Paste to agent</h3>
+                <p><kbd>Ctrl+V</kbd> into Claude Code, Cursor, or any AI chat. The agent sees exactly what you see.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="flow-column">
+          <h3 class="flow-title">Agent &rarr; You &rarr; Agent</h3>
+          <p class="flow-subtitle">Review what the agent built</p>
+          <div class="steps">
+            <div class="step">
+              <div class="step-number">1</div>
+              <div class="step-content">
+                <h3>Agent renders</h3>
+                <p>Agent calls <code>snip render</code> or <code>snip open</code> with a diagram or image.</p>
+              </div>
+            </div>
+            <div class="step">
+              <div class="step-number">2</div>
+              <div class="step-content">
+                <h3>Review Mode opens</h3>
+                <p>Snip pops up with the visual and the agent's context message.</p>
+              </div>
+            </div>
+            <div class="step">
+              <div class="step-number">3</div>
+              <div class="step-content">
+                <h3>Annotate &amp; respond</h3>
+                <p>Draw on the image, type feedback, or just approve.</p>
+              </div>
+            </div>
+            <div class="step">
+              <div class="step-number">4</div>
+              <div class="step-content">
+                <h3>Agent acts</h3>
+                <p>Your annotations and text return to the agent as structured feedback.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- More Features -->
+  <section class="features" id="features">
+    <div class="section-inner">
+      <a href="extensions.html" class="more-features-banner" aria-label="See all optional features">
+        <div class="more-features-content">
+          <div class="section-badge">More Features</div>
+          <h2>AI organization, segmentation, upscale, animate, transcribe &amp; more</h2>
+          <p>Optional AI-powered add-ons: auto-organize with a local vision LLM, semantic search, object segmentation, 2x upscaling, text extraction, GIF animation. All on-device, all optional.</p>
+        </div>
+        <div class="more-features-arrow">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+      </a>
     </div>
   </section>
 
@@ -654,46 +351,6 @@
         <div class="extension-point">
           <strong>Permission System</strong>
           <span>Extensions declare what they need. <code>screenshots:read</code>, <code>temp:write</code> — shown before install.</span>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Tech Stack -->
-  <section class="tech-section">
-    <div class="section-inner">
-      <div class="section-header">
-        <div class="section-badge">Built With</div>
-        <h2>Modern stack. Native feel.</h2>
-      </div>
-      <div class="tech-grid">
-        <div class="tech-item">
-          <strong>Electron 33</strong>
-          <span>Cross-platform runtime</span>
-        </div>
-        <div class="tech-item">
-          <strong>Fabric.js 7</strong>
-          <span>Canvas annotation engine</span>
-        </div>
-        <div class="tech-item">
-          <strong>Ollama</strong>
-          <span>Local vision LLM</span>
-        </div>
-        <div class="tech-item">
-          <strong>Transformers.js</strong>
-          <span>Local embeddings</span>
-        </div>
-        <div class="tech-item">
-          <strong>SlimSAM</strong>
-          <span>Object segmentation</span>
-        </div>
-        <div class="tech-item">
-          <strong>Swin2SR</strong>
-          <span>AI image upscaling</span>
-        </div>
-        <div class="tech-item">
-          <strong>Liquid Glass</strong>
-          <span>macOS 26+ native UI</span>
         </div>
       </div>
     </div>
