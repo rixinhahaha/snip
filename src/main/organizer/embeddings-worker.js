@@ -9,13 +9,21 @@
  *   Worker → Parent: { type: 'ready' }
  */
 
+var { importTransformers } = require('../addon-resolve');
+
+let transformersModule = null;
 let pipeline = null;
 let envConfigured = false;
+
+async function await getTransformers() {
+  if (!transformersModule) transformersModule = await importTransformers();
+  return transformersModule;
+}
 
 async function configureEnv() {
   if (envConfigured) return;
   envConfigured = true;
-  var { env } = await import('@huggingface/transformers');
+  var { env } = await getTransformers();
   if (process.env.SNIP_ADDON_MODELS_PATH) {
     env.cacheDir = process.env.SNIP_ADDON_MODELS_PATH;
     console.log('[Embeddings Worker] Model cache: ' + env.cacheDir);
@@ -31,7 +39,7 @@ async function configureEnv() {
 async function getPipeline() {
   if (pipeline) return pipeline;
   await configureEnv();
-  var transformers = await import('@huggingface/transformers');
+  var transformers = await getTransformers();
   console.log('[Embeddings Worker] Loading MiniLM model...');
   pipeline = await transformers.pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2', {
     quantized: true

@@ -50,6 +50,7 @@ asarUnpack:
   - "src/main/upscaler/upscaler-worker.js"
   - "src/main/organizer/embeddings-worker.js"
   - "src/main/addon-model-downloader.js"
+  - "src/main/addon-resolve.js"
   - "src/main/transcription/transcribe.swift"
   - "src/main/animation/gif-encoder-worker.js"
   - "src/mcp/server.js"

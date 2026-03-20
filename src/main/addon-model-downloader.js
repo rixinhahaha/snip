@@ -37,7 +37,8 @@ function progressCallback(progress) {
 }
 
 async function main() {
-  var transformers = await import('@huggingface/transformers');
+  var { importTransformers } = require('./addon-resolve');
+  var transformers = await importTransformers();
 
   // Configure cache directory and enable remote downloads
   transformers.env.cacheDir = modelsPath;

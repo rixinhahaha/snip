@@ -6,9 +6,16 @@
  * runtime crashes inside Electron's V8.
  */
 const zlib = require('zlib');
+const { importTransformers } = require('../addon-resolve');
 
+let transformersModule = null;
 let pipeline2x = null;
 let envConfigured = false;
+
+async function await getTransformers() {
+  if (!transformersModule) transformersModule = await importTransformers();
+  return transformersModule;
+}
 
 const MODEL_2X = 'Xenova/swin2SR-lightweight-x2-64';
 
@@ -18,7 +25,7 @@ const MODEL_2X = 'Xenova/swin2SR-lightweight-x2-64';
 async function configureEnv() {
   if (envConfigured) return;
   envConfigured = true;
-  const { env } = await import('@huggingface/transformers');
+  const { env } = await getTransformers();
   if (process.env.SNIP_MODELS_PATH) {
     env.cacheDir = process.env.SNIP_MODELS_PATH;
     console.log('[Upscaler Worker] Model cache: ' + env.cacheDir);
@@ -31,7 +38,7 @@ async function configureEnv() {
 
 async function getPipeline() {
   await configureEnv();
-  const { pipeline } = await import('@huggingface/transformers');
+  const { pipeline } = await getTransformers();
 
   if (!pipeline2x) {
     console.log('[Upscaler Worker] Loading 2x model...');
@@ -106,7 +113,7 @@ async function decodeDataURLToRawImage(dataURL, RawImage) {
 
 async function upscaleImage(imageBase64) {
   const pipe = await getPipeline();
-  const { RawImage } = await import('@huggingface/transformers');
+  const { RawImage } = await getTransformers();
 
   // Send progress: model loaded, starting inference
   process.send({ type: 'progress', stage: 'inferencing', percent: 30 });

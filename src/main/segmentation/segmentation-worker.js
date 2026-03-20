@@ -4,9 +4,17 @@
  */
 const zlib = require('zlib');
 
+const { importTransformers } = require('../addon-resolve');
+
+let transformersModule = null;
 let model = null;
 let processor = null;
 let envConfigured = false;
+
+async function await getTransformers() {
+  if (!transformersModule) transformersModule = await importTransformers();
+  return transformersModule;
+}
 
 // CRC32 table (computed once at module scope)
 const CRC_TABLE = new Uint32Array(256);
@@ -56,7 +64,7 @@ function encodeRGBAtoPNG(rgbaData, width, height) {
 async function configureEnv() {
   if (envConfigured) return;
   envConfigured = true;
-  const { env } = await import('@huggingface/transformers');
+  const { env } = await getTransformers();
   if (process.env.SNIP_MODELS_PATH) {
     env.cacheDir = process.env.SNIP_MODELS_PATH;
     console.log('[Segmentation Worker] Model cache: ' + env.cacheDir);
@@ -70,7 +78,7 @@ async function configureEnv() {
 async function loadModel() {
   if (model && processor) return { model, processor };
   await configureEnv();
-  const { SamModel, AutoProcessor } = await import('@huggingface/transformers');
+  const { SamModel, AutoProcessor } = await getTransformers();
   console.log('[Segmentation Worker] Loading SlimSAM model...');
   model = await SamModel.from_pretrained('Xenova/slimsam-77-uniform');
   processor = await AutoProcessor.from_pretrained('Xenova/slimsam-77-uniform');
@@ -94,7 +102,7 @@ function isNearEdge(maskData, w, h, idx, thickness) {
 }
 
 async function generateMask(rgbaPixels, imgWidth, imgHeight, points, cssWidth, cssHeight) {
-  const { RawImage } = await import('@huggingface/transformers');
+  const { RawImage } = await getTransformers();
   const { model: samModel, processor: samProcessor } = await loadModel();
 
   const rawImage = new RawImage(new Uint8ClampedArray(rgbaPixels), imgWidth, imgHeight, 4);
