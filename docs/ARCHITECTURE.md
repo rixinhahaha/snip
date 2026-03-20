@@ -20,6 +20,7 @@
 | APNG encoding | upng-js | ~170KB pure JS |
 | File watching | Chokidar | 4 |
 | Native bridge | Node-API (N-API) | node-addon-api 8 |
+| Diagram rendering | Mermaid.js | 11 |
 | macOS glass effects | electron-liquid-glass | 1.1+ |
 | Font | Plus Jakarta Sans | variable 200-800 |
 
@@ -91,7 +92,11 @@ src/
     snip.js                    # CLI binary — connects to Unix socket, JSON/text output
 
   mcp/                       # MCP adapter (thin wrapper around CLI)
-    server.js                  # Stdio adapter — spawns CLI for tool calls, direct socket for install_extension
+    server.js                  # Stdio adapter — spawns CLI for tool calls, direct socket for install_extension/render_diagram
+
+  preload/
+    preload.js               # contextBridge — defines window.snip API surface
+    diagram-preload.js       # Minimal preload for diagram renderer window (2 IPC methods)
 
   renderer/                  # Renderer processes (no modules, globals via IIFEs)
     index.html / app.js      # Capture overlay — fullscreen transparent region selector
@@ -115,9 +120,8 @@ src/
       segment.js             # SAM segmentation tool (click-to-select, tag segment, cutout)
       animate.js             # 2GIF animation tool (preset picker, save/copy panel)
       transcribe.js          # TranscribeTool IIFE — text extraction side panel (native macOS OCR)
-
-  preload/
-    preload.js               # contextBridge — defines window.snip API surface
+    diagram.html             # Minimal page for headless Mermaid diagram rendering (hidden BrowserWindow)
+    diagram-renderer.js      # Mermaid render IIFE: receives code via IPC, renders SVG, reports dimensions
 
   native/
     window_utils.mm          # Obj-C++ N-API addon: setMoveToActiveSpace (Space behavior), getWindowList (CGWindowList for window snap — individual windows in z-order with PID)
@@ -287,11 +291,11 @@ Extensions with `toolbarGroups: []` manage their own contextual controls (e.g., 
 ### MCP Server
 An MCP (Model Context Protocol) server exposes Snip's capabilities to external AI agents (e.g., Claude Desktop). Two components:
 
-1. **Unix domain socket** (`socket-server.js`) — listens at `~/Library/Application Support/snip/snip.sock` (chmod 600). Accepts newline-delimited JSON messages with `{ id, action, params }`. Registered actions: `search_screenshots`, `list_screenshots`, `get_screenshot`, `transcribe_screenshot`, `organize_screenshot`, `get_categories`, `open_in_snip`, `install_extension`. The `open_in_snip` action opens the editor with an external image, blocks until the user finishes annotating, and returns the edited PNG via a `pendingMcpResolve` promise resolved by the `editor-result` IPC channel.
+1. **Unix domain socket** (`socket-server.js`) — listens at `~/Library/Application Support/snip/snip.sock` (chmod 600). Accepts newline-delimited JSON messages with `{ id, action, params }`. Registered actions: `search_screenshots`, `list_screenshots`, `get_screenshot`, `transcribe_screenshot`, `organize_screenshot`, `get_categories`, `open_in_snip`, `render_diagram`, `install_extension`. The `open_in_snip` and `render_diagram` actions open the editor, block until the user finishes annotating, and return the edited PNG via a `pendingMcpResolve` promise resolved by the `editor-result` IPC channel.
 
-2. **Snip CLI** (`src/cli/snip.js`) — primary interface. Commands: `search`, `list`, `get`, `transcribe`, `organize`, `categories`, `open`. Auto-launches Snip if not running. Connects to the socket, prints JSON/text to stdout. AI agents call this via bash.
+2. **Snip CLI** (`src/cli/snip.js`) — primary interface. Commands: `search`, `list`, `get`, `transcribe`, `organize`, `categories`, `open`, `render`. Auto-launches Snip if not running. Connects to the socket, prints JSON/text to stdout. The `render` command reads diagram code from stdin. AI agents call this via bash.
 
-3. **MCP stdio adapter** (`src/mcp/server.js`) — thin wrapper that spawns the CLI for tool calls. Speaks MCP JSON-RPC 2.0 over stdio. Uses direct socket only for `install_extension` (complex JSON params) and `open_in_snip` with `imageDataURL` (too large for CLI args). Configure in Claude Desktop:
+3. **MCP stdio adapter** (`src/mcp/server.js`) — thin wrapper that spawns the CLI for tool calls. Speaks MCP JSON-RPC 2.0 over stdio. Uses direct socket only for `install_extension` (complex JSON params), `open_in_snip` with `imageDataURL` (too large for CLI args), and `render_diagram` (diagram code can be large). Configure in Claude Desktop:
 ```json
 {
   "mcpServers": {
@@ -518,6 +522,26 @@ The preload script (`preload.js`) exposes `window.snip` with these methods:
   -> transcription.js parses JSON, returns { languages: [...], text } to renderer
   -> result displayed in side panel, cached in TranscribeTool for the editor session
   -> subsequent clicks skip OCR call and reopen panel instantly
+```
+
+### Diagram Rendering Data Flow
+
+```
+[Agent pipes Mermaid code: echo 'graph TD; A-->B' | snip render --format mermaid]
+  -> CLI reads stdin, sends { action: 'render_diagram', params: { code, format } } via socket
+  -> main.js render_diagram handler calls renderDiagramToImage(code, format)
+  -> hidden BrowserWindow created (4096x4096, show:false) with diagram-preload.js
+  -> diagram.html loads mermaid.min.js from node_modules
+  -> main sends code via 'render-diagram-code' IPC to diagram renderer
+  -> diagram-renderer.js calls mermaid.render(), injects SVG, measures dimensions
+  -> sends 'diagram-rendered' IPC back with { success, width, height }
+  -> main calls webContents.capturePage(rect) -> NativeImage -> PNG data URL
+  -> diagram window destroyed
+  -> editor window opened with rendered PNG (reuses open_in_snip editor flow)
+  -> user annotates diagram in editor
+  -> Esc/Enter closes editor, 'editor-result' IPC returns annotated data URL
+  -> annotated image saved to .tmp/, path returned to CLI via socket
+  -> CLI outputs { status: 'done', path, message }
 ```
 
 ---

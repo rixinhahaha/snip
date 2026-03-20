@@ -29,6 +29,7 @@
     "electron-updater": "^6.8.3",
     "fabric": "^7.0.0",
     "gifenc": "^1.0.3",
+    "mermaid": "^11.13.0",
     "node-addon-api": "^8.5.0",
     "ollama": "^0.6.3",
     "upng-js": "^2.1.0"

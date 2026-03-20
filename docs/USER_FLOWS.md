@@ -1177,7 +1177,7 @@ Note: The Unix domain socket server (`~/Library/Application Support/snip/snip.so
 
 **Preconditions:** MCP enabled, Claude Desktop configured with the copied JSON config.
 
-The MCP adapter (`src/mcp/server.js`) is a **thin CLI wrapper** — it spawns `snip <command>` for most tool calls and reads stdout. It falls back to direct socket for `install_extension` (complex JSON params) and `open_in_snip` with `imageDataURL` (too large for CLI args). The adapter auto-detects stdio framing (Content-Length headers vs newline-delimited JSON).
+The MCP adapter (`src/mcp/server.js`) is a **thin CLI wrapper** — it spawns `snip <command>` for most tool calls and reads stdout. It falls back to direct socket for `install_extension` (complex JSON params), `open_in_snip` with `imageDataURL` (too large for CLI args), and `render_diagram` (diagram code can be large). The adapter auto-detects stdio framing (Content-Length headers vs newline-delimited JSON).
 
 | Step | Action | Expected Result |
 |------|--------|-----------------|
@@ -1191,6 +1191,9 @@ The MCP adapter (`src/mcp/server.js`) is a **thin CLI wrapper** — it spawns `s
 | 7a | -- | User annotates and saves | Returns file path to annotated image |
 | 7b | -- | User presses Esc/cancels | Error returned to agent |
 | 8 | Agent calls `install_extension` with manifest + code | Extension validated, approval dialog shown to user (uses direct socket) |
+| 9 | Agent calls `render_diagram` with Mermaid code | Snip renders diagram to PNG, opens in editor; call blocks until user finishes annotating |
+| 9a | -- | User annotates and saves | Returns file path to annotated diagram |
+| 9b | -- | User cancels | Error returned to agent |
 
 **Edge cases:**
 
@@ -1199,6 +1202,9 @@ The MCP adapter (`src/mcp/server.js`) is a **thin CLI wrapper** — it spawns `s
 | Path traversal in `get_screenshot` | `path.resolve` + `startsWith(screenshotsDir)` check rejects out-of-dir paths |
 | `open_in_snip` with non-image file | Rejected by extension check (PNG/JPEG only) |
 | `open_in_snip` with file > 15 MB | Rejected with size error before decoding |
+| `render_diagram` with invalid Mermaid syntax | Error returned: "Mermaid syntax error: {details}" |
+| `render_diagram` with unsupported format | Error returned: "Unsupported format: X" |
+| `render_diagram` render timeout (> 30s) | Error returned: "Diagram rendering timed out" |
 | Socket buffer overflow (> 16 MB message) | Connection closed |
 | MCP tool called when category disabled | Returns error indicating tool is not enabled |
 | Client sends Content-Length framing | Adapter auto-detects and responds with Content-Length framing |
@@ -1206,9 +1212,39 @@ The MCP adapter (`src/mcp/server.js`) is a **thin CLI wrapper** — it spawns `s
 
 ---
 
-## 15. Extensions
+## 15. Diagram Rendering
 
-### 15.1 Install User Extension from Folder
+### 15.1 Render Mermaid Diagram via CLI
+
+**Preconditions:** Snip app running (or will auto-launch).
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Agent pipes Mermaid code: `echo 'graph TD; A-->B-->C' \| snip render --format mermaid` | CLI reads stdin, sends `render_diagram` to socket |
+| 2 | -- | Hidden BrowserWindow created, Mermaid.js renders diagram to SVG |
+| 3 | -- | `capturePage()` captures rendered diagram as PNG |
+| 4 | -- | Diagram window destroyed, editor window opens with rendered PNG |
+| 5 | User annotates the diagram (circles, arrows, text) | Annotations drawn on Fabric.js canvas |
+| 6 | User presses Esc/Enter or clicks Done | Annotated PNG saved to `.tmp/`, path returned to CLI |
+| 7 | -- | CLI outputs JSON: `{ "status": "done", "path": "...", "message": "..." }` |
+
+**Edge cases:**
+
+| Condition | Expected Behavior |
+|-----------|-------------------|
+| Invalid Mermaid syntax | Error returned immediately: "Mermaid syntax error: {details}" |
+| Empty stdin | CLI exits 1: "empty input from stdin" |
+| TTY stdin (no pipe) | CLI exits 1 with usage hint |
+| `--format` omitted | Defaults to `mermaid` |
+| Unsupported format | Error: "Unsupported format: X (supported: mermaid)" |
+| Editor already busy | Error: "Editor is busy with another upload" |
+| Rendering takes > 30s | Timeout error, diagram window destroyed |
+
+---
+
+## 16. Extensions
+
+### 16.1 Install User Extension from Folder
 
 **Preconditions:** App running, Settings tab active, scrolled to "Extensions" section.
 
@@ -1232,7 +1268,7 @@ The MCP adapter (`src/mcp/server.js`) is a **thin CLI wrapper** — it spawns `s
 | Extension name conflicts with existing | Error: name already installed |
 | User clicks "Deny" in approval dialog | Installation cancelled, no files copied |
 
-### 15.2 Uninstall User Extension
+### 16.2 Uninstall User Extension
 
 **Preconditions:** At least one user extension installed (§15.1).
 
@@ -1244,7 +1280,7 @@ The MCP adapter (`src/mcp/server.js`) is a **thin CLI wrapper** — it spawns `s
 | 4 | -- | Extension folder deleted from `~/Library/Application Support/snip/extensions/<name>/` |
 | 5 | -- | Extension removed from the list |
 
-### 15.3 Extension Sandbox Security
+### 16.3 Extension Sandbox Security
 
 | Scenario | Expected Behavior |
 |----------|------------------|

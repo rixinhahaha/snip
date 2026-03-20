@@ -82,6 +82,25 @@ function startTestServer(handlers) {
   });
 }
 
+function runCliWithStdin(args, stdinData, opts) {
+  return new Promise((resolve) => {
+    var child = execFile(NODE_PATH, [CLI_PATH].concat(args), {
+      env: { ...process.env, SNIP_SOCKET_PATH: socketPath, SNIP_NO_AUTO_LAUNCH: '1' },
+      timeout: (opts && opts.timeout) || 10000
+    }, (err, stdout, stderr) => {
+      resolve({
+        code: err ? (err.code || 1) : 0,
+        stdout: stdout.trim(),
+        stderr: stderr.trim()
+      });
+    });
+    if (stdinData != null) {
+      child.stdin.write(stdinData);
+      child.stdin.end();
+    }
+  });
+}
+
 // ── Help and argument parsing ──
 
 describe('CLI help and args', () => {
@@ -216,7 +235,6 @@ describe('CLI commands', () => {
     var data = JSON.parse(res.stdout);
     expect(data.status).toBe('done');
     expect(data.path).toBe(outPath);
-    expect(data.message).toContain('finished reviewing');
   });
 
   it('--pretty flag indents JSON output', async () => {
@@ -345,5 +363,183 @@ describe('CLI open command', () => {
     var res = await runCli(['open', '/tmp/img.png']);
     expect(res.code).not.toBe(0);
     expect(res.stderr).toContain('cancelled');
+  });
+});
+
+// ── Render command ──
+
+describe('CLI render command', () => {
+  it('help text includes render command', async () => {
+    var res = await runCli(['--help']);
+    expect(res.stdout).toContain('render');
+    expect(res.stdout).toContain('mermaid');
+  });
+
+  it('sends code and format to render_diagram action', async () => {
+    var receivedParams = null;
+    var outPath = join(tmpDir, 'rendered.png');
+    writeFileSync(outPath, 'fake');
+    await startTestServer({
+      render_diagram: async (params) => {
+        receivedParams = params;
+        return { action: 'approved', edited: false, outputPath: outPath };
+      }
+    });
+    var res = await runCliWithStdin(['render', '--format', 'mermaid'], 'graph TD; A-->B');
+    expect(res.code).toBe(0);
+    expect(receivedParams.code).toBe('graph TD; A-->B');
+    expect(receivedParams.format).toBe('mermaid');
+    var data = JSON.parse(res.stdout);
+    expect(data.status).toBe('approved');
+    expect(data.edited).toBe(false);
+    expect(data.path).toBe(outPath);
+  });
+
+  it('defaults format to mermaid when --format omitted', async () => {
+    var receivedFormat = null;
+    var outPath = join(tmpDir, 'rendered.png');
+    writeFileSync(outPath, 'fake');
+    await startTestServer({
+      render_diagram: async (params) => {
+        receivedFormat = params.format;
+        return { outputPath: outPath };
+      }
+    });
+    await runCliWithStdin(['render'], 'graph TD; A-->B');
+    expect(receivedFormat).toBe('mermaid');
+  });
+
+  it('empty stdin → exits 1 with error', async () => {
+    await startTestServer({
+      render_diagram: async () => ({})
+    });
+    var res = await runCliWithStdin(['render'], '');
+    expect(res.code).not.toBe(0);
+    expect(res.stderr).toContain('empty input');
+  });
+
+  it('handler error → exits 1 with error in stderr', async () => {
+    await startTestServer({
+      render_diagram: async () => { throw new Error('Mermaid syntax error: invalid'); }
+    });
+    var res = await runCliWithStdin(['render', '--format', 'mermaid'], 'not valid');
+    expect(res.code).not.toBe(0);
+    expect(res.stderr).toContain('Mermaid syntax error');
+  });
+});
+
+// ── Review mode structured output ──
+
+describe('CLI review mode output', () => {
+  it('approved without edits → status + path, no message', async () => {
+    var outPath = join(tmpDir, 'img.png');
+    writeFileSync(outPath, 'fake');
+    await startTestServer({
+      open_in_snip: async () => ({ action: 'approved', edited: false, outputPath: outPath })
+    });
+    var res = await runCli(['open', '/tmp/test.png']);
+    expect(res.code).toBe(0);
+    var data = JSON.parse(res.stdout);
+    expect(data.status).toBe('approved');
+    expect(data.edited).toBe(false);
+    expect(data.path).toBe(outPath);
+    expect(data.message).toBeUndefined();
+    expect(data.text).toBeUndefined();
+  });
+
+  it('approved with edits → includes message about annotations', async () => {
+    var outPath = join(tmpDir, 'img.png');
+    writeFileSync(outPath, 'fake');
+    await startTestServer({
+      open_in_snip: async () => ({ action: 'approved', edited: true, outputPath: outPath })
+    });
+    var res = await runCli(['open', '/tmp/test.png']);
+    var data = JSON.parse(res.stdout);
+    expect(data.status).toBe('approved');
+    expect(data.edited).toBe(true);
+    expect(data.message).toContain('annotations');
+  });
+
+  it('approved with text → includes text field', async () => {
+    var outPath = join(tmpDir, 'img.png');
+    writeFileSync(outPath, 'fake');
+    await startTestServer({
+      open_in_snip: async () => ({ action: 'approved', edited: false, outputPath: outPath, text: 'looks great' })
+    });
+    var res = await runCli(['open', '/tmp/test.png']);
+    var data = JSON.parse(res.stdout);
+    expect(data.status).toBe('approved');
+    expect(data.text).toBe('looks great');
+    expect(data.message).toBeUndefined();
+  });
+
+  it('changes_requested with text only → text field, no message', async () => {
+    var outPath = join(tmpDir, 'img.png');
+    writeFileSync(outPath, 'fake');
+    await startTestServer({
+      open_in_snip: async () => ({ action: 'changes_requested', edited: false, outputPath: outPath, text: 'fix the auth flow' })
+    });
+    var res = await runCli(['open', '/tmp/test.png']);
+    var data = JSON.parse(res.stdout);
+    expect(data.status).toBe('changes_requested');
+    expect(data.edited).toBe(false);
+    expect(data.text).toBe('fix the auth flow');
+    expect(data.message).toBeUndefined();
+  });
+
+  it('changes_requested with edits → message about annotations', async () => {
+    var outPath = join(tmpDir, 'img.png');
+    writeFileSync(outPath, 'fake');
+    await startTestServer({
+      open_in_snip: async () => ({ action: 'changes_requested', edited: true, outputPath: outPath })
+    });
+    var res = await runCli(['open', '/tmp/test.png']);
+    var data = JSON.parse(res.stdout);
+    expect(data.status).toBe('changes_requested');
+    expect(data.edited).toBe(true);
+    expect(data.message).toContain('annotations');
+    expect(data.text).toBeUndefined();
+  });
+
+  it('changes_requested with edits + text → both message and text', async () => {
+    var outPath = join(tmpDir, 'img.png');
+    writeFileSync(outPath, 'fake');
+    await startTestServer({
+      open_in_snip: async () => ({ action: 'changes_requested', edited: true, outputPath: outPath, text: 'move the button' })
+    });
+    var res = await runCli(['open', '/tmp/test.png']);
+    var data = JSON.parse(res.stdout);
+    expect(data.status).toBe('changes_requested');
+    expect(data.edited).toBe(true);
+    expect(data.text).toBe('move the button');
+    expect(data.message).toContain('annotations');
+  });
+
+  it('--message flag is passed to handler', async () => {
+    var receivedParams = null;
+    var outPath = join(tmpDir, 'img.png');
+    writeFileSync(outPath, 'fake');
+    await startTestServer({
+      open_in_snip: async (params) => {
+        receivedParams = params;
+        return { action: 'approved', edited: false, outputPath: outPath };
+      }
+    });
+    await runCli(['open', '/tmp/test.png', '--message', 'Does this look right?']);
+    expect(receivedParams.message).toBe('Does this look right?');
+  });
+
+  it('render with --message passes message to handler', async () => {
+    var receivedParams = null;
+    var outPath = join(tmpDir, 'img.png');
+    writeFileSync(outPath, 'fake');
+    await startTestServer({
+      render_diagram: async (params) => {
+        receivedParams = params;
+        return { action: 'approved', edited: false, outputPath: outPath };
+      }
+    });
+    await runCliWithStdin(['render', '--format', 'mermaid', '--message', 'Check the flow'], 'graph TD; A-->B');
+    expect(receivedParams.message).toBe('Check the flow');
   });
 });
