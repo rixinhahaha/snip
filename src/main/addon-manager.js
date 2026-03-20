@@ -51,11 +51,16 @@ const ADDON_DEFS = {
 var RUNTIME_ASSET_NAME = 'snip-ai-runtime-darwin-arm64.tar.gz';
 
 function getRuntimeDownloadUrl() {
-  // Use the GitHub repo from electron-builder config
   var owner = 'rixinhahaha';
   var repo = 'snip';
-  // Download the runtime from the latest release that has the asset
-  return 'https://github.com/' + owner + '/' + repo + '/releases/latest/download/' + RUNTIME_ASSET_NAME;
+  // Pin to the app's own version — each release ships a matching runtime tarball.
+  var version;
+  try {
+    version = require('electron').app.getVersion();
+  } catch (_) {
+    version = require('../../package.json').version;
+  }
+  return 'https://github.com/' + owner + '/' + repo + '/releases/download/v' + version + '/' + RUNTIME_ASSET_NAME;
 }
 
 // ── Paths ──
