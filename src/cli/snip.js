@@ -35,6 +35,7 @@ for (var i = 1; i < args.length; i++) {
   else if (args[i] === '--pretty') flags.pretty = true;
   else if (args[i] === '--help' || args[i] === '-h') flags.help = true;
   else if (args[i] === '--format' && i + 1 < args.length) { i++; flags.format = args[i]; }
+  else if (args[i] === '--message' && i + 1 < args.length) { i++; flags.message = args[i]; }
   else positional.push(args[i]);
 }
 
@@ -78,6 +79,7 @@ if (cmd.paramName && positional[0]) {
   }
   params[cmd.paramName] = val;
 }
+if (flags.message) params.message = flags.message;
 
 // Execute
 if (cmd.needsStdin) {
@@ -218,10 +220,13 @@ function formatOutput(command, result) {
   }
 
   if (command === 'open' || command === 'render') {
-    var outPath = null;
-    if (result && result.outputPath) {
-      outPath = result.outputPath;
-    } else if (result && result.dataURL) {
+    if (!result) {
+      printJson({ status: 'error', message: 'No result from editor' });
+      return;
+    }
+
+    var outPath = result.outputPath || null;
+    if (!outPath && result.dataURL) {
       var tmpDir = path.join(os.homedir(), 'Documents', 'snip', 'screenshots', '.tmp');
       fs.mkdirSync(tmpDir, { recursive: true });
       var prefix = command === 'render' ? 'rendered-' : 'annotated-';
@@ -230,12 +235,25 @@ function formatOutput(command, result) {
       var raw = Buffer.from(result.dataURL.split(',')[1], 'base64');
       fs.writeFileSync(outPath, raw);
     }
-    if (outPath) {
-      var msg = command === 'render'
-        ? 'User finished annotating the diagram. Read the file at path to see the result.'
-        : 'User finished reviewing the image. Read the file at path to see the result.';
-      printJson({ status: 'done', path: outPath, message: msg });
+
+    var status = result.action || 'done';
+    var output = { status: status };
+    if (result.edited !== undefined) output.edited = result.edited;
+    if (outPath) output.path = outPath;
+    if (result.message) output.text = result.message;
+
+    if (status === 'approved') {
+      if (result.edited) {
+        output.message = 'User approved with annotations. Read the file at path to see notes.';
+      }
+    } else if (status === 'changes_requested') {
+      var parts = [];
+      if (result.edited) parts.push('See annotations at path.');
+      if (result.message) parts.push(result.message);
+      if (parts.length > 0) output.message = parts.join(' ');
     }
+
+    printJson(output);
     return;
   }
 
@@ -284,6 +302,7 @@ function printHelp() {
     '',
     'Options:',
     '  --format <fmt>        Diagram format for render command (default: mermaid)',
+    '  --message <text>      Context message to show user (for open/render)',
     '  --pretty              Pretty-print JSON output',
     '  --help, -h            Show this help',
     '',

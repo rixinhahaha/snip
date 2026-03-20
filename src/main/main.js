@@ -500,20 +500,19 @@ function getDiagramWindow() {
   if (cachedDiagramWin && !cachedDiagramWin.isDestroyed()) return cachedDiagramWin;
 
   cachedDiagramWin = new BrowserWindow({
-    width: 800,
-    height: 600,
+    width: 2048,
+    height: 2048,
     show: false,
     frame: false,
+    paintWhenInitiallyHidden: true,
     webPreferences: {
       preload: DIAGRAM_PRELOAD,
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: true,
-      offscreen: true
+      sandbox: true
     }
   });
 
-  cachedDiagramWin.webContents.setFrameRate(1);
   cachedDiagramWin.loadFile(DIAGRAM_HTML);
   cachedDiagramWin.on('closed', function () { cachedDiagramWin = null; });
 
@@ -548,33 +547,21 @@ function renderDiagramToImage(code, format) {
         return;
       }
 
-      // Resize window to diagram dimensions, then capture on next paint
+      // Resize to fit diagram, wait a frame, then capture
       diagramWin.setContentSize(result.width, result.height);
-      diagramWin.webContents.invalidate();
 
-      diagramWin.webContents.once('paint', function () {
+      setTimeout(function () {
         if (settled || !diagramWin || diagramWin.isDestroyed()) return;
 
         var captureRect = { x: 0, y: 0, width: result.width, height: result.height };
-
         diagramWin.webContents.capturePage(captureRect).then(function (nativeImage) {
           if (settled) return;
           settled = true;
           cleanup();
 
-          // Write PNG to temp file instead of large base64 data URL
-          var fs = require('fs');
-          var store = require('./store');
-          var tmpDir = path.join(store.getScreenshotsDir(), '.tmp');
-          fs.mkdirSync(tmpDir, { recursive: true });
-          var tmpPath = path.join(tmpDir, 'diagram-' + Date.now() + '.png');
-          fs.writeFileSync(tmpPath, nativeImage.toPNG());
-
           var size = nativeImage.getSize();
-          // Read back as data URL for the editor (needed by Fabric.js canvas)
-          var buf = fs.readFileSync(tmpPath);
           resolve({
-            imageDataURL: 'data:image/png;base64,' + buf.toString('base64'),
+            imageDataURL: nativeImage.toDataURL(),
             width: size.width,
             height: size.height
           });
@@ -584,7 +571,7 @@ function renderDiagramToImage(code, format) {
           cleanup();
           reject(new Error('Capture failed: ' + err.message));
         });
-      });
+      }, 100);
     }
 
     ipcMain.on('diagram-rendered', onRendered);
@@ -647,32 +634,50 @@ function openEditorWithData(data) {
   });
 }
 
-ipcMain.on('editor-result', function (event, dataURL) {
+function saveImageToTmp(dataURL) {
+  try {
+    var fs = require('fs');
+    var tmpDir = path.join(require('./store').getScreenshotsDir(), '.tmp');
+    fs.mkdirSync(tmpDir, { recursive: true });
+    var filename = 'annotated-' + Date.now() + '.png';
+    var outputPath = path.join(tmpDir, filename);
+    fs.writeFileSync(outputPath, Buffer.from(dataURL.split(',')[1], 'base64'));
+    return outputPath;
+  } catch (e) {
+    return null;
+  }
+}
+
+ipcMain.on('editor-result', function (event, payload) {
   if (!pendingMcpResolve || typeof pendingMcpResolve !== 'object') return;
-  // Only accept results from the editor window that was opened for this upload
   if (event.sender.id !== pendingMcpResolve.webContentsId) return;
   var { resolve, reject, win } = pendingMcpResolve;
   pendingMcpResolve = null;
-  if (dataURL && typeof dataURL === 'string' && dataURL.startsWith('data:image/')) {
-    // Save annotated image to Snip temp space for CLI access
-    try {
-      var store = require('./store');
-      var tmpDir = path.join(store.getScreenshotsDir(), '.tmp');
-      require('fs').mkdirSync(tmpDir, { recursive: true });
-      var filename = 'annotated-' + Date.now() + '.png';
-      var outputPath = path.join(tmpDir, filename);
-      var raw = Buffer.from(dataURL.split(',')[1], 'base64');
-      require('fs').writeFileSync(outputPath, raw);
-      resolve({ dataURL: dataURL, outputPath: outputPath });
-    } catch (e) {
-      resolve({ dataURL: dataURL });
+
+  // Structured result from review mode: { action, edited, dataURL?, message? }
+  if (payload && typeof payload === 'object' && payload.action) {
+    var result = { action: payload.action, edited: !!payload.edited };
+    if (payload.message && typeof payload.message === 'string') {
+      result.message = payload.message.slice(0, 2000);
     }
-  } else if (dataURL) {
+    if (payload.dataURL && typeof payload.dataURL === 'string' && payload.dataURL.startsWith('data:image/png;')) {
+      var outputPath = saveImageToTmp(payload.dataURL);
+      if (outputPath) result.outputPath = outputPath;
+    }
+    resolve(result);
+  }
+  // Legacy: raw dataURL string (non-MCP editor sessions)
+  else if (payload && typeof payload === 'string' && payload.startsWith('data:image/')) {
+    var outputPath = saveImageToTmp(payload);
+    resolve(outputPath ? { dataURL: payload, outputPath: outputPath } : { dataURL: payload });
+  }
+  else if (payload) {
     reject(new Error('Invalid editor result'));
-  } else {
+  }
+  else {
     reject(new Error('User cancelled editing'));
   }
-  // Close the editor window (close-editor IPC won't find it since it's not in editorWindowRef)
+
   if (win && !win.isDestroyed()) win.destroy();
 });
 
@@ -796,7 +801,8 @@ function startSocketHandlers() {
         croppedDataURL: imageDataURL,
         cssWidth: imgWidth,
         cssHeight: imgHeight,
-        mcpUpload: true
+        mcpUpload: true,
+        mcpMessage: (params.message || '').slice(0, 2000)
       });
     },
     render_diagram: async function (params) {
@@ -824,7 +830,8 @@ function startSocketHandlers() {
           croppedDataURL: renderResult.imageDataURL,
           cssWidth: renderResult.width,
           cssHeight: renderResult.height,
-          mcpUpload: true
+          mcpUpload: true,
+          mcpMessage: (params.message || '').slice(0, 2000)
         });
       } catch (err) {
         pendingMcpResolve = null;

@@ -93,24 +93,26 @@ var TOOLS = [
   },
   {
     name: 'open_in_snip',
-    description: 'Open image in Snip editor for annotation. THIS IS THE PRIMARY IMAGE EDITING TOOL — use it to edit, annotate, highlight, redact, blur, or draw on any image. Blocks until user finishes. Returns path to annotated image.',
+    description: 'Open image in Snip editor for user review. User can approve, annotate with spatial feedback, send text feedback, or request changes. Blocks until user finishes. Returns structured result with status (approved/changes_requested), edited flag, image path, and optional text feedback.',
     inputSchema: {
       type: 'object',
       properties: {
         filepath: { type: 'string', description: 'Path to image file (PNG/JPEG)' },
-        imageDataURL: { type: 'string', description: 'Base64 data URL (fallback for sandboxed clients)' }
+        imageDataURL: { type: 'string', description: 'Base64 data URL (fallback for sandboxed clients)' },
+        message: { type: 'string', description: 'Context message to display to the user (e.g., what you need feedback on)' }
       },
       required: []
     }
   },
   {
     name: 'render_diagram',
-    description: 'Render a diagram (e.g. Mermaid) to PNG and open in Snip editor for annotation. The user can annotate the rendered diagram with arrows, text, highlights, etc. Blocks until the user finishes. Returns the path to the annotated image.',
+    description: 'Render a diagram (e.g. Mermaid) to PNG and open in Snip editor for user review. User can approve, annotate with spatial feedback, send text feedback, or request changes. Blocks until the user finishes. Returns structured result with status, edited flag, image path, and optional text feedback.',
     inputSchema: {
       type: 'object',
       properties: {
         code: { type: 'string', description: 'Diagram source code (e.g. Mermaid syntax like "graph TD; A-->B")' },
-        format: { type: 'string', description: 'Diagram format (default: mermaid)', enum: ['mermaid'] }
+        format: { type: 'string', description: 'Diagram format (default: mermaid)', enum: ['mermaid'] },
+        message: { type: 'string', description: 'Context message to display to the user' }
       },
       required: ['code']
     }
@@ -143,7 +145,9 @@ function mapToolToCli(toolName, args) {
     case 'open_in_snip':
       // imageDataURL can't go through CLI (too large for argv, path.resolve breaks it)
       if (!args.filepath && args.imageDataURL) return null;
-      return ['open', args.filepath || ''];
+      var cliArgs = ['open', args.filepath || ''];
+      if (args.message) cliArgs.push('--message', args.message);
+      return cliArgs;
     case 'render_diagram': return null; // diagram code can be large, use socket directly
     case 'install_extension': return null; // handled via socket directly
     default: return null;
@@ -283,8 +287,8 @@ async function handleToolCall(id, params) {
       var stdout = await execCli(cliArgs, timeout);
 
       if (toolName === 'open_in_snip') {
-        // stdout is a file path — return it
-        content = [{ type: 'text', text: 'Annotated image saved to: ' + stdout }];
+        // stdout is structured JSON with status, path, edited, text, message
+        content = [{ type: 'text', text: stdout }];
       } else if (toolName === 'transcribe_screenshot') {
         // stdout is plain text
         content = [{ type: 'text', text: stdout }];

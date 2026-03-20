@@ -359,6 +359,21 @@
     </div>
   </div>
 
+  <!-- MCP Review Panel — shown when editor opened via agent (review mode) -->
+  <div id="mcp-review-panel" class="mcp-review-panel hidden">
+    <div id="mcp-review-message" class="mcp-review-message"></div>
+    <div class="mcp-review-actions">
+      <div class="mcp-review-input-row">
+        <input type="text" id="mcp-review-input" class="mcp-review-input"
+               placeholder="Type feedback for the agent..." maxlength="2000">
+      </div>
+      <div class="mcp-review-buttons">
+        <button id="mcp-review-changes" class="mcp-review-btn changes">Request Changes</button>
+        <button id="mcp-review-approve" class="mcp-review-btn approve">Approve <kbd>&#8984;&#9166;</kbd></button>
+      </div>
+    </div>
+  </div>
+
   <!-- Fixed bottom indicators — outside #editor-container to avoid stacking context issues -->
   <div class="bottom-left-bar">
     <div id="image-dims" class="image-dims"></div>

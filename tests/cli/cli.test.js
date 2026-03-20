@@ -235,7 +235,6 @@ describe('CLI commands', () => {
     var data = JSON.parse(res.stdout);
     expect(data.status).toBe('done');
     expect(data.path).toBe(outPath);
-    expect(data.message).toContain('finished reviewing');
   });
 
   it('--pretty flag indents JSON output', async () => {
@@ -383,7 +382,7 @@ describe('CLI render command', () => {
     await startTestServer({
       render_diagram: async (params) => {
         receivedParams = params;
-        return { outputPath: outPath };
+        return { action: 'approved', edited: false, outputPath: outPath };
       }
     });
     var res = await runCliWithStdin(['render', '--format', 'mermaid'], 'graph TD; A-->B');
@@ -391,9 +390,9 @@ describe('CLI render command', () => {
     expect(receivedParams.code).toBe('graph TD; A-->B');
     expect(receivedParams.format).toBe('mermaid');
     var data = JSON.parse(res.stdout);
-    expect(data.status).toBe('done');
+    expect(data.status).toBe('approved');
+    expect(data.edited).toBe(false);
     expect(data.path).toBe(outPath);
-    expect(data.message).toContain('annotating the diagram');
   });
 
   it('defaults format to mermaid when --format omitted', async () => {

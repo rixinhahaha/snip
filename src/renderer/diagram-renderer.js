@@ -9,13 +9,15 @@
     flowchart: { htmlLabels: false }
   });
 
+  var renderCount = 0;
   window.snip.onDiagramCode(async function (data) {
     var container = document.getElementById('diagram-container');
+    container.innerHTML = '';
+    renderCount++;
     try {
-      var result = await mermaid.render('snip-diagram', data.code);
+      var result = await mermaid.render('snip-diagram-' + renderCount, data.code);
       container.innerHTML = result.svg;
 
-      // Wait for layout to complete before measuring
       await new Promise(function (r) { requestAnimationFrame(r); });
 
       var svg = container.querySelector('svg');
@@ -23,15 +25,13 @@
       var naturalW = Math.ceil(rect.width);
       var naturalH = Math.ceil(rect.height);
 
-      // Scale SVG to 2x for crisp text — SVG is vector so browser re-rasterizes
+      // Scale SVG to 2x for crisp text on Retina
       svg.style.width = (naturalW * 2) + 'px';
       svg.style.height = (naturalH * 2) + 'px';
       svg.style.maxWidth = 'none';
 
-      // Wait for re-layout at 2x size
       await new Promise(function (r) { requestAnimationFrame(r); });
 
-      // Report 2x dimensions + container padding (24px × 2 sides = 48px)
       window.snip.diagramRendered({
         success: true,
         width: naturalW * 2 + 48,

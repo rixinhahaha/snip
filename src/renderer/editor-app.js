@@ -26,6 +26,7 @@
     if (_editorInitialized) return; // prevent double init
     _editorInitialized = true;
     _mcpUpload = !!imageData.mcpUpload;
+    var _mcpMessage = imageData.mcpMessage || '';
 
     const { croppedDataURL, cssWidth, cssHeight } = imageData;
 
@@ -76,6 +77,11 @@
 
     // Ensure window is wide enough for full toolbar
     await ensureToolbarFits();
+
+    // Review mode: show review panel for MCP sessions
+    if (_mcpUpload) {
+      initReviewMode(_mcpMessage);
+    }
   }
 
   // Listen for pushed image data (pre-warmed window path — fast)
@@ -836,10 +842,13 @@
           canvas.renderAll();
         }
       },
-      onDone: function() { copyToClipboardAndClose(); },
+      onDone: function() { _mcpUpload ? sendMcpResult('approved') : copyToClipboardAndClose(); },
       onSave: function() { saveScreenshot(); },
       onCancel: function() {
-        if (_mcpUpload) window.snip.sendEditorResult(null);
+        if (_mcpUpload) {
+          sendMcpResult('changes_requested');
+          return;
+        }
         EditorCanvasManager.clearAnnotations();
         window.snip.closeEditor();
       },
@@ -1068,13 +1077,80 @@
     }
   }
 
+  // ── Review Mode (MCP sessions) ──
+
+  function initReviewMode(message) {
+    // Add review-mode class to body for CSS overrides
+    document.body.classList.add('review-mode');
+
+    var panel = document.getElementById('mcp-review-panel');
+    var msgEl = document.getElementById('mcp-review-message');
+    var inputEl = document.getElementById('mcp-review-input');
+    var approveBtn = document.getElementById('mcp-review-approve');
+    var changesBtn = document.getElementById('mcp-review-changes');
+
+    if (!panel) return;
+
+    if (message) {
+      msgEl.textContent = message;
+    }
+
+    panel.classList.remove('hidden');
+
+    approveBtn.addEventListener('click', function () {
+      sendMcpResult('approved');
+    });
+
+    changesBtn.addEventListener('click', function () {
+      var text = inputEl.value.trim();
+      sendMcpResult('changes_requested', text || undefined);
+    });
+
+    inputEl.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        e.stopPropagation();
+        var text = inputEl.value.trim();
+        if (!text) return;
+        sendMcpResult('changes_requested', text);
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        inputEl.blur();
+      }
+    });
+  }
+
+  var _mcpResultSent = false;
+  function sendMcpResult(action, text) {
+    if (_mcpResultSent || !canvas) return;
+    _mcpResultSent = true;
+
+    if (canvas.getActiveObject()) {
+      canvas.discardActiveObject();
+      canvas.renderAll();
+    }
+
+    var edited = canvas.getObjects().length > 0;
+    var result = { action: action, edited: edited };
+    if (text) result.message = text;
+
+    result.dataURL = edited
+      ? EditorCanvasManager.exportAsDataURL('png', 1.0)
+      : EditorCanvasManager.getBackgroundDataURL();
+
+    window.snip.sendEditorResult(result);
+    EditorCanvasManager.clearAnnotations();
+    window.snip.closeEditor();
+  }
+
   async function copyToClipboardAndClose() {
     if (!canvas) return;
     canvas.discardActiveObject();
     canvas.renderAll();
     var dataURL = EditorCanvasManager.exportAsDataURL('png', 1.0);
     await window.snip.copyToClipboard(dataURL);
-    if (_mcpUpload) window.snip.sendEditorResult(dataURL);
     EditorCanvasManager.clearAnnotations();
     window.snip.closeEditor();
     window.snip.showNotification('Copied to clipboard');
@@ -1093,7 +1169,6 @@
 
     var pngDataURL = EditorCanvasManager.exportAsDataURL('png', 1.0);
     await window.snip.copyToClipboard(pngDataURL);
-    if (_mcpUpload) window.snip.sendEditorResult(pngDataURL);
 
     EditorCanvasManager.clearAnnotations();
     window.snip.closeEditor();
@@ -1138,12 +1213,26 @@
       return;
     }
 
+    // Review mode: Cmd+Enter = Approve
+    if (_mcpUpload && (e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+      e.preventDefault();
+      sendMcpResult('approved');
+      return;
+    }
+
+    // Review mode: don't handle global Enter/Esc when text input is focused
+    if (_mcpUpload && document.activeElement && document.activeElement.id === 'mcp-review-input') {
+      return;
+    }
+
     if (e.key === 'Enter') {
       e.preventDefault();
       var currentTool = Toolbar.getActiveTool();
       if (currentTool === TOOLS.RECT || currentTool === TOOLS.ARROW || currentTool === TOOLS.BLUR_BRUSH) {
         // Finish drawing session: switch to select mode
         Toolbar.setTool(TOOLS.SELECT);
+      } else if (_mcpUpload) {
+        sendMcpResult('approved');
       } else {
         await copyToClipboardAndClose();
       }
@@ -1151,7 +1240,10 @@
 
     if (e.key === 'Escape') {
       e.preventDefault();
-      await copyToClipboardAndClose();
+      if (!_mcpUpload) {
+        await copyToClipboardAndClose();
+      }
+      // In review mode, Escape is a no-op (use Approve or Request Changes)
     }
 
     if ((e.metaKey || e.ctrlKey) && e.key === 's') {
