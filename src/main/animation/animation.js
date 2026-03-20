@@ -378,8 +378,17 @@ function extractAndEncode(mp4Buffer, fps, loops, useChromaKey, onProgress) {
     var tmpMp4 = path.join(tmpDir, 'snip-anim-' + Date.now() + '.mp4');
     fs.writeFileSync(tmpMp4, mp4Buffer);
 
+    // Set NODE_PATH so worker can find ffmpeg-static from addon runtime
+    var workerEnv = { ...process.env };
+    try {
+      var addonManager = require('../addon-manager');
+      var addonNodeModules = addonManager.getRuntimeNodeModules();
+      workerEnv.NODE_PATH = addonNodeModules + (workerEnv.NODE_PATH ? ':' + workerEnv.NODE_PATH : '');
+    } catch (_) {}
+
     var workerProc = child_process.fork(workerScript, [], {
-      stdio: ['pipe', 'inherit', 'inherit', 'ipc']
+      stdio: ['pipe', 'inherit', 'inherit', 'ipc'],
+      env: workerEnv
     });
 
     workerProc.on('message', function(msg) {

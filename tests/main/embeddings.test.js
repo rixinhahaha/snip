@@ -46,16 +46,24 @@ describe('cosineSimilarity', () => {
 
 // ── searchScreenshots ─────────────────────────────────────────────────────────
 
-// Use vi.hoisted so mockPipelineFn is available inside vi.mock factories
-const mockPipelineFn = vi.hoisted(() => vi.fn());
+// Mock sendRequest to simulate the embeddings worker returning an embedding
+const mockSendRequest = vi.hoisted(() => vi.fn().mockResolvedValue([0.5, 0.5, 0.5, 0.5]));
 
-vi.mock('@huggingface/transformers', () => ({
-  pipeline: vi.fn().mockResolvedValue(mockPipelineFn),
-  env: { cacheDir: '', allowRemoteModels: false },
+vi.mock('../../src/main/worker-process', () => ({
+  createWorkerProcess: vi.fn().mockReturnValue({
+    sendRequest: mockSendRequest,
+    sendMessage: vi.fn(),
+    killWorker: vi.fn(),
+  }),
 }));
 
-vi.mock('../../src/main/model-paths', () => ({
-  configureTransformersEnv: vi.fn(),
+vi.mock('../../src/main/addon-manager', () => ({
+  ADDON_DEFS: { segment: {}, upscale: {}, 'smart-search': {} },
+  isAddonInstalled: vi.fn().mockReturnValue(true),
+  isRuntimeInstalled: vi.fn().mockReturnValue(true),
+  getRuntimeNodeModules: vi.fn().mockReturnValue('/tmp/test-runtime/node_modules'),
+  getModelsDir: vi.fn().mockReturnValue('/tmp/test-models'),
+  getAddonsDir: vi.fn().mockReturnValue('/tmp/test-addons'),
 }));
 
 const store = require('../../src/main/store');
@@ -66,8 +74,8 @@ const { searchScreenshots } = require('../../src/main/organizer/embeddings');
 let spyReadIndex;
 
 beforeEach(() => {
-  mockPipelineFn.mockReset();
-  mockPipelineFn.mockResolvedValue({ data: new Float32Array(4).fill(0.5) });
+  mockSendRequest.mockReset();
+  mockSendRequest.mockResolvedValue([0.5, 0.5, 0.5, 0.5]);
   spyReadIndex = vi.spyOn(store, 'readIndex');
 });
 
@@ -131,7 +139,7 @@ describe('searchScreenshots', () => {
   });
 
   it('falls back to text search for all entries when embedding pipeline fails', async () => {
-    mockPipelineFn.mockRejectedValue(new Error('Model not found'));
+    mockSendRequest.mockRejectedValue(new Error('Model not found'));
     spyReadIndex.mockReturnValue([
       { filename: 'a.png', path: '/a.png', name: 'code thing', description: '', tags: [], category: 'code', embedding: [0.1, 0.2] },
       { filename: 'b.png', path: '/b.png', name: 'shopping', description: '', tags: [], category: 'personal', embedding: [0.3, 0.4] },

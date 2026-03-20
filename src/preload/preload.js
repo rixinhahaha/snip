@@ -114,6 +114,7 @@ contextBridge.exposeInMainWorld('snip', {
   segmentAtPoint: ({ points, cssWidth, cssHeight }) =>
     ipcRenderer.invoke('segment-at-point', { points, cssWidth, cssHeight }),
   checkSegmentSupport: () => ipcRenderer.invoke('check-segment-support'),
+  checkUpscaleSupport: () => ipcRenderer.invoke('check-upscale-support'),
 
   // Setup overlay
   onShowSetupOverlay: (callback) => {
@@ -138,6 +139,22 @@ contextBridge.exposeInMainWorld('snip', {
   configureAiProvider: (id) => ipcRenderer.invoke('configure-ai-provider', id),
   removeAiProvider: (id) => ipcRenderer.invoke('remove-ai-provider', id),
   checkAiProviderStatus: (id) => ipcRenderer.invoke('check-ai-provider-status', id),
+
+  // Settings: Add-ons (optional AI features)
+  getAddonStatus: () => ipcRenderer.invoke('get-addon-status'),
+  installAddon: (name) => ipcRenderer.invoke('install-addon', name),
+  removeAddon: (name) => ipcRenderer.invoke('remove-addon', name),
+  cancelAddonDownload: (name) => ipcRenderer.invoke('cancel-addon-download', name),
+  onAddonProgress: (callback) => {
+    var handler = (event, progress) => callback(progress);
+    ipcRenderer.on('addon-download-progress', handler);
+    return () => ipcRenderer.removeListener('addon-download-progress', handler);
+  },
+  onAddonStatusChanged: (callback) => {
+    var handler = (event, status) => callback(status);
+    ipcRenderer.on('addon-status-changed', handler);
+    return () => ipcRenderer.removeListener('addon-status-changed', handler);
+  },
 
   // Settings: User Extensions
   getUserExtensions: () => ipcRenderer.invoke('get-user-extensions'),

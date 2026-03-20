@@ -47,9 +47,9 @@ Power users on macOS who take 5-50 screenshots per day: developers, designers, P
 | Arrow | A | Point at things |
 | Tag | G | Two-click callout: draggable label group + draggable anchor tip with leader line |
 | Blur Brush | B | Paint to pixelate sensitive info |
-| Segment | S | AI-powered object selection (SlimSAM) — Apply Cutout or Tag Segment (4-color palette: Red/Yellow/Green/Blue) |
+| Segment | S | AI-powered object selection (SlimSAM) — Apply Cutout or Tag Segment (4-color palette: Red/Yellow/Green/Blue). **Requires Segment add-on** (Settings → Add-ons). |
 | Animate | — | Animate a segment cutout into GIF/APNG via fal.ai cloud API |
-| Upscale | — | On-device 2x image upscaling via ONNX model (Swin2SR) |
+| Upscale | — | On-device 2x image upscaling via ONNX model (Swin2SR). **Requires Upscale add-on** (Settings → Add-ons). |
 
 ### Canvas Navigation
 - **Pinch-to-zoom** on trackpad or **⌘+scroll** to zoom toward cursor

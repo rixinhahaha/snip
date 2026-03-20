@@ -200,10 +200,18 @@ const Toolbar = (() => {
   }
 
   /**
-   * Show the segment tool button (called after device compatibility check)
+   * Show the segment tool button (called after addon install check)
    */
   function enableSegmentTool() {
     var btn = document.getElementById('tool-segment');
+    if (btn) btn.classList.remove('hidden');
+  }
+
+  /**
+   * Show the upscale tool button (called after addon install check)
+   */
+  function enableUpscaleTool() {
+    var btn = document.getElementById('btn-upscale');
     if (btn) btn.classList.remove('hidden');
   }
 
@@ -212,6 +220,7 @@ const Toolbar = (() => {
     initToolbar,
     setTool,
     enableSegmentTool,
+    enableUpscaleTool,
     getActiveTool: () => activeTool,
     getActiveColor: () => activeColor,
     getActiveStrokeWidth: () => activeStrokeWidth,

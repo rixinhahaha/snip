@@ -1,18 +1,15 @@
 #!/usr/bin/env node
 /**
- * Download HuggingFace models for offline bundling.
+ * Download HuggingFace models for local development.
  *
- * 1. Xenova/all-MiniLM-L6-v2           — embedding model (~23 MB)
- * 2. Xenova/slimsam-77-uniform         — SAM segmentation model (~50 MB)
- * 3. Xenova/swin2SR-lightweight-x2-64  — 2x image upscaling model (~5.7 MB)
+ * Models are no longer bundled in the app binary — they are downloaded
+ * on demand by the addon system. This script is only needed for local
+ * development if you want to test with pre-downloaded models.
  *
  * Usage:
  *   node scripts/download-models.js
  *
- * Ollama models (minicpm-v) are pulled at runtime by the app — not bundled.
- *
- * Prerequisites:
- *   - @huggingface/transformers must be installed (npm install)
+ * Models are saved to vendor/models/ and used by dev mode via model-paths.js.
  */
 
 var path = require('path');
@@ -46,9 +43,10 @@ function formatBytes(bytes) {
 }
 
 async function main() {
-  console.log('Snip Model Downloader');
-  console.log('=====================');
-  console.log('  HuggingFace: MiniLM + SlimSAM + Swin2SR');
+  console.log('Snip Model Downloader (dev only)');
+  console.log('=================================');
+  console.log('  Downloads models for local development.');
+  console.log('  These are NOT bundled in the app binary.');
   console.log('');
 
   fs.mkdirSync(VENDOR_MODELS, { recursive: true });
@@ -82,7 +80,7 @@ async function main() {
 
   // Summary
   console.log('\n==> Done! HF models: ' + formatBytes(getDirSize(VENDOR_MODELS)));
-  console.log('These will be bundled into the app via extraResources.');
+  console.log('These are for dev use only — the binary does not bundle them.');
 }
 
 main().catch(function (err) {

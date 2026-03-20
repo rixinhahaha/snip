@@ -4,6 +4,14 @@ function init(context) {
   ctx = context;
 }
 
+async function checkSupport() {
+  const addonManager = require('../../main/addon-manager');
+  if (!addonManager.isAddonInstalled('upscale')) {
+    return { supported: false, reason: 'addon_not_installed' };
+  }
+  return { supported: true };
+}
+
 async function upscaleImage(event, { imageBase64 }) {
   const { upscaleImage } = require('../../main/upscaler/upscaler');
   return upscaleImage(imageBase64, function (progress) {
@@ -18,4 +26,4 @@ function killWorker() {
   killWorker();
 }
 
-module.exports = { init, upscaleImage, killWorker };
+module.exports = { init, checkSupport, upscaleImage, killWorker };

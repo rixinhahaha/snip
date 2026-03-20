@@ -27,8 +27,8 @@ jobs:
       - name: Rebuild native modules for target arch
         run: npx node-gyp rebuild --arch=arm64
 
-      - name: Download HuggingFace models
-        run: node scripts/download-models.js
+      - name: Build AI runtime bundle
+        run: node scripts/build-runtime-bundle.js
 
       - name: Download bundled Node.js binary
         run: node scripts/download-node.js --arch arm64
@@ -43,15 +43,25 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npx electron-builder --mac dmg zip --arm64 --publish always
 
+      - name: Upload AI runtime bundle
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "$GITHUB_REF_NAME" dist/snip-ai-runtime-darwin-arm64.tar.gz
+
       - name: Publish release with notes
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           NOTES=$(gh api repos/${{ github.repository }}/releases/generate-notes -f tag_name="$GITHUB_REF_NAME" --jq '.body')
-          gh release edit "$GITHUB_REF_NAME" --notes "$NOTES" --draft=false
+          PRERELEASE_FLAG=""
+          if echo "$GITHUB_REF_NAME" | grep -q "beta\|alpha\|rc"; then
+            PRERELEASE_FLAG="--prerelease"
+          fi
+          gh release edit "$GITHUB_REF_NAME" --notes "$NOTES" --draft=false $PRERELEASE_FLAG
 
   update-cask:
     needs: build
+    if: ${{ !contains(github.ref_name, 'beta') && !contains(github.ref_name, 'alpha') && !contains(github.ref_name, 'rc') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

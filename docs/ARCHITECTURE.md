@@ -43,12 +43,16 @@ src/
     constants.js             # Shared constants (BASE_WEB_PREFERENCES)
     auto-updater.js          # Auto-update via electron-updater (check, prompt, download, install)
     ollama-manager.js        # Ollama process lifecycle (spawn/kill on dynamic port, ready/status/model pull)
-    model-paths.js           # Bundled model path resolution (dev vs packaged)
+    model-paths.js           # Model path resolution (addon dir, dev vendor/, legacy bundled)
+    addon-manager.js         # Optional AI add-on system: install/remove/status, runtime + model downloads
+    addon-model-downloader.js  # Forked helper: downloads HF models using transformers.js from addon runtime
+    worker-process.js        # Shared factory for forking isolated child-process workers (used by segmentation, upscaler, embeddings)
     organizer/               # AI screenshot organization pipeline
       agent.js               # Ollama vision prompt + response parsing
       worker.js              # Background worker thread for AI processing
       watcher.js             # Chokidar file watcher + pendingFiles queue + setOllamaHost() + generateEmbeddingForEntry()
-      embeddings.js          # HuggingFace transformer embedding generation
+      embeddings.js          # Embedding coordinator — delegates to child process worker
+      embeddings-worker.js   # Forked child: runs MiniLM embedding inference via transformers.js
     node-binary.js           # Shared findNodeBinary() utility for child processes
     segmentation/            # SAM image segmentation (isolated from organizer)
       segmentation.js        # SAM model orchestration (spawns subprocess, uses node-binary.js)
@@ -127,8 +131,9 @@ site/                        # Marketing site (GitHub Pages, snipit.dev)
   CNAME                        # Custom domain config (snipit.dev)
   assets/                      # Hero video, screenshots, OG image
 scripts/                     # Build and generation scripts
-  download-models.js           # Download MiniLM + SlimSAM + Swin2SR to vendor/models/
+  download-models.js           # Download HF models to vendor/models/ (dev only, not bundled)
   download-node.js             # Download standalone Node.js binary to vendor/node/
+  build-runtime-bundle.js      # Build AI runtime tarball for addon system (GitHub release asset)
   afterPack.js                 # electron-builder afterPack hook (strip unused native modules, pre-sign)
   build-signed.sh              # Production build: sign + notarize
   generate-app-icon.js         # Regenerate app icons from SVG template
@@ -145,9 +150,9 @@ tests/                       # Vitest unit tests
     tool-utils.test.js         # hexToRgba, lineEndpointForTag, nextTagId
   cli/
     cli.test.js                # CLI help, commands, parameter passing, socket, error handling
-vendor/                      # Downloaded at dev time, bundled at build time
-  models/                      # HuggingFace models: MiniLM + SlimSAM (~75 MB)
-  node/                        # Standalone Node.js binary for SAM subprocess (~100 MB)
+vendor/                      # Downloaded at dev time (NOT bundled in binary)
+  models/                      # HuggingFace models for dev (npm run download-models)
+  node/                        # Standalone Node.js binary for child processes (~100 MB)
     arm64/node                   # Apple Silicon
   (static animation presets inlined in src/main/animation/animation.js)
 ```
@@ -216,17 +221,18 @@ Model pull uses `client.pull({ model, stream: true })` with per-digest progress 
 
 All AI runs locally — no cloud API calls (except fal.ai for animations).
 
-### Bundled HuggingFace Models
-All Transformers.js models are **pre-downloaded and bundled** — no runtime download needed. They live in `vendor/models/` (dev) or `Resources/models/` (packaged). The `model-paths.js` module resolves the correct cache directory and disables remote downloads in the packaged app:
-- **Xenova/all-MiniLM-L6-v2** (~23 MB quantized) — semantic search embeddings
-- **Xenova/slimsam-77-uniform** (~50 MB) — SAM image segmentation
-- **Xenova/swin2SR-lightweight-x2-64** (~5.7 MB q4) — 2x image upscaling
+### HuggingFace Models (Optional Add-ons)
+HuggingFace/Transformers.js models are **not bundled** in the app binary. They are optional add-ons downloaded on demand through Settings → Add-ons. The shared AI runtime (`@huggingface/transformers` + `onnxruntime-node`) and models are stored in `~/Library/Application Support/snip/addons/`. In development, `vendor/models/` can be used (populated by `npm run download-models`).
 
-### ONNX Runtime Threading
-ONNX Runtime (via Transformers.js) **crashes in worker_threads**. Embeddings must run on the main Electron thread. The worker thread handles Ollama API calls, then delegates embedding generation back to main via message passing.
+Three add-ons are available:
+- **Segment** — Xenova/slimsam-77-uniform (~38 MB) — SAM image segmentation
+- **Upscale** — Xenova/swin2SR-lightweight-x2-64 (~8 MB) — 2x image super-resolution
+- **Smart Search** — Xenova/all-MiniLM-L6-v2 (~97 MB) — semantic search embeddings
 
-### SAM and Upscaler in Child Processes
-The segmentation model (SlimSAM) and the upscaler model (Swin2SR 2x) both run in **child processes** (`child_process.fork`), not worker threads, because ONNX Runtime crashes in Electron's V8 worker context. Both use a standalone Node.js binary (not Electron's) located via the shared `findNodeBinary()` utility in `src/main/node-binary.js`. A bundled Node.js binary is included in the packaged app (`Resources/node/node`) so these features work without requiring users to install developer tools. In development, `vendor/node/{arch}/node` is checked first, then system Node.js installs (NVM, homebrew, PATH, FNM). The parent passes `SNIP_MODELS_PATH` and `SNIP_PACKAGED` env vars so the worker uses bundled models.
+The add-on system is managed by `src/main/addon-manager.js`. First add-on install downloads the shared AI runtime (~60 MB tarball from GitHub releases), then the model from HuggingFace.
+
+### ONNX Runtime in Child Processes
+All ONNX inference (segmentation, upscaling, embeddings) runs in **child processes** (`child_process.fork`), not the main Electron process, because ONNX Runtime crashes in Electron's V8. Workers use a standalone Node.js binary located via `src/main/node-binary.js`. The parent passes `NODE_PATH` pointing to the addon runtime's `node_modules/` so workers can find `@huggingface/transformers`.
 
 The upscaler uses Transformers.js `image-to-image` pipeline with the Swin2SR quantized ONNX model (~5.7 MB). Input images are decoded from base64 data URLs to `RawImage` objects using sharp before being passed to the pipeline. Output is capped at 3840x2160 to prevent memory issues. The upscale button is disabled after use to prevent repeated upscaling.
 
@@ -562,5 +568,6 @@ The native Liquid Glass layer is always present (macOS 26+). Dark and Light them
 
 | Ollama binary | `/usr/local/bin/ollama`, `/opt/homebrew/bin/ollama`, or `/Applications/Ollama.app/Contents/Resources/ollama` | same (user-installed) |
 | Ollama models | `~/.ollama/models/` | same (shared with system Ollama) |
-| HF models (MiniLM + SlimSAM + Swin2SR) | `vendor/models/` | `Resources/models/` |
+| HF models (add-ons) | `vendor/models/` (dev) | `~/Library/Application Support/snip/addons/models/` (downloaded on demand) |
+| AI runtime (transformers.js + onnxruntime) | `node_modules/` (dev) | `~/Library/Application Support/snip/addons/runtime/` (downloaded on demand) |
 | Animation presets | Inlined in `src/main/animation/animation.js` | same (bundled in asar) |
