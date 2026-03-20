@@ -11,7 +11,7 @@ let model = null;
 let processor = null;
 let envConfigured = false;
 
-async function await getTransformers() {
+async function getTransformers() {
   if (!transformersModule) transformersModule = await importTransformers();
   return transformersModule;
 }
