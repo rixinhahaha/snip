@@ -1,31 +1,30 @@
 /**
- * Resolve and import @huggingface/transformers from the addon runtime.
+ * Resolve and load @huggingface/transformers from the addon runtime.
  *
- * ESM import() does not respect NODE_PATH in packaged Electron apps.
- * This helper uses require.resolve() with explicit paths to find the
- * module in the addon runtime's node_modules, then imports via file URL.
+ * Two problems in packaged Electron apps:
+ * 1. ESM import() does not respect NODE_PATH
+ * 2. require.resolve + import(fileURL) wraps CJS exports under .default
+ *
+ * Solution: use module.createRequire() anchored at the addon runtime dir.
+ * This loads the CJS entry directly with correct exports shape.
  */
 var path = require('path');
-var { pathToFileURL } = require('url');
 
-/**
- * Import @huggingface/transformers, resolving from NODE_PATH if set.
- * Falls back to standard resolution (works in dev where it's in project node_modules).
- */
 async function importTransformers() {
   // In packaged app, NODE_PATH points to addon runtime's node_modules.
-  // require.resolve() with explicit paths finds the package, then import() loads it via file URL.
+  // Use createRequire anchored there to load via CJS resolution.
   if (process.env.NODE_PATH) {
     var searchPaths = process.env.NODE_PATH.split(path.delimiter);
     try {
-      var resolved = require.resolve('@huggingface/transformers', { paths: searchPaths });
-      return await import(pathToFileURL(resolved).href);
+      var createRequire = require('module').createRequire;
+      var addonRequire = createRequire(path.join(searchPaths[0], '_'));
+      return addonRequire('@huggingface/transformers');
     } catch (_) {
-      // Fall through to standard resolution
+      // Fall through to standard import
     }
   }
 
-  // Standard resolution — works in dev where it's in project node_modules
+  // Standard ESM import — works in dev where it's in project node_modules
   return await import('@huggingface/transformers');
 }
 
