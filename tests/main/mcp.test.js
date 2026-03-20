@@ -768,3 +768,67 @@ describe('socket edge cases', () => {
     expect(res.error).toBeUndefined();
   });
 });
+
+// ── render_diagram validation ──
+
+describe('render_diagram validation', () => {
+  let socketPath;
+  let server;
+
+  beforeEach(() => {
+    socketPath = join(tmpDir, 'render.sock');
+  });
+
+  afterEach(() => {
+    if (server) { server.stop(); server = null; }
+  });
+
+  function startRenderServer() {
+    server = createTestSocketServer(socketPath, {
+      render_diagram: async (params) => {
+        const config = store.getMcpConfig();
+        if (!config.categories.upload) throw new Error('upload is disabled in MCP settings');
+        if (!params.code || typeof params.code !== 'string') throw new Error('Missing "code" parameter');
+        var format = params.format || 'mermaid';
+        if (format !== 'mermaid') throw new Error('Unsupported format: ' + format + ' (supported: mermaid)');
+        return { outputPath: '/tmp/rendered.png' };
+      }
+    });
+    return server.waitReady();
+  }
+
+  it('rejects when upload category is disabled', async () => {
+    store.setMcpConfig({ enabled: true, categories: { upload: false } });
+    await startRenderServer();
+    const res = await socketRequest(socketPath, { id: '1', action: 'render_diagram', params: { code: 'graph TD; A-->B' } });
+    expect(res.error).toContain('upload is disabled');
+  });
+
+  it('rejects missing code parameter', async () => {
+    store.setMcpConfig({ enabled: true });
+    await startRenderServer();
+    const res = await socketRequest(socketPath, { id: '1', action: 'render_diagram', params: {} });
+    expect(res.error).toBe('Missing "code" parameter');
+  });
+
+  it('rejects unsupported format', async () => {
+    store.setMcpConfig({ enabled: true });
+    await startRenderServer();
+    const res = await socketRequest(socketPath, { id: '1', action: 'render_diagram', params: { code: 'test', format: 'dot' } });
+    expect(res.error).toContain('Unsupported format: dot');
+  });
+
+  it('accepts valid mermaid code and returns result', async () => {
+    store.setMcpConfig({ enabled: true });
+    await startRenderServer();
+    const res = await socketRequest(socketPath, { id: '1', action: 'render_diagram', params: { code: 'graph TD; A-->B', format: 'mermaid' } });
+    expect(res.result).toEqual({ outputPath: '/tmp/rendered.png' });
+  });
+
+  it('defaults format to mermaid when omitted', async () => {
+    store.setMcpConfig({ enabled: true });
+    await startRenderServer();
+    const res = await socketRequest(socketPath, { id: '1', action: 'render_diagram', params: { code: 'graph TD; A-->B' } });
+    expect(res.result).toEqual({ outputPath: '/tmp/rendered.png' });
+  });
+});

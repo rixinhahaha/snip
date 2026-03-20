@@ -122,8 +122,15 @@ Power users on macOS who take 5-50 screenshots per day: developers, designers, P
 - **MCP Server**: Toggle to enable/disable the MCP (Model Context Protocol) server. When enabled, exposes Snip's library and tools to external AI agents (e.g., Claude Desktop) via a Unix domain socket. Per-tool toggles control which capabilities are exposed (Library, Upload, Transcribe, Organize). Copy-to-clipboard button provides the JSON config snippet needed for Claude Desktop.
 - **Extensions**: Lists user-installed extensions with name, type, and permissions. Install button opens a folder picker to load a new extension (shows a manifest preview and permission approval dialog before installing). Uninstall button removes extension and kills its sandbox process.
 
+### Diagram Rendering
+- `snip render --format mermaid` — renders Mermaid diagram code piped via stdin to a PNG, opens the result in the annotation editor
+- Enables the agent-to-human visual round-trip: agent generates diagram code → Snip renders it → user annotates → annotated result returned to agent
+- Rendering uses Electron's built-in Chromium via a hidden BrowserWindow — zero agent-side dependencies (no mmdc, no Puppeteer)
+- Also available as `render_diagram` MCP tool for direct agent integration
+- Extensible to additional formats (DOT, SVG, HTML) via `--format` flag
+
 ### MCP Integration
-- When MCP is enabled, external AI agents can search screenshots, list and retrieve files, transcribe text, trigger AI organization, open files in the editor, and install extensions
+- When MCP is enabled, external AI agents can search screenshots, list and retrieve files, transcribe text, trigger AI organization, open files in the editor, render diagrams, and install extensions
 - MCP server runs as a stdio process (`src/mcp/server.js`) that bridges to Snip's Unix socket
 - Per-category toggles in Settings control which tools are exposed
 

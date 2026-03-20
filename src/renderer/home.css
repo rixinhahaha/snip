@@ -2397,6 +2397,7 @@ kbd {
   gap: 8px;
   width: 100%;
   margin-top: 8px;
+  margin-bottom: 16px;
 }
 
 /* Save location — settings section */

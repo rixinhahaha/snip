@@ -104,6 +104,18 @@ var TOOLS = [
     }
   },
   {
+    name: 'render_diagram',
+    description: 'Render a diagram (e.g. Mermaid) to PNG and open in Snip editor for annotation. The user can annotate the rendered diagram with arrows, text, highlights, etc. Blocks until the user finishes. Returns the path to the annotated image.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        code: { type: 'string', description: 'Diagram source code (e.g. Mermaid syntax like "graph TD; A-->B")' },
+        format: { type: 'string', description: 'Diagram format (default: mermaid)', enum: ['mermaid'] }
+      },
+      required: ['code']
+    }
+  },
+  {
     name: 'install_extension',
     description: 'Install a sandboxed extension into Snip. Requires user approval. Only action-tool and processor types. All IPC channels must use ext: prefix.\n\nExample:\n  name: "word-counter"\n  manifest: { name: "word-counter", displayName: "Word Counter", type: "action-tool", ipc: [{ channel: "ext:word-counter:count", method: "count" }] }\n  mainCode: "async function count(event, { text }) { return { words: text.split(/\\\\s+/).length }; }\\nmodule.exports = { count };"',
     inputSchema: {
@@ -132,6 +144,7 @@ function mapToolToCli(toolName, args) {
       // imageDataURL can't go through CLI (too large for argv, path.resolve breaks it)
       if (!args.filepath && args.imageDataURL) return null;
       return ['open', args.filepath || ''];
+    case 'render_diagram': return null; // diagram code can be large, use socket directly
     case 'install_extension': return null; // handled via socket directly
     default: return null;
   }

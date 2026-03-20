@@ -13,6 +13,7 @@
  *   snip organize <filepath>       Queue for AI categorization
  *   snip categories                List categories
  *   snip open <filepath>           Open in editor, get annotated result
+ *   snip render --format mermaid   Render diagram from stdin, open in editor
  */
 
 var net = require('net');
@@ -33,6 +34,7 @@ for (var i = 1; i < args.length; i++) {
   if (args[i] === '--json') flags.json = true;
   else if (args[i] === '--pretty') flags.pretty = true;
   else if (args[i] === '--help' || args[i] === '-h') flags.help = true;
+  else if (args[i] === '--format' && i + 1 < args.length) { i++; flags.format = args[i]; }
   else positional.push(args[i]);
 }
 
@@ -50,7 +52,8 @@ var COMMANDS = {
   transcribe: { action: 'transcribe_screenshot', paramName: 'filepath', needsArg: true },
   organize:   { action: 'organize_screenshot', paramName: 'filepath', needsArg: true },
   categories: { action: 'get_categories' },
-  open:       { action: 'open_in_snip', paramName: 'filepath', needsArg: true }
+  open:       { action: 'open_in_snip', paramName: 'filepath', needsArg: true },
+  render:     { action: 'render_diagram', needsStdin: true }
 };
 
 var cmd = COMMANDS[command];
@@ -77,13 +80,46 @@ if (cmd.paramName && positional[0]) {
 }
 
 // Execute
-callSnip(cmd.action, params, false).then(function (result) {
-  formatOutput(command, result);
-  process.exit(0);
-}).catch(function (err) {
-  process.stderr.write('Error: ' + err.message + '\n');
-  process.exit(1);
-});
+if (cmd.needsStdin) {
+  if (process.stdin.isTTY) {
+    process.stderr.write('Error: ' + command + ' reads from stdin. Pipe diagram code, e.g.:\n');
+    process.stderr.write('  echo "graph TD; A-->B" | snip render --format mermaid\n');
+    process.exit(1);
+  }
+  readStdin().then(function (input) {
+    if (!input.trim()) {
+      process.stderr.write('Error: empty input from stdin\n');
+      process.exit(1);
+    }
+    params.code = input;
+    params.format = flags.format || 'mermaid';
+    return callSnip(cmd.action, params, false);
+  }).then(function (result) {
+    formatOutput(command, result);
+    process.exit(0);
+  }).catch(function (err) {
+    process.stderr.write('Error: ' + err.message + '\n');
+    process.exit(1);
+  });
+} else {
+  callSnip(cmd.action, params, false).then(function (result) {
+    formatOutput(command, result);
+    process.exit(0);
+  }).catch(function (err) {
+    process.stderr.write('Error: ' + err.message + '\n');
+    process.exit(1);
+  });
+}
+
+function readStdin() {
+  return new Promise(function (resolve) {
+    var chunks = [];
+    process.stdin.setEncoding('utf8');
+    process.stdin.on('data', function (chunk) { chunks.push(chunk); });
+    process.stdin.on('end', function () { resolve(chunks.join('')); });
+    process.stdin.resume();
+  });
+}
 
 // ── Socket connection ──
 
@@ -129,7 +165,7 @@ function callSnip(action, params, isRetry) {
     });
 
     // Timeout for long-running commands (open blocks on user interaction)
-    if (action !== 'open_in_snip') {
+    if (action !== 'open_in_snip' && action !== 'render_diagram') {
       setTimeout(function () {
         conn.destroy();
         reject(new Error('Request timed out'));
@@ -181,20 +217,24 @@ function formatOutput(command, result) {
     return;
   }
 
-  if (command === 'open') {
+  if (command === 'open' || command === 'render') {
     var outPath = null;
     if (result && result.outputPath) {
       outPath = result.outputPath;
     } else if (result && result.dataURL) {
       var tmpDir = path.join(os.homedir(), 'Documents', 'snip', 'screenshots', '.tmp');
       fs.mkdirSync(tmpDir, { recursive: true });
-      var filename = 'annotated-' + Date.now() + '.png';
+      var prefix = command === 'render' ? 'rendered-' : 'annotated-';
+      var filename = prefix + Date.now() + '.png';
       outPath = path.join(tmpDir, filename);
       var raw = Buffer.from(result.dataURL.split(',')[1], 'base64');
       fs.writeFileSync(outPath, raw);
     }
     if (outPath) {
-      printJson({ status: 'done', path: outPath, message: 'User finished reviewing the image. Read the file at path to see the result.' });
+      var msg = command === 'render'
+        ? 'User finished annotating the diagram. Read the file at path to see the result.'
+        : 'User finished reviewing the image. Read the file at path to see the result.';
+      printJson({ status: 'done', path: outPath, message: msg });
     }
     return;
   }
@@ -240,8 +280,10 @@ function printHelp() {
     '  organize <filepath>   Queue screenshot for AI categorization',
     '  categories            List all categories',
     '  open <filepath>       Open image in Snip editor for annotation',
+    '  render --format <fmt> Render diagram from stdin (formats: mermaid)',
     '',
     'Options:',
+    '  --format <fmt>        Diagram format for render command (default: mermaid)',
     '  --pretty              Pretty-print JSON output',
     '  --help, -h            Show this help',
     '',
@@ -252,6 +294,7 @@ function printHelp() {
     '  snip list | jq \'.[].name\'',
     '  snip transcribe ~/Documents/snip/screenshots/code/api.png',
     '  snip open mockup.png',
+    '  echo "graph TD; A-->B" | snip render --format mermaid',
     ''
   ].join('\n'));
 }

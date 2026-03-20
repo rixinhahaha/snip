@@ -487,9 +487,138 @@ function requireCategory(category) {
   }
 }
 
-// ── MCP open_in_snip: pending promise for editor result ──
+// ── Diagram rendering (hidden BrowserWindow + Mermaid.js) ──
+
+const DIAGRAM_HTML = path.join(__dirname, '..', 'renderer', 'diagram.html');
+const DIAGRAM_PRELOAD = path.join(__dirname, '..', 'preload', 'diagram-preload.js');
+
+function renderDiagramToImage(code, format) {
+  return new Promise(function (resolve, reject) {
+    var diagramWin = new BrowserWindow({
+      width: 4096,
+      height: 4096,
+      show: false,
+      frame: false,
+      webPreferences: {
+        preload: DIAGRAM_PRELOAD,
+        contextIsolation: true,
+        nodeIntegration: false,
+        sandbox: false,
+        offscreen: true
+      }
+    });
+
+    // Offscreen rendering needs a frame rate and an initial paint
+    diagramWin.webContents.setFrameRate(30);
+
+    var settled = false;
+    var timeoutId = setTimeout(function () {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      reject(new Error('Diagram rendering timed out (30s)'));
+    }, 30000);
+
+    function cleanup() {
+      clearTimeout(timeoutId);
+      if (diagramWin && !diagramWin.isDestroyed()) {
+        diagramWin.destroy();
+      }
+      diagramWin = null;
+    }
+
+    function onRendered(event, result) {
+      if (settled) return;
+      if (!diagramWin || event.sender.id !== diagramWin.webContents.id) return;
+
+      if (!result.success) {
+        settled = true;
+        cleanup();
+        reject(new Error('Mermaid syntax error: ' + (result.error || 'unknown')));
+        return;
+      }
+
+      // In offscreen mode, invalidate to force a fresh paint then capture
+      diagramWin.webContents.invalidate();
+      setTimeout(function () {
+        if (settled || !diagramWin || diagramWin.isDestroyed()) return;
+
+        var captureRect = { x: 0, y: 0, width: result.width, height: result.height };
+
+        diagramWin.webContents.capturePage(captureRect).then(function (nativeImage) {
+          if (settled) return;
+          settled = true;
+          var pngDataURL = nativeImage.toDataURL();
+          var size = nativeImage.getSize();
+          cleanup();
+          resolve({
+            imageDataURL: pngDataURL,
+            width: size.width,
+            height: size.height
+          });
+        }).catch(function (err) {
+          if (settled) return;
+          settled = true;
+          cleanup();
+          reject(new Error('Capture failed: ' + err.message));
+        });
+      }, 100); // Wait for offscreen paint to complete
+    }
+
+    ipcMain.once('diagram-rendered', onRendered);
+
+    diagramWin.loadFile(DIAGRAM_HTML);
+    diagramWin.webContents.once('did-finish-load', function () {
+      diagramWin.webContents.send('render-diagram-code', { code: code, format: format });
+    });
+  });
+}
+
+// ── MCP editor helpers ──
 
 var pendingMcpResolve = null; // { resolve, reject, webContentsId, win }
+
+/**
+ * Open an image in the editor and block until the user finishes annotating.
+ * Shared by open_in_snip and render_diagram.
+ * Caller must set pendingMcpResolve = true before calling.
+ */
+function openEditorWithData(data) {
+  return new Promise(function (resolve, reject) {
+    data.extensions = extensionRegistry.getRendererManifest();
+
+    var { setPendingEditorData } = require('./ipc-handlers');
+    setPendingEditorData(data);
+
+    var win = createEditorWindow(data.cssWidth, data.cssHeight);
+    pendingMcpResolve = { resolve: resolve, reject: reject, webContentsId: win.webContents.id, win: win };
+
+    app.focus({ steal: true });
+
+    var pushData = function () {
+      if (win && !win.isDestroyed()) {
+        win.webContents.send('editor-image-data', data);
+        win.show();
+      }
+    };
+    if (win.webContents.isLoading()) {
+      win.webContents.once('did-finish-load', pushData);
+    } else {
+      pushData();
+    }
+
+    win.on('closed', function () {
+      var { setPendingEditorData } = require('./ipc-handlers');
+      setPendingEditorData(null);
+
+      if (pendingMcpResolve && typeof pendingMcpResolve === 'object' && pendingMcpResolve.reject) {
+        pendingMcpResolve.reject(new Error('Editor closed without saving'));
+        pendingMcpResolve = null;
+      }
+      prewarmEditor();
+    });
+  });
+}
 
 ipcMain.on('editor-result', function (event, dataURL) {
   if (!pendingMcpResolve || typeof pendingMcpResolve !== 'object') return;
@@ -636,51 +765,44 @@ function startSocketHandlers() {
         throw err;
       }
 
-      var data = {
+      return openEditorWithData({
         croppedDataURL: imageDataURL,
         cssWidth: imgWidth,
         cssHeight: imgHeight,
         mcpUpload: true
-      };
-
-      return new Promise(function (resolve, reject) {
-        data.extensions = extensionRegistry.getRendererManifest();
-
-        // Set pendingEditorData so segment/transcribe tools can access the image
-        var { setPendingEditorData } = require('./ipc-handlers');
-        setPendingEditorData(data);
-
-        var win = createEditorWindow(data.cssWidth, data.cssHeight);
-        pendingMcpResolve = { resolve: resolve, reject: reject, webContentsId: win.webContents.id, win: win };
-
-        // Bring app to front
-        app.focus({ steal: true });
-
-        var pushData = function () {
-          if (win && !win.isDestroyed()) {
-            win.webContents.send('editor-image-data', data);
-            win.show();
-          }
-        };
-        if (win.webContents.isLoading()) {
-          win.webContents.once('did-finish-load', pushData);
-        } else {
-          pushData();
-        }
-
-        // Reject if window is closed without sending a result
-        win.on('closed', function () {
-          // Clear the MCP editor data so it doesn't leak into the next capture
-          var { setPendingEditorData } = require('./ipc-handlers');
-          setPendingEditorData(null);
-
-          if (pendingMcpResolve && typeof pendingMcpResolve === 'object' && pendingMcpResolve.reject) {
-            pendingMcpResolve.reject(new Error('Editor closed without saving'));
-            pendingMcpResolve = null;
-          }
-          prewarmEditor();
-        });
       });
+    },
+    render_diagram: async function (params) {
+      requireCategory('upload');
+
+      if (!params.code || typeof params.code !== 'string') {
+        throw new Error('Missing "code" parameter');
+      }
+      if (params.code.length > 100 * 1024) {
+        throw new Error('Diagram code too large (max 100 KB)');
+      }
+      var format = params.format || 'mermaid';
+      if (format !== 'mermaid') {
+        throw new Error('Unsupported format: ' + format + ' (supported: mermaid)');
+      }
+
+      // Check editor is not already busy
+      if (pendingMcpResolve) throw new Error('Editor is busy with another upload');
+      pendingMcpResolve = true;
+
+      try {
+        var renderResult = await renderDiagramToImage(params.code, format);
+
+        return openEditorWithData({
+          croppedDataURL: renderResult.imageDataURL,
+          cssWidth: renderResult.width,
+          cssHeight: renderResult.height,
+          mcpUpload: true
+        });
+      } catch (err) {
+        pendingMcpResolve = null;
+        throw err;
+      }
     },
     install_extension: async function (params) {
       if (!params.name || !params.manifest) throw new Error('Provide name and manifest');
