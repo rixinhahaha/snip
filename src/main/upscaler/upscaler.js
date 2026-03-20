@@ -5,6 +5,7 @@
  */
 const path = require('path');
 const { createWorkerProcess } = require('../worker-process');
+const addonManager = require('../addon-manager');
 
 var progressCallback = null;
 
@@ -23,6 +24,9 @@ var wp = createWorkerProcess({
  * @returns {Promise<{ dataURL, width, height }>}
  */
 function upscaleImage(imageBase64, onProgress) {
+  if (!addonManager.isAddonInstalled('upscale')) {
+    return Promise.reject(new Error('Upscale add-on not installed'));
+  }
   progressCallback = onProgress || null;
   return wp.sendRequest({
     type: 'upscale',

@@ -66,6 +66,7 @@ async function main() {
 
   console.log('[Model Downloader] Done: ' + modelId);
   process.send({ type: 'done' });
+  process.exit(0);
 }
 
 main().catch(function (err) {

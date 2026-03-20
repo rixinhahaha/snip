@@ -13,7 +13,9 @@
 const path = require('path');
 const fs = require('fs');
 const https = require('https');
-const { execFileSync, fork } = require('child_process');
+const { execFile, execFileSync, fork } = require('child_process');
+const { promisify } = require('util');
+var execFileAsync = promisify(execFile);
 const { app } = require('electron');
 const { findNodeBinary } = require('./node-binary');
 
@@ -150,6 +152,7 @@ function getStatus() {
 // ── Download helpers ──
 
 var activeDownloads = new Map(); // addonName → AbortController
+var runtimeInstallPromise = null; // mutex for concurrent runtime installs
 
 var MAX_REDIRECTS = 5;
 
@@ -249,8 +252,8 @@ async function installRuntime(onProgress, signal) {
 
   // Validate tarball: check for path traversal (Zip Slip)
   console.log('[Addons] Validating tarball...');
-  var listOutput = execFileSync('tar', ['tzf', tarPath], { encoding: 'utf8', maxBuffer: 10 * 1024 * 1024 });
-  var entries = listOutput.split('\n').filter(Boolean);
+  var listResult = await execFileAsync('tar', ['tzf', tarPath], { encoding: 'utf8', maxBuffer: 10 * 1024 * 1024 });
+  var entries = listResult.stdout.split('\n').filter(Boolean);
   for (var i = 0; i < entries.length; i++) {
     if (entries[i].startsWith('/') || entries[i].includes('..')) {
       try { fs.unlinkSync(tarPath); } catch (_) {}
@@ -258,14 +261,14 @@ async function installRuntime(onProgress, signal) {
     }
   }
 
-  // Extract tarball
+  // Extract tarball (async to avoid blocking main thread)
   console.log('[Addons] Extracting runtime...');
   if (onProgress) onProgress({ phase: 'runtime-extract', percent: 0 });
 
   var runtimeDir = getRuntimeDir();
   fs.mkdirSync(runtimeDir, { recursive: true });
 
-  execFileSync('tar', ['xzf', tarPath, '-C', runtimeDir], { stdio: 'pipe' });
+  await execFileAsync('tar', ['xzf', tarPath, '-C', runtimeDir]);
 
   // Clean up tarball
   try { fs.unlinkSync(tarPath); } catch (_) {}
@@ -376,30 +379,51 @@ async function installModel(addonName, onProgress, signal) {
 async function installAddon(addonName, onProgress) {
   if (!ADDON_DEFS[addonName]) throw new Error('Unknown addon: ' + addonName);
 
+  // Guard against double-click / concurrent install of the same addon
+  if (activeDownloads.has(addonName)) {
+    throw new Error('Install already in progress for ' + addonName);
+  }
+
   var controller = new AbortController();
   activeDownloads.set(addonName, controller);
   var signal = controller.signal;
 
   try {
-    // Step 1: Runtime (if needed)
+    // Step 1: Runtime (if needed) — mutex prevents concurrent runtime downloads
     if (!isRuntimeInstalled()) {
-      await installRuntime(onProgress, signal);
+      if (!runtimeInstallPromise) {
+        runtimeInstallPromise = installRuntime(onProgress, signal).finally(function () {
+          runtimeInstallPromise = null;
+        });
+      }
+      await runtimeInstallPromise;
     }
 
     // Step 2: Model
     await installModel(addonName, onProgress, signal);
 
-    // Step 3: Update state
-    var state = readState();
-    state.runtime = true;
-    if (!state.addons) state.addons = {};
-    state.addons[addonName] = { installed: true, installedAt: new Date().toISOString() };
-    writeState(state);
+    // Step 3: Update state (atomic read-modify-write)
+    updateAddonState(addonName, true);
 
     console.log('[Addons] Installed: ' + addonName);
   } finally {
     activeDownloads.delete(addonName);
   }
+}
+
+/**
+ * Atomically update a single addon's installed state.
+ */
+function updateAddonState(addonName, installed) {
+  var state = readState();
+  state.runtime = isRuntimeInstalled();
+  if (!state.addons) state.addons = {};
+  if (installed) {
+    state.addons[addonName] = { installed: true, installedAt: new Date().toISOString() };
+  } else {
+    delete state.addons[addonName];
+  }
+  writeState(state);
 }
 
 /**
@@ -426,13 +450,10 @@ function removeAddon(addonName) {
     console.log('[Addons] Removed model: ' + def.modelId);
   }
 
-  var state = readState();
-  if (state.addons && state.addons[addonName]) {
-    delete state.addons[addonName];
-    writeState(state);
-  }
+  updateAddonState(addonName, false);
 
   // If no addons remain, optionally clean up runtime
+  var state = readState();
   var anyInstalled = Object.keys(state.addons || {}).length > 0;
   if (!anyInstalled) {
     var runtimeDir = getRuntimeDir();

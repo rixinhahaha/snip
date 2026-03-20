@@ -1662,23 +1662,17 @@
       card.className = 'addon-card';
       card.id = 'addon-card-' + name;
 
-      var header = document.createElement('div');
-      header.className = 'addon-card-header';
-
       var nameEl = document.createElement('span');
       nameEl.className = 'addon-card-name';
       nameEl.textContent = addon.displayName;
 
+      var desc = document.createElement('span');
+      desc.className = 'addon-card-desc';
+      desc.textContent = addon.description;
+
       var sizeEl = document.createElement('span');
       sizeEl.className = 'addon-card-size';
       sizeEl.textContent = addon.modelSize;
-
-      header.appendChild(nameEl);
-      header.appendChild(sizeEl);
-
-      var desc = document.createElement('div');
-      desc.className = 'addon-card-desc';
-      desc.textContent = addon.description;
 
       var actions = document.createElement('div');
       actions.className = 'addon-card-actions';
@@ -1734,9 +1728,6 @@
         }(name));
 
         actions.appendChild(badge);
-        var spacer = document.createElement('span');
-        spacer.style.flex = '1';
-        actions.appendChild(spacer);
         actions.appendChild(removeBtn);
       } else {
         // Not installed state
@@ -1749,21 +1740,19 @@
             refreshAddons();
             var result = await window.snip.installAddon(addonName);
             delete downloadingAddons[addonName];
-            if (result && !result.success) {
+            if (result && !result.success && result.error !== 'Cancelled') {
               showAddonError(addonName, result.error);
             }
             refreshAddons();
           };
         }(name));
 
-        var spacer2 = document.createElement('span');
-        spacer2.style.flex = '1';
-        actions.appendChild(spacer2);
         actions.appendChild(installBtn);
       }
 
-      card.appendChild(header);
+      card.appendChild(nameEl);
       card.appendChild(desc);
+      card.appendChild(sizeEl);
       card.appendChild(actions);
       return card;
     }

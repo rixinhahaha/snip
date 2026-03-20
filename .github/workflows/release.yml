@@ -27,8 +27,8 @@ jobs:
       - name: Rebuild native modules for target arch
         run: npx node-gyp rebuild --arch=arm64
 
-      - name: Download HuggingFace models
-        run: node scripts/download-models.js
+      - name: Build AI runtime bundle
+        run: node scripts/build-runtime-bundle.js
 
       - name: Download bundled Node.js binary
         run: node scripts/download-node.js --arch arm64
@@ -42,6 +42,11 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npx electron-builder --mac dmg zip --arm64 --publish always
+
+      - name: Upload AI runtime bundle
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "$GITHUB_REF_NAME" dist/snip-ai-runtime-darwin-arm64.tar.gz
 
       - name: Publish release with notes
         env:

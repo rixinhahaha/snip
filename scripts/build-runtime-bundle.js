@@ -69,7 +69,8 @@ async function main() {
     private: true,
     dependencies: {
       '@huggingface/transformers': '^3.3.0',
-      'ffmpeg-static': '^5.3.0'
+      'ffmpeg-static': '^5.3.0',
+      'sharp': '^0.33.0'
     }
   };
 

@@ -446,14 +446,23 @@ body {
 }
 
 .settings-section {
-  margin-bottom: 32px;
+  margin-bottom: 28px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+
+.settings-section:first-child {
+  border-top: none;
+  padding-top: 0;
 }
 
 .settings-section h3 {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--text-link-hover);
-  margin-bottom: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-bright);
+  margin-bottom: 10px;
 }
 
 .settings-section p {
@@ -1458,9 +1467,9 @@ input:focus { border-color: var(--accent); }
 
 .addon-card {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 14px 16px;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
   border-bottom: 1px solid var(--border);
   transition: background 0.1s;
 }
@@ -1471,32 +1480,39 @@ input:focus { border-color: var(--accent); }
 .addon-card-header {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+  min-width: 0;
 }
 
 .addon-card-name {
   font-size: 13px;
   font-weight: 600;
   color: var(--text-bright);
+  white-space: nowrap;
 }
 
 .addon-card-size {
   font-size: 11px;
   color: var(--text-muted);
-  margin-left: auto;
+  white-space: nowrap;
 }
 
 .addon-card-desc {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-secondary);
-  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
 }
 
 .addon-card-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-top: 4px;
+  gap: 8px;
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 .addon-install-btn, .addon-remove-btn {
@@ -1584,14 +1600,10 @@ input:focus { border-color: var(--accent); }
 /* Settings subsections (AI Features + AI Workflow Integration) */
 .ai-subsection {
   margin-top: 20px;
-  padding-top: 16px;
-  border-top: 1px solid var(--border);
 }
 
 .ai-subsection:first-of-type {
   margin-top: 12px;
-  padding-top: 0;
-  border-top: none;
 }
 
 .ai-subsection h4 {
