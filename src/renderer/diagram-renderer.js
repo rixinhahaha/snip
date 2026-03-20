@@ -6,7 +6,7 @@
     startOnLoad: false,
     theme: 'default',
     securityLevel: 'strict',
-    flowchart: { htmlLabels: true }
+    flowchart: { htmlLabels: false }
   });
 
   window.snip.onDiagramCode(async function (data) {
@@ -20,11 +20,22 @@
 
       var svg = container.querySelector('svg');
       var rect = svg.getBoundingClientRect();
+      var naturalW = Math.ceil(rect.width);
+      var naturalH = Math.ceil(rect.height);
 
+      // Scale SVG to 2x for crisp text — SVG is vector so browser re-rasterizes
+      svg.style.width = (naturalW * 2) + 'px';
+      svg.style.height = (naturalH * 2) + 'px';
+      svg.style.maxWidth = 'none';
+
+      // Wait for re-layout at 2x size
+      await new Promise(function (r) { requestAnimationFrame(r); });
+
+      // Report 2x dimensions + container padding (24px × 2 sides = 48px)
       window.snip.diagramRendered({
         success: true,
-        width: Math.ceil(rect.width) + 48,  // +48 = 24px padding × 2 sides
-        height: Math.ceil(rect.height) + 48
+        width: naturalW * 2 + 48,
+        height: naturalH * 2 + 48
       });
     } catch (err) {
       window.snip.diagramRendered({

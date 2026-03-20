@@ -433,6 +433,7 @@ app.on('will-quit', (e) => {
     flushConfig();
     extensionRegistry.killWorkers();
     stopSocketServer();
+    if (cachedDiagramWin && !cachedDiagramWin.isDestroyed()) cachedDiagramWin.destroy();
     // Kill Ollama synchronously (SIGTERM fires immediately even though stopOllama is async)
     try { stopOllama(); } catch (_) {}
     // Safety net: if quitAndInstall fails, force exit after 5s
@@ -446,6 +447,7 @@ app.on('will-quit', (e) => {
   flushConfig();
   extensionRegistry.killWorkers();
   stopSocketServer();
+  if (cachedDiagramWin && !cachedDiagramWin.isDestroyed()) cachedDiagramWin.destroy();
   // Safety timeout: force exit after 5s no matter what
   var forceExit = setTimeout(() => app.exit(0), 5000);
   stopOllama().finally(() => { clearTimeout(forceExit); app.exit(0); });
@@ -487,31 +489,42 @@ function requireCategory(category) {
   }
 }
 
-// ── Diagram rendering (hidden BrowserWindow + Mermaid.js) ──
+// ── Diagram rendering (cached offscreen BrowserWindow + Mermaid.js) ──
 
 const DIAGRAM_HTML = path.join(__dirname, '..', 'renderer', 'diagram.html');
 const DIAGRAM_PRELOAD = path.join(__dirname, '..', 'preload', 'diagram-preload.js');
 
+var cachedDiagramWin = null;
+
+function getDiagramWindow() {
+  if (cachedDiagramWin && !cachedDiagramWin.isDestroyed()) return cachedDiagramWin;
+
+  cachedDiagramWin = new BrowserWindow({
+    width: 800,
+    height: 600,
+    show: false,
+    frame: false,
+    webPreferences: {
+      preload: DIAGRAM_PRELOAD,
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+      offscreen: true
+    }
+  });
+
+  cachedDiagramWin.webContents.setFrameRate(1);
+  cachedDiagramWin.loadFile(DIAGRAM_HTML);
+  cachedDiagramWin.on('closed', function () { cachedDiagramWin = null; });
+
+  return cachedDiagramWin;
+}
+
 function renderDiagramToImage(code, format) {
   return new Promise(function (resolve, reject) {
-    var diagramWin = new BrowserWindow({
-      width: 4096,
-      height: 4096,
-      show: false,
-      frame: false,
-      webPreferences: {
-        preload: DIAGRAM_PRELOAD,
-        contextIsolation: true,
-        nodeIntegration: false,
-        sandbox: false,
-        offscreen: true
-      }
-    });
-
-    // Offscreen rendering needs a frame rate and an initial paint
-    diagramWin.webContents.setFrameRate(30);
-
+    var diagramWin = getDiagramWindow();
     var settled = false;
+
     var timeoutId = setTimeout(function () {
       if (settled) return;
       settled = true;
@@ -521,15 +534,12 @@ function renderDiagramToImage(code, format) {
 
     function cleanup() {
       clearTimeout(timeoutId);
-      if (diagramWin && !diagramWin.isDestroyed()) {
-        diagramWin.destroy();
-      }
-      diagramWin = null;
+      ipcMain.removeListener('diagram-rendered', onRendered);
     }
 
     function onRendered(event, result) {
       if (settled) return;
-      if (!diagramWin || event.sender.id !== diagramWin.webContents.id) return;
+      if (!diagramWin || diagramWin.isDestroyed() || event.sender.id !== diagramWin.webContents.id) return;
 
       if (!result.success) {
         settled = true;
@@ -538,9 +548,11 @@ function renderDiagramToImage(code, format) {
         return;
       }
 
-      // In offscreen mode, invalidate to force a fresh paint then capture
+      // Resize window to diagram dimensions, then capture on next paint
+      diagramWin.setContentSize(result.width, result.height);
       diagramWin.webContents.invalidate();
-      setTimeout(function () {
+
+      diagramWin.webContents.once('paint', function () {
         if (settled || !diagramWin || diagramWin.isDestroyed()) return;
 
         var captureRect = { x: 0, y: 0, width: result.width, height: result.height };
@@ -548,11 +560,21 @@ function renderDiagramToImage(code, format) {
         diagramWin.webContents.capturePage(captureRect).then(function (nativeImage) {
           if (settled) return;
           settled = true;
-          var pngDataURL = nativeImage.toDataURL();
-          var size = nativeImage.getSize();
           cleanup();
+
+          // Write PNG to temp file instead of large base64 data URL
+          var fs = require('fs');
+          var store = require('./store');
+          var tmpDir = path.join(store.getScreenshotsDir(), '.tmp');
+          fs.mkdirSync(tmpDir, { recursive: true });
+          var tmpPath = path.join(tmpDir, 'diagram-' + Date.now() + '.png');
+          fs.writeFileSync(tmpPath, nativeImage.toPNG());
+
+          var size = nativeImage.getSize();
+          // Read back as data URL for the editor (needed by Fabric.js canvas)
+          var buf = fs.readFileSync(tmpPath);
           resolve({
-            imageDataURL: pngDataURL,
+            imageDataURL: 'data:image/png;base64,' + buf.toString('base64'),
             width: size.width,
             height: size.height
           });
@@ -562,15 +584,20 @@ function renderDiagramToImage(code, format) {
           cleanup();
           reject(new Error('Capture failed: ' + err.message));
         });
-      }, 100); // Wait for offscreen paint to complete
+      });
     }
 
-    ipcMain.once('diagram-rendered', onRendered);
+    ipcMain.on('diagram-rendered', onRendered);
 
-    diagramWin.loadFile(DIAGRAM_HTML);
-    diagramWin.webContents.once('did-finish-load', function () {
+    function sendCode() {
       diagramWin.webContents.send('render-diagram-code', { code: code, format: format });
-    });
+    }
+
+    if (diagramWin.webContents.isLoading()) {
+      diagramWin.webContents.once('did-finish-load', sendCode);
+    } else {
+      sendCode();
+    }
   });
 }
 

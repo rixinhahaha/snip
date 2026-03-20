@@ -272,7 +272,7 @@ async function handleToolCall(id, params) {
       var cliArgs = mapToolToCli(toolName, args);
       if (!cliArgs) {
         // Fallback to direct socket for tools that can't go through CLI (e.g., open_in_snip with imageDataURL)
-        var socketResult = await callSocket(toolName === 'open_in_snip' ? 'open_in_snip' : toolName, args);
+        var socketResult = await callSocket(toolName, args);
         content = [{ type: 'text', text: JSON.stringify(socketResult, null, 2) }];
         sendResult(id, { content: content });
         return;
