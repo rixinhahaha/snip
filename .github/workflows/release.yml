@@ -53,10 +53,15 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           NOTES=$(gh api repos/${{ github.repository }}/releases/generate-notes -f tag_name="$GITHUB_REF_NAME" --jq '.body')
-          gh release edit "$GITHUB_REF_NAME" --notes "$NOTES" --draft=false
+          PRERELEASE_FLAG=""
+          if echo "$GITHUB_REF_NAME" | grep -q "beta\|alpha\|rc"; then
+            PRERELEASE_FLAG="--prerelease"
+          fi
+          gh release edit "$GITHUB_REF_NAME" --notes "$NOTES" --draft=false $PRERELEASE_FLAG
 
   update-cask:
     needs: build
+    if: ${{ !contains(github.ref_name, 'beta') && !contains(github.ref_name, 'alpha') && !contains(github.ref_name, 'rc') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
