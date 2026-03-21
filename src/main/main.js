@@ -1,4 +1,10 @@
 const { app, BrowserWindow, screen, ipcMain } = require('electron');
+
+// Enable PipeWire screen capture on Linux (fixes repeated desktopCapturer crashes)
+if (process.platform === 'linux') {
+  app.commandLine.appendSwitch('enable-features', 'PipeWireV4');
+}
+
 const path = require('path');
 const platform = require('./platform');
 const { registerShortcuts, unregisterShortcuts, reregisterShortcuts } = require('./shortcuts');
