@@ -383,7 +383,7 @@ function extractAndEncode(mp4Buffer, fps, loops, useChromaKey, onProgress) {
     try {
       var addonManager = require('../addon-manager');
       var addonNodeModules = addonManager.getRuntimeNodeModules();
-      workerEnv.NODE_PATH = addonNodeModules + (workerEnv.NODE_PATH ? ':' + workerEnv.NODE_PATH : '');
+      workerEnv.NODE_PATH = addonNodeModules + (workerEnv.NODE_PATH ? require('path').delimiter + workerEnv.NODE_PATH : '');
     } catch (_) {}
 
     var workerProc = child_process.fork(workerScript, [], {

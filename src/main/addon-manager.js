@@ -47,8 +47,8 @@ const ADDON_DEFS = {
   }
 };
 
-// GitHub release asset URL for the shared AI runtime
-var RUNTIME_ASSET_NAME = 'snip-ai-runtime-darwin-arm64.tar.gz';
+// GitHub release asset URL for the shared AI runtime (platform-specific)
+var RUNTIME_ASSET_NAME = 'snip-ai-runtime-' + process.platform + '-' + process.arch + '.tar.gz';
 
 function getRuntimeDownloadUrl() {
   var owner = 'rixinhahaha';
@@ -496,7 +496,7 @@ function migrateFromBundled() {
   try {
     // Copy models (can't move from read-only Resources/)
     fs.mkdirSync(newModelsDir, { recursive: true });
-    execFileSync('cp', ['-R', oldModelsDir + '/.', newModelsDir + '/'], { stdio: 'pipe' });
+    fs.cpSync(oldModelsDir, newModelsDir, { recursive: true });
 
     // Mark addons as installed if their models exist
     var state = readState();

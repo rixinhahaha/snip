@@ -23,6 +23,11 @@ mac:
   extendInfo:
     LSUIElement: true
     NSScreenCaptureUsageDescription: "Snip needs screen recording permission to capture screenshots."
+  asarUnpack:
+    - "node_modules/electron-liquid-glass/**"
+  extraResources:
+    - from: "build/Release/window_utils.node"
+      to: "native/window_utils.node"
 
 artifactName: "Snip-${version}-${arch}.${ext}"
 
@@ -61,13 +66,23 @@ asarUnpack:
   - "node_modules/gifenc/**"
   - "node_modules/upng-js/**"
   - "node_modules/pako/**"
-  - "node_modules/electron-liquid-glass/**"
 
 extraResources:
-  - from: "build/Release/window_utils.node"
-    to: "native/window_utils.node"
   - from: "src/cli/snip.js"
     to: "cli/snip.js"
+
+linux:
+  target:
+    - target: AppImage
+      arch:
+        - x64
+        - arm64
+    - target: deb
+      arch:
+        - x64
+        - arm64
+  category: Utility
+  icon: assets/icon.png
 
 publish:
   provider: github

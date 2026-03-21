@@ -1,7 +1,7 @@
 const net = require('net');
 const path = require('path');
 const fs = require('fs');
-const { app } = require('electron');
+const platform = require('./platform');
 
 const MAX_BUFFER_SIZE = 16 * 1024 * 1024; // 16 MB per connection
 
@@ -13,7 +13,10 @@ let socketPath = null;
  * @param {Object} handlers - Map of action names to async handler functions.
  */
 function startSocketServer(handlers) {
-  socketPath = path.join(app.getPath('userData'), 'snip.sock');
+  socketPath = platform.getSocketPath();
+
+  // Ensure socket directory exists (needed on Linux where ~/.config/snip/ may not exist)
+  try { fs.mkdirSync(path.dirname(socketPath), { recursive: true }); } catch {}
 
   // Remove stale socket file
   try { fs.unlinkSync(socketPath); } catch {}

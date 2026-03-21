@@ -1,6 +1,10 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('snip', {
+  // Platform info
+  platform: process.platform,
+  homedir: require('os').homedir(),
+
   // Screenshot overlay
   onScreenshotCaptured: (callback) => {
     ipcRenderer.on('screenshot-captured', (event, data) => callback(data));

@@ -2,7 +2,15 @@
  * Transcription module — uses macOS Vision framework (VNRecognizeTextRequest)
  * with Unicode script-based language detection for fast native OCR.
  * Compiles a Swift helper on first use, then runs it as a child process.
+ *
+ * Only available on macOS. Other platforms get a stub that returns an error.
  */
+var platform = require('../platform');
+if (!platform.canTranscribe()) {
+  module.exports = { transcribe: async function () { return { success: false, error: 'OCR is not available on this platform' }; } };
+  return;
+}
+
 const child_process = require('child_process');
 const path = require('path');
 const fs = require('fs');

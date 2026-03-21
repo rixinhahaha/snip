@@ -30,7 +30,7 @@ function buildChildEnv() {
   // Set NODE_PATH so worker can find transformers.js from addon runtime
   var addonNodeModules = addonManager.getRuntimeNodeModules();
   if (childEnv.NODE_PATH) {
-    childEnv.NODE_PATH = addonNodeModules + ':' + childEnv.NODE_PATH;
+    childEnv.NODE_PATH = addonNodeModules + require('path').delimiter + childEnv.NODE_PATH;
   } else {
     childEnv.NODE_PATH = addonNodeModules;
   }

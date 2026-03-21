@@ -8,11 +8,12 @@
   let currentToolHandler = null;
   const TOOLS = Toolbar.TOOLS;
 
-  // Apply theme
+  // Apply theme and platform
   (async function() {
     var theme = await window.snip.getTheme();
     document.documentElement.dataset.theme = theme;
   })();
+  document.documentElement.dataset.platform = window.snip.platform;
   window.snip.onThemeChanged(function(theme) {
     document.documentElement.dataset.theme = theme;
   });

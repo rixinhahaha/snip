@@ -55,13 +55,15 @@ body {
   justify-content: center;
   gap: 4px;
   padding: 6px 8px;
-  padding-left: 76px; /* space for macOS traffic lights */
   -webkit-app-region: drag;
   background: var(--bg-toolbar);
   backdrop-filter: blur(var(--glass-blur));
   -webkit-backdrop-filter: blur(var(--glass-blur));
   border-bottom: 1px solid var(--glass-specular);
   box-shadow: var(--shadow-toolbar);
+}
+[data-platform="darwin"] #toolbar {
+  padding-left: 76px; /* space for macOS traffic lights */
 }
 
 #toolbar-tools {

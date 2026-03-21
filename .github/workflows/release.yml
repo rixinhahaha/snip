@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 jobs:
-  build:
+  build-macos:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -28,10 +28,10 @@ jobs:
         run: npx node-gyp rebuild --arch=arm64
 
       - name: Build AI runtime bundle
-        run: node scripts/build-runtime-bundle.js
+        run: node scripts/build-runtime-bundle.js --platform darwin --arch arm64
 
       - name: Download bundled Node.js binary
-        run: node scripts/download-node.js --arch arm64
+        run: node scripts/download-node.js --platform darwin --arch arm64
 
       - name: Build, sign, notarize & publish
         env:
@@ -46,7 +46,7 @@ jobs:
       - name: Upload AI runtime bundle
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release upload "$GITHUB_REF_NAME" dist/snip-ai-runtime-darwin-arm64.tar.gz
+        run: gh release upload "$GITHUB_REF_NAME" dist/snip-ai-runtime-darwin-arm64.tar.gz --clobber
 
       - name: Publish release with notes
         env:
@@ -59,8 +59,37 @@ jobs:
           fi
           gh release edit "$GITHUB_REF_NAME" --notes "$NOTES" --draft=false $PRERELEASE_FLAG
 
+  build-linux:
+    needs: build-macos
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci --ignore-scripts --force
+
+      - name: Build AI runtime bundle
+        run: node scripts/build-runtime-bundle.js --platform linux --arch x64
+
+      - name: Download bundled Node.js binary
+        run: node scripts/download-node.js --platform linux --arch x64
+
+      - name: Build & publish
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx electron-builder --linux AppImage deb --x64 --publish always
+
+      - name: Upload AI runtime bundle
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "$GITHUB_REF_NAME" dist/snip-ai-runtime-linux-x64.tar.gz --clobber
+
   update-cask:
-    needs: build
+    needs: build-macos
     if: ${{ !contains(github.ref_name, 'beta') && !contains(github.ref_name, 'alpha') && !contains(github.ref_name, 'rc') }}
     runs-on: ubuntu-latest
     steps:

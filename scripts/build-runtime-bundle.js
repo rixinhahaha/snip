@@ -22,7 +22,17 @@ var { execSync, execFileSync } = require('child_process');
 
 var PROJECT_DIR = path.join(__dirname, '..');
 var OUTPUT_DIR = path.join(PROJECT_DIR, 'dist');
-var OUTPUT_NAME = 'snip-ai-runtime-darwin-arm64.tar.gz';
+
+// Parse --platform and --arch flags (default to current system)
+var BUILD_PLATFORM = process.platform;
+var BUILD_ARCH = process.arch;
+var _args = process.argv.slice(2);
+for (var _ai = 0; _ai < _args.length; _ai++) {
+  if (_args[_ai] === '--platform' && _args[_ai + 1]) { BUILD_PLATFORM = _args[++_ai]; }
+  else if (_args[_ai] === '--arch' && _args[_ai + 1]) { BUILD_ARCH = _args[++_ai]; }
+}
+
+var OUTPUT_NAME = 'snip-ai-runtime-' + BUILD_PLATFORM + '-' + BUILD_ARCH + '.tar.gz';
 
 function removeDir(dir) {
   if (fs.existsSync(dir)) {
@@ -81,7 +91,7 @@ async function main() {
   execSync('npm install --production', {
     cwd: tmpDir,
     stdio: 'inherit',
-    env: { ...process.env, npm_config_platform: 'darwin', npm_config_arch: 'arm64' }
+    env: { ...process.env, npm_config_platform: BUILD_PLATFORM, npm_config_arch: BUILD_ARCH }
   });
 
   var nmDir = path.join(tmpDir, 'node_modules');
@@ -90,24 +100,24 @@ async function main() {
   // Strip unnecessary files
   console.log('==> Stripping unnecessary files...');
 
-  // Remove non-darwin ONNX binaries
+  // Remove ONNX binaries for other platforms
   var onnxBinDir = path.join(nmDir, 'onnxruntime-node', 'bin', 'napi-v3');
   if (fs.existsSync(onnxBinDir)) {
     var platforms = fs.readdirSync(onnxBinDir);
     for (var i = 0; i < platforms.length; i++) {
-      if (platforms[i] !== 'darwin') {
+      if (platforms[i] !== BUILD_PLATFORM) {
         removeDir(path.join(onnxBinDir, platforms[i]));
         console.log('  Removed onnxruntime ' + platforms[i]);
       }
     }
-    // Remove non-arm64 darwin binaries
-    var darwinDir = path.join(onnxBinDir, 'darwin');
-    if (fs.existsSync(darwinDir)) {
-      var arches = fs.readdirSync(darwinDir);
+    // Remove other arch binaries for target platform
+    var targetPlatDir = path.join(onnxBinDir, BUILD_PLATFORM);
+    if (fs.existsSync(targetPlatDir)) {
+      var arches = fs.readdirSync(targetPlatDir);
       for (var j = 0; j < arches.length; j++) {
-        if (arches[j] !== 'arm64') {
-          removeDir(path.join(darwinDir, arches[j]));
-          console.log('  Removed onnxruntime darwin/' + arches[j]);
+        if (arches[j] !== BUILD_ARCH) {
+          removeDir(path.join(targetPlatDir, arches[j]));
+          console.log('  Removed onnxruntime ' + BUILD_PLATFORM + '/' + arches[j]);
         }
       }
     }
@@ -117,13 +127,14 @@ async function main() {
   removeDir(path.join(nmDir, 'onnxruntime-web'));
   console.log('  Removed onnxruntime-web');
 
-  // Remove wrong-platform sharp binaries (keep only darwin-arm64)
+  // Remove wrong-platform sharp binaries (keep only target platform+arch)
+  var keepSuffix = BUILD_PLATFORM + '-' + BUILD_ARCH;
   var imgDir = path.join(nmDir, '@img');
   if (fs.existsSync(imgDir)) {
     var imgPackages = fs.readdirSync(imgDir);
     for (var si = 0; si < imgPackages.length; si++) {
       var pkg2 = imgPackages[si];
-      if ((pkg2.startsWith('sharp-') || pkg2.startsWith('sharp-libvips-')) && pkg2.indexOf('darwin-arm64') === -1) {
+      if ((pkg2.startsWith('sharp-') || pkg2.startsWith('sharp-libvips-')) && pkg2.indexOf(keepSuffix) === -1) {
         removeDir(path.join(imgDir, pkg2));
         console.log('  Removed @img/' + pkg2);
       }

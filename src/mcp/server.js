@@ -13,6 +13,7 @@
 
 var path = require('path');
 var { execFile } = require('child_process');
+var platform = require('../main/platform');
 
 // Resolve CLI path and Node binary
 var CLI_PATH;
@@ -24,14 +25,15 @@ var isPackaged = false;
 try { isPackaged = require('fs').existsSync(path.join(__dirname, '..', '..', 'app.asar')); } catch {}
 
 var { findNodeBinary } = require('../main/node-binary');
+var nodeBin = platform.getNodeBinaryName();
 
 if (isPackaged || __dirname.includes('app.asar')) {
   var resourcesPath = path.resolve(__dirname, '..', '..', '..');
   CLI_PATH = path.join(resourcesPath, 'cli', 'snip.js');
-  NODE_PATH = path.join(resourcesPath, 'node', 'node');
+  NODE_PATH = path.join(resourcesPath, 'node', nodeBin);
   // Fallback to system node if bundled node not found
   if (!require('fs').existsSync(NODE_PATH)) {
-    NODE_PATH = findNodeBinary() || '/usr/local/bin/node';
+    NODE_PATH = findNodeBinary() || path.join(platform.getNodeSearchPaths()[0] || '/usr/local/bin', nodeBin);
   }
 } else {
   CLI_PATH = path.join(__dirname, '..', 'cli', 'snip.js');
@@ -171,8 +173,7 @@ function execCli(cliArgs, timeout) {
 
 // For install_extension, we still need direct socket (it needs to pass complex JSON)
 var net = require('net');
-var os = require('os');
-var SOCKET_PATH = path.join(os.homedir(), 'Library', 'Application Support', 'snip', 'snip.sock');
+var SOCKET_PATH = platform.getSocketPath();
 
 function callSocket(action, params) {
   return new Promise(function (resolve, reject) {

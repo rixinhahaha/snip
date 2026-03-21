@@ -1,11 +1,12 @@
 (function() {
   'use strict';
 
-  // Apply theme
+  // Apply theme and platform
   (async function() {
     var theme = await window.snip.getTheme();
     document.documentElement.dataset.theme = theme;
   })();
+  document.documentElement.dataset.platform = window.snip.platform;
   window.snip.onThemeChanged(function(theme) {
     document.documentElement.dataset.theme = theme;
   });
@@ -14,8 +15,10 @@
 
   var currentSubdir = ''; // relative path within screenshots dir
 
-  // Shorten absolute macOS paths for display: /Users/<name>/... → ~/...
+  // Shorten absolute paths for display: /Users/<name>/... or /home/<name>/... → ~/...
+  var _homedir = window.snip.homedir || '';
   function shortenPath(p) {
+    if (_homedir && p.startsWith(_homedir)) return '~' + p.slice(_homedir.length);
     var parts = p.split('/');
     if (parts[1] === 'Users' && parts.length > 3) return '~/' + parts.slice(3).join('/');
     return p;

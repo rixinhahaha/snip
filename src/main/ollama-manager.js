@@ -15,6 +15,7 @@ const { Notification } = require('electron');
 const { Ollama } = require('ollama');
 const https = require('https');
 
+const platform = require('./platform');
 const { getOllamaModel, getOllamaUrl } = require('./store');
 
 let client = null;
@@ -36,14 +37,10 @@ let installInProgress = false;
 let installProgress = { status: 'idle', percent: 0 };
 let onInstallComplete = null;
 
-// Known CLI binary paths for macOS (packaged apps don't inherit shell PATH)
-var KNOWN_CLI_PATHS = [
-  '/usr/local/bin/ollama',
-  '/opt/homebrew/bin/ollama'
-];
-
-var OLLAMA_APP_PATH = '/Applications/Ollama.app';
-var OLLAMA_APP_BINARY = '/Applications/Ollama.app/Contents/Resources/ollama';
+var _ollamaConfig = platform.getOllamaConfig();
+var KNOWN_CLI_PATHS = _ollamaConfig.knownPaths;
+var OLLAMA_APP_PATH = _ollamaConfig.appPath;
+var OLLAMA_APP_BINARY = _ollamaConfig.appBinary;
 var DEFAULT_HOST = 'http://127.0.0.1:11434';
 
 /**
@@ -74,8 +71,8 @@ function findOllamaBinary() {
       return KNOWN_CLI_PATHS[i];
     }
   }
-  // Check the binary inside Ollama.app
-  if (fs.existsSync(OLLAMA_APP_BINARY)) {
+  // Check the binary inside Ollama.app (macOS only; null on other platforms)
+  if (OLLAMA_APP_BINARY && fs.existsSync(OLLAMA_APP_BINARY)) {
     return OLLAMA_APP_BINARY;
   }
   return null;
@@ -176,8 +173,8 @@ async function emitStatus() {
  * Used for install detection (UI status) — spawning uses findOllamaBinary().
  */
 function findOllamaInstall() {
-  // Check for Ollama.app first (most common macOS install)
-  if (fs.existsSync(OLLAMA_APP_PATH)) {
+  // Check for Ollama.app (macOS only; null on other platforms)
+  if (OLLAMA_APP_PATH && fs.existsSync(OLLAMA_APP_PATH)) {
     return { type: 'app', path: OLLAMA_APP_PATH };
   }
 
@@ -205,7 +202,7 @@ function findOllamaInstall() {
 async function startOllama() {
   // Kill any previously managed process first
   if (ollamaProcess) {
-    try { ollamaProcess.kill('SIGTERM'); } catch (_) {}
+    platform.killProcess(ollamaProcess).catch(function () {});
     ollamaProcess = null;
   }
 
@@ -280,7 +277,7 @@ async function startOllama() {
   } catch (err) {
     startupError = 'Server failed to start: ' + err.message;
     console.error('[Ollama]', startupError);
-    try { ollamaProcess.kill('SIGTERM'); } catch (_) {}
+    platform.killProcess(ollamaProcess).catch(function () {});
     ollamaProcess = null;
     emitStatus();
     return;
@@ -301,8 +298,7 @@ async function startOllama() {
 }
 
 /**
- * Download and install Ollama.
- * Downloads Ollama-darwin.zip, extracts Ollama.app, opens the DMG-like experience.
+ * Download and install Ollama via the platform-specific procedure.
  */
 async function installOllama() {
   if (installInProgress) {
@@ -310,74 +306,22 @@ async function installOllama() {
   }
 
   installInProgress = true;
-  // Single continuous progress: download 0-85%, extract 85-90%, install 90-95%, launch 95-100%
   installProgress = { status: 'downloading', percent: 0 };
   emitInstallProgress(installProgress);
 
-  var { app } = require('electron');
-  var tmpDir = app.getPath('temp');
-  var zipPath = path.join(tmpDir, 'Ollama-darwin.zip');
-  var extractDir = path.join(tmpDir, 'Ollama-extract');
-
   try {
-    // Download the zip (0% – 85%)
-    await downloadFile('https://ollama.com/download/Ollama-darwin.zip', zipPath, function (percent) {
-      var scaled = Math.round(percent * 0.85);
-      installProgress = { status: 'downloading', percent: scaled };
-      emitInstallProgress(installProgress);
+    await platform.installOllama({
+      onProgress: function (progress) {
+        installProgress = progress;
+        emitInstallProgress(installProgress);
+      },
+      onNotification: showInstallNotification,
+      downloadFile: downloadFile,
+      onInstalled: function () {
+        ollamaInstalled = true;
+      }
     });
 
-    showInstallNotification('Ollama downloaded — unpacking...');
-    installProgress = { status: 'extracting', percent: 87 };
-    emitInstallProgress(installProgress);
-
-    // Clean extract dir if it exists
-    if (fs.existsSync(extractDir)) {
-      fs.rmSync(extractDir, { recursive: true, force: true });
-    }
-    fs.mkdirSync(extractDir, { recursive: true });
-
-    // Extract the zip
-    await new Promise(function (resolve, reject) {
-      var child = spawn('unzip', ['-o', '-q', zipPath, '-d', extractDir], { stdio: 'ignore' });
-      child.on('error', reject);
-      child.on('close', function (code) {
-        if (code === 0) resolve();
-        else reject(new Error('unzip exited with code ' + code));
-      });
-    });
-
-    // Move Ollama.app to /Applications/
-    var extractedApp = path.join(extractDir, 'Ollama.app');
-    if (!fs.existsSync(extractedApp)) {
-      throw new Error('Ollama.app not found in downloaded archive');
-    }
-
-    showInstallNotification('Ollama unpacked — installing...');
-    installProgress = { status: 'installing', percent: 92 };
-    emitInstallProgress(installProgress);
-
-    // Remove existing Ollama.app if present, then move
-    if (fs.existsSync(OLLAMA_APP_PATH)) {
-      fs.rmSync(OLLAMA_APP_PATH, { recursive: true, force: true });
-    }
-
-    await new Promise(function (resolve, reject) {
-      var child = spawn('mv', [extractedApp, '/Applications/'], { stdio: 'ignore' });
-      child.on('error', reject);
-      child.on('close', function (code) {
-        if (code === 0) resolve();
-        else reject(new Error('Failed to move Ollama.app to /Applications/ (code ' + code + ')'));
-      });
-    });
-
-    // Clean up temp files
-    try { fs.unlinkSync(zipPath); } catch (_) {}
-    try { fs.rmSync(extractDir, { recursive: true, force: true }); } catch (_) {}
-
-    // Launch our own managed server (not the GUI app)
-    ollamaInstalled = true;
-    showInstallNotification('Ollama installed — launching...');
     installProgress = { status: 'launching', percent: 96 };
     emitInstallProgress(installProgress);
 
@@ -563,37 +507,11 @@ async function checkModel() {
 
 /**
  * Stop the managed Ollama process and reset all state.
- * Sends SIGTERM first, then SIGKILL after a timeout.
  */
 async function stopOllama() {
   if (ollamaProcess) {
     console.log('[Ollama] Stopping managed process (pid=%d)...', ollamaProcess.pid);
-    try {
-      ollamaProcess.kill('SIGTERM');
-    } catch (_) {}
-
-    // Give it 3s to exit gracefully, then force kill
-    await new Promise(function (resolve) {
-      var timeout = setTimeout(function () {
-        if (ollamaProcess) {
-          try {
-            ollamaProcess.kill('SIGKILL');
-            console.log('[Ollama] Sent SIGKILL after timeout');
-          } catch (_) {}
-        }
-        resolve();
-      }, 3000);
-
-      if (ollamaProcess) {
-        ollamaProcess.on('exit', function () {
-          clearTimeout(timeout);
-          resolve();
-        });
-      } else {
-        clearTimeout(timeout);
-        resolve();
-      }
-    });
+    await platform.killProcess(ollamaProcess);
     ollamaProcess = null;
   }
 

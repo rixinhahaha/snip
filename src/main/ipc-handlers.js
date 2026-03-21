@@ -1,6 +1,7 @@
 const { ipcMain, clipboard, nativeImage, app, Notification, shell, BrowserWindow, screen, systemPreferences, desktopCapturer, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const platform = require('./platform');
 const {
   getScreenshotsDir, getDefaultScreenshotsDir, setScreenshotsDir,
   getOllamaModel, setOllamaModel, getOllamaUrl, setOllamaUrl,
@@ -249,16 +250,22 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
     ];
   });
 
-  // Screen recording permission
+  // Screen recording permission (macOS-specific; other platforms return 'granted')
   ipcMain.handle('get-screen-permission', async () => {
-    return systemPreferences.getMediaAccessStatus('screen');
+    if (systemPreferences.getMediaAccessStatus) {
+      return systemPreferences.getMediaAccessStatus('screen');
+    }
+    return 'granted';
   });
 
   ipcMain.handle('request-screen-permission', async () => {
     try {
       await desktopCapturer.getSources({ types: ['screen'], thumbnailSize: { width: 1, height: 1 } });
     } catch (e) { console.log('[Snip] Screen permission probe error (expected):', e.message); }
-    return systemPreferences.getMediaAccessStatus('screen');
+    if (systemPreferences.getMediaAccessStatus) {
+      return systemPreferences.getMediaAccessStatus('screen');
+    }
+    return 'granted';
   });
 
   ipcMain.handle('restart-app', () => {
@@ -355,7 +362,7 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
 
     if (app.isPackaged) {
       // Packaged: use bundled Node + unpacked MCP server
-      nodePath = path.join(process.resourcesPath, 'node', 'node');
+      nodePath = path.join(process.resourcesPath, 'node', platform.getNodeBinaryName());
       serverPath = path.join(process.resourcesPath, 'app.asar.unpacked', 'src', 'mcp', 'server.js');
     } else {
       // Dev: use system node + source file
@@ -378,35 +385,30 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
   ipcMain.handle('install-cli', async () => {
     var { findNodeBinary } = require('./node-binary');
     var nodePath, cliPath;
+    var nodeBin = platform.getNodeBinaryName();
     if (app.isPackaged) {
-      nodePath = findNodeBinary() || '/usr/local/bin/node';
+      nodePath = findNodeBinary() || path.join(platform.getNodeSearchPaths()[0] || '/usr/local/bin', nodeBin);
       cliPath = path.join(process.resourcesPath, 'cli', 'snip.js');
     } else {
-      nodePath = findNodeBinary() || '/usr/local/bin/node';
+      nodePath = findNodeBinary() || path.join(platform.getNodeSearchPaths()[0] || '/usr/local/bin', nodeBin);
       cliPath = path.join(__dirname, '..', 'cli', 'snip.js');
     }
 
-    // Sanitize paths for shell safety (escape double quotes)
-    var safeNode = nodePath.replace(/"/g, '\\"');
-    var safeCli = cliPath.replace(/"/g, '\\"');
-    var wrapper = '#!/bin/sh\n# Snip CLI — installed by Snip.app\nexec "' + safeNode + '" "' + safeCli + '" "$@"\n';
-    var home = require('os').homedir();
-    var targets = [
-      '/usr/local/bin/snip',
-      path.join(home, '.local', 'bin', 'snip'),
-      path.join(home, 'bin', 'snip')
-    ];
+    var wrapper = platform.getCliWrapperContent(nodePath, cliPath);
+    if (!wrapper) {
+      return { error: 'CLI install is not supported on this platform' };
+    }
 
-    // Directories that are commonly in shell PATH even if Electron doesn't see them
-    // (Electron launched via Finder gets a minimal PATH without shell profile additions)
-    var commonShellPaths = ['/usr/local/bin', path.join(home, '.local', 'bin'), path.join(home, 'bin')];
+    var targets = platform.getCliInstallPaths();
+    var home = require('os').homedir();
+    var commonShellPaths = targets.map(function (t) { return path.dirname(t); });
 
     for (var target of targets) {
       try {
         fs.mkdirSync(path.dirname(target), { recursive: true });
         fs.writeFileSync(target, wrapper, { mode: 0o755 });
         var dir = path.dirname(target);
-        var inPath = (process.env.PATH || '').split(':').includes(dir) || commonShellPaths.includes(dir);
+        var inPath = (process.env.PATH || '').split(path.delimiter).includes(dir) || commonShellPaths.includes(dir);
         return {
           installed: true,
           path: target,
@@ -415,7 +417,7 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
         };
       } catch {}
     }
-    return { error: 'Could not install CLI. Run manually: sudo ln -sf "' + safeCli + '" /usr/local/bin/snip' };
+    return { error: 'Could not install CLI to any target path' };
   });
 
   ipcMain.handle('detect-ai-providers', async () => {
@@ -451,7 +453,7 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
     }
   }
 
-  var SNIP_RULES_VERSION = 'snip-rules-v2';
+  var SNIP_RULES_VERSION = 'snip-rules-v3';
 
   var snipRulesContent = [
     '# Snip — Visual Communication Tool',
@@ -476,6 +478,7 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
     '- **Show a diagram** when your changes affect architecture, data flow, or multi-file structure. Render a Mermaid diagram for the user to review before proceeding.',
     '- **Open an image** when the user wants to show, point out, or mark up something visually. Always prefer `snip open` over asking the user to describe what they see.',
     '- **Use `--message`** to tell the user what you need feedback on (e.g., "Does the auth flow look right?").',
+    '- When `snip open` or `snip render` returns `edited: true` with a `path`, use the `Read` tool to view the annotated image directly.',
     ''
   ].join('\n');
 
@@ -557,8 +560,7 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
   });
 
   ipcMain.handle('check-cli-installed', async () => {
-    var home = require('os').homedir();
-    var targets = ['/usr/local/bin/snip', path.join(home, '.local', 'bin', 'snip'), path.join(home, 'bin', 'snip')];
+    var targets = platform.getCliInstallPaths();
     for (var target of targets) {
       if (fs.existsSync(target)) {
         try {
@@ -566,7 +568,7 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
           // Verify this is our wrapper, not another app's binary
           if (content.indexOf('Snip CLI') === -1) continue;
           // Verify the wrapper still points to a valid node binary
-          var match = content.match(/exec "([^"]+)"/);
+          var match = content.match(/exec ['"]([^'"]+)['"]/);
           if (match && match[1] && !fs.existsSync(match[1])) {
             return 'stale'; // wrapper exists but points to deleted app
           }
@@ -578,8 +580,7 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
   });
 
   ipcMain.handle('uninstall-cli', async () => {
-    var home = require('os').homedir();
-    var targets = ['/usr/local/bin/snip', path.join(home, '.local', 'bin', 'snip'), path.join(home, 'bin', 'snip')];
+    var targets = platform.getCliInstallPaths();
     var removed = false;
     for (var target of targets) {
       try {

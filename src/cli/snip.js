@@ -20,8 +20,9 @@ var net = require('net');
 var path = require('path');
 var os = require('os');
 var fs = require('fs');
+var platform = require('../main/platform');
 
-var SOCKET_PATH = process.env.SNIP_SOCKET_PATH || path.join(os.homedir(), 'Library', 'Application Support', 'snip', 'snip.sock');
+var SOCKET_PATH = process.env.SNIP_SOCKET_PATH || platform.getSocketPath();
 
 // ── Parse args ──
 
@@ -177,30 +178,18 @@ function callSnip(action, params, isRetry) {
 }
 
 function launchAndRetry(action, params) {
-  // Try to launch the packaged app
-  if (fs.existsSync('/Applications/Snip.app')) {
-    process.stderr.write('Launching Snip...\n');
-    require('child_process').exec('open -a Snip');
-  } else {
-    return Promise.reject(new Error('Snip is not running. Start it with: npm start'));
+  var launched = platform.launchApp();
+  if (!launched) {
+    return Promise.reject(new Error('Snip is not running. Start it first.'));
   }
 
-  // Poll for socket to appear
+  process.stderr.write('Launching Snip...\n');
+
   return new Promise(function (resolve, reject) {
-    var attempts = 0;
-    var check = function () {
-      attempts++;
-      if (attempts > 20) {
-        return reject(new Error('Snip did not start in time'));
-      }
-      if (fs.existsSync(SOCKET_PATH)) {
-        // Socket appeared — retry the call
-        callSnip(action, params, true).then(resolve).catch(reject);
-      } else {
-        setTimeout(check, 500);
-      }
-    };
-    setTimeout(check, 500);
+    platform.pollForSocket(SOCKET_PATH, function (err) {
+      if (err) return reject(err);
+      callSnip(action, params, true).then(resolve).catch(reject);
+    });
   });
 }
 

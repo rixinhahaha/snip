@@ -1,50 +1,9 @@
 const { app, BrowserWindow, desktopCapturer, screen } = require('electron');
 const path = require('path');
-
-// Load native addon for macOS Space behavior.
-// In the packaged app the addon lives in Resources/native/ (via extraResources).
-// In dev mode it lives at the project root build/Release/.
-let windowUtils = null;
-try {
-  const packedPath = path.join(process.resourcesPath, 'native', 'window_utils.node');
-  const devPath = path.join(__dirname, '..', '..', 'build', 'Release', 'window_utils.node');
-  windowUtils = require(app.isPackaged ? packedPath : devPath);
-} catch (e) {
-  console.warn('[Snip] Native window_utils addon not found — overlay may appear on wrong Space.', e.message);
-}
+const platform = require('./platform');
 
 // Stored NativeImage from the last capture — converted to dataURL on demand (deferred)
 let storedNativeImage = null;
-
-
-/**
- * Get the window list for the given display (sync, must run before overlay appears).
- */
-function getWindowList(cursorDisplay) {
-  let windowList = [];
-  if (windowUtils && windowUtils.getWindowList) {
-    try {
-      const { width, height } = cursorDisplay.size;
-      const bounds = cursorDisplay.bounds;
-      windowList = windowUtils.getWindowList(bounds.x, bounds.y, width, height);
-      // Convert macOS global coords to display-relative coords
-      windowList = windowList.map(function (w) {
-        return {
-          x: w.x - bounds.x,
-          y: w.y - bounds.y,
-          width: w.width,
-          height: w.height,
-          owner: w.owner,
-          name: w.name,
-          pid: w.pid
-        };
-      });
-    } catch (e) {
-      console.warn('[Snip] Failed to get window list:', e.message);
-    }
-  }
-  return windowList;
-}
 
 /**
  * Capture screen image via desktopCapturer. Stores the NativeImage for deferred
@@ -115,7 +74,7 @@ async function captureScreen(createOverlayFn, getOverlayFn, opts) {
   const { width, height } = cursorDisplay.size;
 
   // 1. Get window list BEFORE overlay appears (sync, so overlay isn't in the list)
-  const windowList = getWindowList(cursorDisplay);
+  const windowList = platform.getWindowList(cursorDisplay);
 
   // 2. Parallel: capture screen image + prepare overlay window
   const [, overlayWindow] = await Promise.all([
@@ -123,15 +82,8 @@ async function captureScreen(createOverlayFn, getOverlayFn, opts) {
     createOverlayFn()
   ]);
 
-  // 3. Set native macOS behavior: move window to whichever Space is active
-  if (windowUtils) {
-    try {
-      const handle = overlayWindow.getNativeWindowHandle();
-      windowUtils.setMoveToActiveSpace(handle);
-    } catch (e) {
-      console.warn('[Snip] Failed to set MoveToActiveSpace:', e.message);
-    }
-  }
+  // 3. Move window to whichever Space/desktop is active (macOS Spaces, no-op elsewhere)
+  platform.setMoveToActiveSpace(overlayWindow);
 
   // 4. Show overlay and send metadata (image data is deferred until crop time)
   // In the packaged app LSUIElement:true makes this a background agent —
