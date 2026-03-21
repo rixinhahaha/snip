@@ -160,7 +160,8 @@ describe('platform interface', () => {
     'launchApp',
     'canTranscribe',
     'getCliInstallPaths',
-    'getCliWrapperContent'
+    'getCliWrapperContent',
+    'getTrayIcon'
   ];
 
   it('exports all required functions', () => {
@@ -280,10 +281,15 @@ describe('linux module', () => {
     expect(paths).toContain('/snap/bin');
   });
 
-  it('getSocketPath returns XDG config path', () => {
+  it('getSocketPath returns XDG runtime or config path', () => {
     var sp = linux.getSocketPath();
-    expect(sp).toContain('.config');
+    // Uses XDG_RUNTIME_DIR if set, otherwise falls back to ~/.config/
     expect(sp).toContain('snip.sock');
+    if (process.env.XDG_RUNTIME_DIR) {
+      expect(sp).toContain(process.env.XDG_RUNTIME_DIR);
+    } else {
+      expect(sp).toContain('.config');
+    }
   });
 
   it('canTranscribe returns false', () => {

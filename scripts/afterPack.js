@@ -44,8 +44,29 @@ function findFiles(dir, pattern, results) {
 }
 
 module.exports = async function afterPack(context) {
-  // All afterPack logic is macOS-specific (codesigning, .app bundle structure)
-  if (context.packager.platform.name !== 'mac') return;
+  var platformName = context.packager.platform.name;
+
+  // On Linux, only copy the bundled Node.js binary (no codesigning needed)
+  if (platformName === 'linux') {
+    var linuxResourcesDir = path.join(context.appOutDir, 'resources');
+    var archMap = { 1: 'x64', 3: 'arm64' };
+    var linuxArch = archMap[context.arch] || process.arch;
+    var linuxNodeSrc = path.join(__dirname, '..', 'vendor', 'node', linuxArch, 'node');
+    var linuxNodeDestDir = path.join(linuxResourcesDir, 'node');
+    var linuxNodeDest = path.join(linuxNodeDestDir, 'node');
+    if (fs.existsSync(linuxNodeSrc)) {
+      fs.mkdirSync(linuxNodeDestDir, { recursive: true });
+      fs.copyFileSync(linuxNodeSrc, linuxNodeDest);
+      fs.chmodSync(linuxNodeDest, 0o755);
+      console.log('[afterPack] Copied bundled Node.js binary for linux-' + linuxArch);
+    } else {
+      console.warn('[afterPack] No bundled Node.js binary at ' + linuxNodeSrc);
+    }
+    return;
+  }
+
+  // Everything below is macOS-specific (codesigning, .app bundle structure)
+  if (platformName !== 'mac') return;
 
   var appOutDir = context.appOutDir;
   var appName = context.packager.appInfo.productFilename;

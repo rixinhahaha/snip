@@ -71,8 +71,8 @@ function findOllamaBinary() {
       return KNOWN_CLI_PATHS[i];
     }
   }
-  // Check the binary inside Ollama.app
-  if (fs.existsSync(OLLAMA_APP_BINARY)) {
+  // Check the binary inside Ollama.app (macOS only; null on other platforms)
+  if (OLLAMA_APP_BINARY && fs.existsSync(OLLAMA_APP_BINARY)) {
     return OLLAMA_APP_BINARY;
   }
   return null;
@@ -173,8 +173,8 @@ async function emitStatus() {
  * Used for install detection (UI status) — spawning uses findOllamaBinary().
  */
 function findOllamaInstall() {
-  // Check for Ollama.app first (most common macOS install)
-  if (fs.existsSync(OLLAMA_APP_PATH)) {
+  // Check for Ollama.app (macOS only; null on other platforms)
+  if (OLLAMA_APP_PATH && fs.existsSync(OLLAMA_APP_PATH)) {
     return { type: 'app', path: OLLAMA_APP_PATH };
   }
 

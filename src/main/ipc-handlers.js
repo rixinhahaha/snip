@@ -362,7 +362,7 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
 
     if (app.isPackaged) {
       // Packaged: use bundled Node + unpacked MCP server
-      nodePath = path.join(process.resourcesPath, 'node', 'node');
+      nodePath = path.join(process.resourcesPath, 'node', platform.getNodeBinaryName());
       serverPath = path.join(process.resourcesPath, 'app.asar.unpacked', 'src', 'mcp', 'server.js');
     } else {
       // Dev: use system node + source file
@@ -453,7 +453,7 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
     }
   }
 
-  var SNIP_RULES_VERSION = 'snip-rules-v2';
+  var SNIP_RULES_VERSION = 'snip-rules-v3';
 
   var snipRulesContent = [
     '# Snip — Visual Communication Tool',
@@ -478,6 +478,7 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
     '- **Show a diagram** when your changes affect architecture, data flow, or multi-file structure. Render a Mermaid diagram for the user to review before proceeding.',
     '- **Open an image** when the user wants to show, point out, or mark up something visually. Always prefer `snip open` over asking the user to describe what they see.',
     '- **Use `--message`** to tell the user what you need feedback on (e.g., "Does the auth flow look right?").',
+    '- When `snip open` or `snip render` returns `edited: true` with a `path`, use the `Read` tool to view the annotated image directly.',
     ''
   ].join('\n');
 

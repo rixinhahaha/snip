@@ -49,6 +49,9 @@ function getNodeSearchPaths() {
 // ── IPC / Socket ──
 
 function getSocketPath() {
+  // XDG spec: runtime files (sockets, PIDs) go in $XDG_RUNTIME_DIR (tmpfs, cleared on logout)
+  var runtimeDir = process.env.XDG_RUNTIME_DIR;
+  if (runtimeDir) return path.join(runtimeDir, 'snip', 'snip.sock');
   return path.join(os.homedir(), '.config', 'snip', 'snip.sock');
 }
 

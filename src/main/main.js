@@ -1,3 +1,11 @@
+// Force X11 backend on Linux so globalShortcut, desktopCapturer, and Tray
+// work reliably. Wayland doesn't support global key grabs or unrestricted
+// screen capture. XWayland is always available on Wayland sessions.
+// Must be set before app module is used.
+if (process.platform === 'linux') {
+  require('electron').app.commandLine.appendSwitch('ozone-platform', 'x11');
+}
+
 const { app, BrowserWindow, screen, ipcMain } = require('electron');
 const path = require('path');
 const platform = require('./platform');
