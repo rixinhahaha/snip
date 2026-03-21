@@ -844,6 +844,123 @@ function startSocketHandlers() {
         throw err;
       }
     },
+    portal_capture: async function () {
+      requireCategory('upload');
+      var { spawn: spawnChild } = require('child_process');
+
+      return new Promise(function (resolve, reject) {
+        var token = 'snip_' + Date.now();
+        var settled = false;
+        var monitor = null;
+        var callProc = null;
+
+        function settle(fn) {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timeout);
+          if (monitor) try { monitor.kill(); } catch (_) {}
+          if (callProc) try { callProc.kill(); } catch (_) {}
+          fn();
+        }
+
+        var timeout = setTimeout(function () {
+          settle(function () { reject(new Error('Capture timed out')); });
+        }, 60000);
+
+        // Get D-Bus sender name to compute the handle path
+        var nameProc = spawnChild('gdbus', ['call', '--session',
+          '--dest', 'org.freedesktop.DBus',
+          '--object-path', '/org/freedesktop/DBus',
+          '--method', 'org.freedesktop.DBus.Hello'], { stdio: ['pipe', 'pipe', 'pipe'] });
+
+        nameProc.on('error', function (err) {
+          settle(function () { reject(new Error('gdbus not found: ' + err.message)); });
+        });
+
+        var nameOut = '';
+        nameProc.stdout.on('data', function (d) { nameOut += d; });
+        nameProc.on('close', function () {
+          if (settled) return;
+          var match = nameOut.match(/:(\d+\.\d+)/);
+          if (!match) { settle(function () { reject(new Error('Could not get D-Bus name')); }); return; }
+          var sender = match[1].replace(/\./g, '_');
+          var handlePath = '/org/freedesktop/portal/desktop/request/' + sender + '/' + token;
+
+          // Monitor for the Response signal
+          monitor = spawnChild('gdbus', ['monitor', '--session',
+            '--dest', 'org.freedesktop.portal.Desktop',
+            '--object-path', handlePath], { stdio: ['pipe', 'pipe', 'pipe'] });
+
+          var monitorOut = '';
+          monitor.stdout.on('data', function (chunk) {
+            if (settled) return;
+            monitorOut += chunk.toString();
+
+            // Check for success (file URI in response)
+            var uriMatch = monitorOut.match(/file:\/\/([^'"\s,>]+)/);
+            if (uriMatch) {
+              var filePath = decodeURIComponent(uriMatch[1]);
+              settle(function () {
+                var fs = require('fs');
+                if (!fs.existsSync(filePath)) { resolve({ cancelled: true }); return; }
+                var buf = fs.readFileSync(filePath);
+                var ext = path.extname(filePath).slice(1).toLowerCase() || 'png';
+                var mimeType = ext === 'jpg' ? 'image/jpeg' : 'image/' + ext;
+                var dataURL = 'data:' + mimeType + ';base64,' + buf.toString('base64');
+                // Parse dimensions (PNG + JPEG)
+                var imgW = 0, imgH = 0;
+                if (buf.length > 24 && buf[1] === 0x50 && buf[2] === 0x4E && buf[3] === 0x47) {
+                  imgW = buf.readUInt32BE(16); imgH = buf.readUInt32BE(20);
+                }
+                if (!imgW && buf.length > 2 && buf[0] === 0xFF && buf[1] === 0xD8) {
+                  for (var si = 2; si < Math.min(buf.length - 9, 65536); si++) {
+                    if (buf[si] === 0xFF && (buf[si + 1] === 0xC0 || buf[si + 1] === 0xC2)) {
+                      imgH = buf.readUInt16BE(si + 5); imgW = buf.readUInt16BE(si + 7); break;
+                    }
+                  }
+                }
+                if (!imgW) { imgW = 1920; imgH = 1080; }
+                if (pendingMcpResolve) { resolve({ busy: true }); return; }
+                pendingMcpResolve = true;
+                openEditorWithData({
+                  croppedDataURL: dataURL, cssWidth: imgW, cssHeight: imgH,
+                  mcpUpload: true, mcpMessage: 'Captured via system shortcut'
+                }).then(resolve).catch(reject);
+              });
+              return;
+            }
+            // Check for cancellation (response code 1)
+            if (monitorOut.indexOf('uint32 1') !== -1 && monitorOut.indexOf('Response') !== -1) {
+              settle(function () { resolve({ cancelled: true }); });
+            }
+          });
+
+          monitor.on('error', function () {});
+          monitor.on('close', function () {
+            if (!settled) settle(function () { reject(new Error('Portal monitor closed unexpectedly')); });
+          });
+
+          // Delay to ensure monitor is attached before calling Screenshot
+          setTimeout(function () {
+            if (settled) return;
+            callProc = spawnChild('gdbus', ['call', '--session',
+              '--dest', 'org.freedesktop.portal.Desktop',
+              '--object-path', '/org/freedesktop/portal/desktop',
+              '--method', 'org.freedesktop.portal.Screenshot.Screenshot',
+              '', "{'handle_token': <'" + token + "'>, 'interactive': <true>}"],
+              { stdio: 'pipe' });
+            callProc.on('error', function (err) {
+              settle(function () { reject(new Error('Portal call failed: ' + err.message)); });
+            });
+          }, 200);
+        });
+      });
+    },
+    show_search: async function () {
+      requireCategory('library');
+      showSearchPage();
+      return { shown: true };
+    },
     install_extension: async function (params) {
       if (!params.name || !params.manifest) throw new Error('Provide name and manifest');
 

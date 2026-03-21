@@ -161,7 +161,10 @@ describe('platform interface', () => {
     'canTranscribe',
     'getCliInstallPaths',
     'getCliWrapperContent',
-    'getTrayIcon'
+    'getTrayIcon',
+    'getShortcutMode',
+    'installCompositorShortcut',
+    'checkCompositorShortcut'
   ];
 
   it('exports all required functions', () => {
@@ -255,6 +258,14 @@ describe('darwin module', () => {
     // Without the native addon, should be a no-op
     expect(() => darwin.setMoveToActiveSpace({ getNativeWindowHandle: () => Buffer.alloc(0) })).not.toThrow();
   });
+
+  it('getShortcutMode returns native', () => {
+    expect(darwin.getShortcutMode()).toBe('native');
+  });
+
+  it('checkCompositorShortcut returns not installed', () => {
+    expect(darwin.checkCompositorShortcut('capture')).toEqual({ installed: false, binding: null });
+  });
 });
 
 describe('linux module', () => {
@@ -306,6 +317,18 @@ describe('linux module', () => {
 
   it('installOllama throws with helpful message', async () => {
     await expect(linux.installOllama()).rejects.toThrow('curl');
+  });
+
+  it('getShortcutMode returns native or compositor based on session type', () => {
+    var mode = linux.getShortcutMode();
+    // In test environment, XDG_SESSION_TYPE may or may not be set
+    expect(['native', 'compositor']).toContain(mode);
+  });
+
+  it('checkCompositorShortcut returns status object', async () => {
+    var status = await linux.checkCompositorShortcut('capture');
+    expect(status).toHaveProperty('installed');
+    expect(status).toHaveProperty('binding');
   });
 });
 

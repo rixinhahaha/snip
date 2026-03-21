@@ -1056,6 +1056,24 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
     return true;
   });
 
+  // Compositor shortcuts (Wayland)
+  var VALID_SHORTCUT_ACTIONS = ['capture', 'search'];
+
+  ipcMain.handle('get-shortcut-mode', async () => {
+    return platform.getShortcutMode();
+  });
+
+  ipcMain.handle('install-compositor-shortcut', async (event, { action, binding }) => {
+    if (!VALID_SHORTCUT_ACTIONS.includes(action)) throw new Error('Invalid action');
+    if (typeof binding !== 'string' || binding.length > 100) throw new Error('Invalid binding');
+    return platform.installCompositorShortcut(action, binding);
+  });
+
+  ipcMain.handle('check-compositor-shortcut', async (event, { action }) => {
+    if (!VALID_SHORTCUT_ACTIONS.includes(action)) throw new Error('Invalid action');
+    return platform.checkCompositorShortcut(action);
+  });
+
   // Theme
   ipcMain.handle('get-theme', async () => {
     return getTheme();

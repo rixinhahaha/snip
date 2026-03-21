@@ -1179,6 +1179,46 @@ input:focus { border-color: var(--accent); }
   opacity: 0.6;
 }
 
+.compositor-shortcut-banner {
+  padding: 10px 14px;
+  margin-bottom: 8px;
+  border-radius: 8px;
+  background: var(--accent-bg);
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+  border: 1px solid var(--border-card);
+}
+.compositor-shortcut-banner strong {
+  color: var(--text-primary);
+}
+
+.shortcut-setup-btn {
+  padding: 4px 12px;
+  border: 1px solid var(--border-card);
+  border-radius: 5px;
+  background: transparent;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+.shortcut-setup-btn:hover {
+  background: var(--accent-bg);
+  border-color: var(--accent);
+}
+.shortcut-setup-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.shortcut-setup-btn.installed {
+  color: var(--text-secondary);
+  border-color: var(--border-card);
+  cursor: default;
+}
+
 .shortcuts-actions {
   display: flex;
   align-items: center;

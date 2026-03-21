@@ -213,5 +213,8 @@ contextBridge.exposeInMainWorld('snip', {
     var handler = (event, shortcuts) => callback(shortcuts);
     ipcRenderer.on('shortcuts-changed', handler);
     return () => ipcRenderer.removeListener('shortcuts-changed', handler);
-  }
+  },
+  getShortcutMode: () => ipcRenderer.invoke('get-shortcut-mode'),
+  installCompositorShortcut: (action, binding) => ipcRenderer.invoke('install-compositor-shortcut', { action, binding }),
+  checkCompositorShortcut: (action) => ipcRenderer.invoke('check-compositor-shortcut', { action })
 });

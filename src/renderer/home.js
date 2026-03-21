@@ -683,12 +683,14 @@
   var recordingEditBtn = null;
   var recordingKeyHandler = null;
   var recordingBlurHandler = null;
+  var _shortcutMode = 'native'; // 'native' or 'compositor'
 
   function acceleratorToDisplay(accel) {
     if (!accel) return '';
+    var ctrlLabel = window.snip.platform === 'darwin' ? 'Cmd' : 'Ctrl';
     return accel
-      .replace('CommandOrControl', 'Cmd')
-      .replace('CmdOrCtrl', 'Cmd')
+      .replace('CommandOrControl', ctrlLabel)
+      .replace('CmdOrCtrl', ctrlLabel)
       .replace(/\+/g, ' + ');
   }
 
@@ -696,6 +698,11 @@
   var _shortcutsExpanded = false;
 
   async function initShortcutsSettings() {
+    // Fetch shortcut mode (native vs compositor)
+    if (window.snip.getShortcutMode) {
+      _shortcutMode = await window.snip.getShortcutMode();
+    }
+
     // Fetch addon status to filter addon-dependent shortcuts
     if (window.snip.getAddonStatus) {
       _shortcutsAddonStatus = await window.snip.getAddonStatus();
@@ -751,7 +758,52 @@
     var keySpan = document.createElement('span');
     keySpan.className = 'shortcut-row-key';
 
-    if (def.configurable) {
+    if (def.configurable && _shortcutMode === 'compositor') {
+      // Compositor mode: show Set up / Installed button instead of key recorder
+      var currentAccel = shortcuts[def.action] || '';
+      keySpan.textContent = acceleratorToDisplay(currentAccel);
+
+      var setupBtn = document.createElement('button');
+      setupBtn.className = 'shortcut-setup-btn';
+      setupBtn.textContent = 'Set up';
+      setupBtn.disabled = true; // enabled after status check
+
+      // Check current compositor status
+      (function(d, btn, accel) {
+        window.snip.checkCompositorShortcut(d.action).then(function(status) {
+          if (status.installed) {
+            btn.textContent = 'Linked';
+            btn.classList.add('installed');
+            btn.disabled = true;
+          } else {
+            btn.textContent = 'Set up';
+            btn.classList.remove('installed');
+            btn.disabled = false;
+          }
+        });
+        btn.addEventListener('click', function(e) {
+          e.preventDefault();
+          btn.textContent = 'Setting up...';
+          btn.disabled = true;
+          window.snip.installCompositorShortcut(d.action, accel).then(function() {
+            btn.textContent = 'Linked';
+            btn.classList.add('installed');
+            btn.disabled = false;
+          }).catch(function(err) {
+            btn.textContent = 'Failed';
+            btn.disabled = false;
+            console.error('Compositor shortcut setup failed:', err);
+            setTimeout(function() { btn.textContent = 'Set up'; }, 2000);
+          });
+        });
+      })(def, setupBtn, shortcuts[def.action] || '');
+
+      row.appendChild(name);
+      row.appendChild(context);
+      row.appendChild(keySpan);
+      row.appendChild(setupBtn);
+    } else if (def.configurable) {
+      // Native mode: normal key recorder
       var currentAccel = shortcuts[def.action] || '';
       keySpan.textContent = acceleratorToDisplay(currentAccel);
 
@@ -786,6 +838,14 @@
   function renderShortcuts(shortcuts) {
     var list = document.getElementById('shortcuts-list');
     list.innerHTML = '';
+
+    // Show compositor info banner if needed
+    if (_shortcutMode === 'compositor') {
+      var banner = document.createElement('div');
+      banner.className = 'compositor-shortcut-banner';
+      banner.innerHTML = '<strong>System shortcuts</strong><br>Your desktop uses Wayland, which requires shortcuts to be registered with the system. Click "Set up" to link each shortcut.';
+      list.appendChild(banner);
+    }
 
     // Filter out shortcuts for addons that aren't installed
     var defs = SHORTCUT_DEFINITIONS.filter(isAddonShortcutAvailable);

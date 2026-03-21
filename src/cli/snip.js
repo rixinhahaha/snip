@@ -48,14 +48,16 @@ if (!command || command === '--help' || command === '-h' || flags.help) {
 // ── Command map ──
 
 var COMMANDS = {
-  search:     { action: 'search_screenshots', paramName: 'query', needsArg: true },
-  list:       { action: 'list_screenshots' },
-  get:        { action: 'get_screenshot', paramName: 'filepath', needsArg: true },
-  transcribe: { action: 'transcribe_screenshot', paramName: 'filepath', needsArg: true },
-  organize:   { action: 'organize_screenshot', paramName: 'filepath', needsArg: true },
-  categories: { action: 'get_categories' },
-  open:       { action: 'open_in_snip', paramName: 'filepath', needsArg: true },
-  render:     { action: 'render_diagram', needsStdin: true }
+  search:        { action: 'search_screenshots', paramName: 'query', needsArg: true },
+  list:          { action: 'list_screenshots' },
+  get:           { action: 'get_screenshot', paramName: 'filepath', needsArg: true },
+  transcribe:    { action: 'transcribe_screenshot', paramName: 'filepath', needsArg: true },
+  organize:      { action: 'organize_screenshot', paramName: 'filepath', needsArg: true },
+  categories:    { action: 'get_categories' },
+  open:          { action: 'open_in_snip', paramName: 'filepath', needsArg: true },
+  render:        { action: 'render_diagram', needsStdin: true },
+  capture:       { action: 'portal_capture' },
+  'show-search': { action: 'show_search' }
 };
 
 var cmd = COMMANDS[command];
@@ -168,7 +170,7 @@ function callSnip(action, params, isRetry) {
     });
 
     // Timeout for long-running commands (open blocks on user interaction)
-    if (action !== 'open_in_snip' && action !== 'render_diagram') {
+    if (action !== 'open_in_snip' && action !== 'render_diagram' && action !== 'portal_capture') {
       setTimeout(function () {
         conn.destroy();
         reject(new Error('Request timed out'));
@@ -208,7 +210,14 @@ function formatOutput(command, result) {
     return;
   }
 
-  if (command === 'open' || command === 'render') {
+  if (command === 'capture') {
+    if (result && result.cancelled) {
+      process.exit(0);
+    }
+    // Capture results follow the same format as open/render
+  }
+
+  if (command === 'capture' || command === 'open' || command === 'render') {
     if (!result) {
       printJson({ status: 'error', message: 'No result from editor' });
       return;
@@ -281,6 +290,8 @@ function printHelp() {
     '  categories            List all categories',
     '  open <filepath>       Open image in Snip editor for annotation',
     '  render --format <fmt> Render diagram from stdin (formats: mermaid)',
+    '  capture               Capture screenshot via system portal (Linux Wayland)',
+    '  show-search           Open Snip search window',
     '',
     'Options:',
     '  --format <fmt>        Diagram format for render command (default: mermaid)',

@@ -234,5 +234,9 @@ module.exports = {
   canTranscribe,
   getCliInstallPaths: shared.getCliInstallPaths,
   getCliWrapperContent: shared.getCliWrapperContent,
-  getTrayIcon
+  getTrayIcon,
+  getShortcutMode: function () { return 'native'; },
+  installCompositorShortcut: function () { throw new Error('Compositor shortcuts not supported on macOS'); },
+  removeCompositorShortcut: function () {},
+  checkCompositorShortcut: function () { return { installed: false, binding: null }; }
 };
