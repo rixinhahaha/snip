@@ -11,6 +11,8 @@ Visual communication layer between humans and AI agents for macOS.
 
 Capture and annotate screenshots, render diagrams from code, review agent-generated visuals with approve/request-changes flow — all from the menu bar. AI organizes and indexes everything for semantic search. CLI and MCP integration let any AI agent use Snip as their visual I/O.
 
+[![Snip MCP server](https://glama.ai/mcp/servers/rixinhahaha/snip/badges/card.svg)](https://glama.ai/mcp/servers/rixinhahaha/snip)
+
 ## Install
 
 ```bash
