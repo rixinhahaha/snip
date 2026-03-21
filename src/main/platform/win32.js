@@ -96,6 +96,12 @@ function getCliWrapperContent() {
   return '';
 }
 
+// ── Tray ──
+
+function getTrayIcon() {
+  return { file: 'icon.png', resize: 22 };
+}
+
 module.exports = {
   getOllamaConfig,
   installOllama,
@@ -111,5 +117,6 @@ module.exports = {
   launchApp,
   canTranscribe,
   getCliInstallPaths,
-  getCliWrapperContent
+  getCliWrapperContent,
+  getTrayIcon
 };

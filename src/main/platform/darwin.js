@@ -212,6 +212,12 @@ function canTranscribe() {
   return true;
 }
 
+// ── Tray ──
+
+function getTrayIcon() {
+  return { file: 'tray-iconTemplate.png', resize: false };
+}
+
 module.exports = {
   getOllamaConfig,
   installOllama,
@@ -227,5 +233,6 @@ module.exports = {
   launchApp,
   canTranscribe,
   getCliInstallPaths: shared.getCliInstallPaths,
-  getCliWrapperContent: shared.getCliWrapperContent
+  getCliWrapperContent: shared.getCliWrapperContent,
+  getTrayIcon
 };

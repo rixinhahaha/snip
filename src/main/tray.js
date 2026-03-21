@@ -1,5 +1,6 @@
 const { Tray, Menu, app, nativeImage, BrowserWindow } = require('electron');
 const path = require('path');
+const platform = require('./platform');
 const { getTheme, setTheme, getShortcuts } = require('./store');
 
 let tray = null;
@@ -82,12 +83,16 @@ function buildTrayMenu() {
 }
 
 function createTray(captureCallback, searchCallback, homeCallback, quickSnipCallback) {
-  const iconPath = path.join(__dirname, '..', '..', 'assets', 'tray-iconTemplate.png');
+  var iconConfig = platform.getTrayIcon();
+  const iconPath = path.join(__dirname, '..', '..', 'assets', iconConfig.file);
 
   let trayIcon;
   try {
     trayIcon = nativeImage.createFromPath(iconPath);
     if (trayIcon.isEmpty()) throw new Error('Empty icon');
+    if (iconConfig.resize) {
+      trayIcon = trayIcon.resize({ width: iconConfig.resize, height: iconConfig.resize });
+    }
   } catch (e) {
     console.warn('[Snip] Tray icon not found at', iconPath, '— tray menu still accessible via menubar.');
     trayIcon = nativeImage.createEmpty();
