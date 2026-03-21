@@ -89,7 +89,16 @@ function validateAction(action) {
 }
 
 function getShortcutMode() {
-  return process.env.XDG_SESSION_TYPE === 'wayland' ? 'compositor' : 'native';
+  if (process.env.XDG_SESSION_TYPE !== 'wayland') return 'native';
+  // Only use compositor shortcuts on GNOME (gsettings-based). KDE/Sway/etc.
+  // don't support this, so fall back to native (Electron globalShortcut may
+  // still fail, but it's the best we can do).
+  try {
+    require('child_process').execFileSync('gsettings', ['list-schemas'], { stdio: 'pipe', timeout: 3000 });
+    return 'compositor';
+  } catch (_) {
+    return 'native';
+  }
 }
 
 function electronToGnomeBinding(accel) {

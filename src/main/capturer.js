@@ -86,11 +86,12 @@ async function captureScreen(createOverlayFn, getOverlayFn, opts) {
   platform.setMoveToActiveSpace(overlayWindow);
 
   // 4. Show overlay and send metadata (image data is deferred until crop time)
-  // In the packaged app LSUIElement:true makes this a background agent —
-  // explicitly activate so the overlay can receive keyboard events.
-  // Skip in dev mode: app.dock.hide() already handles it and
-  // app.focus() would cause unwanted Space switching.
-  if (app.isPackaged) {
+  // Explicitly activate so the overlay can receive keyboard events.
+  // On macOS packaged builds, LSUIElement:true makes this a background agent —
+  // app.focus() is needed to bring it forward. Skip in macOS dev mode where
+  // app.dock.hide() already handles it and app.focus() causes Space switching.
+  // On Linux, always call app.focus() — the WM won't raise a background window otherwise.
+  if (app.isPackaged || process.platform === 'linux') {
     app.focus({ steal: true });
   }
 
@@ -99,9 +100,18 @@ async function captureScreen(createOverlayFn, getOverlayFn, opts) {
   overlayWindow.focus();
   // If the user switches away (Cmd+Tab, click another app), cancel the capture.
   // The stale screenshot would be confusing; they can re-trigger the shortcut.
-  overlayWindow.on('blur', () => {
-    if (!overlayWindow.isDestroyed()) overlayWindow.destroy();
-  });
+  // On Linux, the overlay may not have focus yet when shown — defer the blur
+  // listener so the WM has time to process the focus request.
+  var attachBlurCancel = function () {
+    overlayWindow.on('blur', function () {
+      if (!overlayWindow.isDestroyed()) overlayWindow.destroy();
+    });
+  };
+  if (process.platform === 'linux') {
+    setTimeout(attachBlurCancel, 300);
+  } else {
+    attachBlurCancel();
+  }
   // Force position to cover full screen including menu bar
   // (macOS may push the window below menu bar on show)
   const bounds = cursorDisplay.bounds;
