@@ -8,15 +8,17 @@
 
 ## Vision
 
-Snip is a **menu-bar-only** macOS app that serves as the visual communication layer between humans and AI agents. Capture, annotate, render diagrams, and review visual artifacts — all in one tool. Screenshots are automatically organized by AI and searchable via natural language.
+Snip is a **tray-only** cross-platform app (macOS and Linux) that serves as the visual communication layer between humans and AI agents. Capture, annotate, render diagrams, and review visual artifacts — all in one tool. Screenshots are automatically organized by AI and searchable via natural language.
 
 The app should feel **invisible until needed** — a global shortcut captures, a quick annotation pass adds context, and the result is instantly on your clipboard or returned to the agent.
+
+**Linux note:** Targets Wayland sessions (X11 is untested). Some macOS-specific features are unavailable — see Platform Differences below.
 
 ---
 
 ## Target User
 
-Power users on macOS who take 5-50 screenshots per day: developers, designers, PMs, support engineers. They paste screenshots into Slack, Jira, Notion, and docs constantly. They never find old screenshots because they're buried in `~/Desktop` with timestamps as names.
+Power users on macOS and Linux who take 5-50 screenshots per day: developers, designers, PMs, support engineers. They paste screenshots into Slack, Jira, Notion, and docs constantly. They never find old screenshots because they're buried in `~/Desktop` with timestamps as names.
 
 ---
 
@@ -25,17 +27,17 @@ Power users on macOS who take 5-50 screenshots per day: developers, designers, P
 1. **Fastest capture-to-clipboard** — Two keystrokes: Cmd+Shift+2 to capture, Esc to copy annotated image to clipboard. Under 5 seconds.
 2. **Smart organization** — AI names, categorizes, and tags every saved screenshot. No manual filing.
 3. **Semantic search** — Find any screenshot by describing what was in it. "slack message about deployment" finds the right one.
-4. **Native feel** — Liquid Glass UI, tray-only app, no Dock icon, works across macOS Spaces without switching.
+4. **Native feel** — Liquid Glass UI on macOS 26+, tray-only app, no Dock icon, works across macOS Spaces without switching. On Linux, uses standard system tray with Wayland compositor integration.
 
 ---
 
 ## Feature Set
 
 ### Capture
-- **Global shortcut** (Cmd+Shift+2): Fullscreen overlay, click a window to snap-select it, or drag to select a custom region — completes immediately on mouse-up
-- **Quick Snip** (Cmd+Shift+1): Same overlay with window/region selection, copies result directly to clipboard without opening the annotation editor
+- **Global shortcut** (Cmd+Shift+2 on macOS, Ctrl+Shift+2 on Linux): Fullscreen overlay, click a window to snap-select it, or drag to select a custom region — completes immediately on mouse-up
+- **Quick Snip** (Cmd+Shift+1 / Ctrl+Shift+1): Same overlay with window/region selection, copies result directly to clipboard without opening the annotation editor
 - **Full-screen capture**: Press Enter without selecting
-- Works across macOS Spaces without switching desktops
+- Works across macOS Spaces without switching desktops (macOS only)
 - Home window hides during capture to stay out of the way
 
 ### Annotation Tools
@@ -71,11 +73,12 @@ Power users on macOS who take 5-50 screenshots per day: developers, designers, P
 - New categories auto-registered with AI-generated descriptions; notification is informational only
 - Default model: `minicpm-v` (8B, Metal-accelerated on Apple Silicon) — pulled on first launch via Ollama's API. Ollama is not bundled; users install it separately or via the in-app setup wizard.
 
-### Transcribe Text
+### Transcribe Text (macOS only)
 - Editor toolbar button uses native macOS Vision framework (VNRecognizeTextRequest) with Unicode script-based language detection to extract visible text and identify languages
 - Near-instant, works offline without any model — uses built-in macOS OCR
 - Results displayed in a collapsible side panel: language badges, extracted text, and copy-to-clipboard button
 - Cached per editor session — first click runs OCR, subsequent opens are instant
+- **Not available on Linux** — button is hidden, `platform.canTranscribe()` returns `false`
 
 ### Animation (Animate)
 - Requires internet connection and a fal.ai API key (configured in Settings > Animation)
@@ -159,7 +162,7 @@ Power users on macOS who take 5-50 screenshots per day: developers, designers, P
 | **Snip and Annotate** | The capture action that opens the annotation editor (menu item and tray label) |
 | **Category** | AI-assigned folder: code, chat, web, design, documents, terminal, personal, fun, other |
 | **Tag** | AI-assigned keyword for search/filtering |
-| **Glass** | The translucent Liquid Glass theme on macOS 26+ |
+| **Glass** | The translucent Liquid Glass theme (native on macOS 26+, CSS fallback on Linux) |
 
 ---
 
@@ -171,6 +174,24 @@ Power users on macOS who take 5-50 screenshots per day: developers, designers, P
 4. **Non-intrusive**: Tray-only, no Dock icon, no Space switching, hides during capture.
 5. **AI is invisible labor**: Users don't "invoke AI" — it just happens in the background after save.
 6. **Purple, always purple**: The brand color is violet/purple. Never blue. See [`DESIGN.md`](DESIGN.md).
+
+---
+
+## Platform Differences
+
+| Feature | macOS | Linux (Wayland) |
+|---------|-------|-----------------|
+| Capture shortcut | Cmd+Shift+2 | Ctrl+Shift+2 |
+| Global shortcuts | Electron native | GNOME compositor via gsettings (other DEs: Electron native, may fail) |
+| Liquid Glass | Native NSGlassEffectView (macOS 26+) | CSS `backdrop-filter` fallback |
+| Vibrancy | Native `under-window` | Not supported (standard window chrome) |
+| Transcribe (OCR) | Native Vision framework | Not available |
+| Window snap (capture) | CGWindowList via native addon | Not available (drag-select only) |
+| Dock hiding | `app.dock.hide()` / LSUIElement | N/A (system tray only) |
+| Spaces support | Overlay moves to active Space | N/A |
+| Clipboard | Native | `wl-copy` (Wayland), fallback to Electron |
+| Ollama install | Auto-install from ollama.com | Manual (`curl -fsSL https://ollama.com/install.sh | sh`) |
+| Auto-update | electron-updater (DMG/ZIP) | electron-updater (AppImage) |
 
 ---
 

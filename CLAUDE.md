@@ -88,7 +88,7 @@ These are non-negotiable rules. Violating them causes crashes or broken UX:
 
 ## Project Overview
 
-**Snip** is a macOS Electron app — the visual communication layer between humans and AI agents. Menu-bar only (no Dock icon). Capture via global shortcut, annotate with Fabric.js tools, render diagrams via Mermaid, review agent-generated visuals with approve/request-changes flow. AI-powered organization via local Ollama LLM, semantic search.
+**Snip** is a cross-platform Electron app (macOS and Linux) — the visual communication layer between humans and AI agents. Menu-bar / system tray only (no Dock icon on macOS). Capture via global shortcut, annotate with Fabric.js tools, render diagrams via Mermaid, review agent-generated visuals with approve/request-changes flow. AI-powered organization via local Ollama LLM, semantic search. Linux support targets Wayland sessions (X11 is untested).
 
 ### Key Paths
 | What | Where |
@@ -118,5 +118,6 @@ These are non-negotiable rules. Violating them causes crashes or broken UX:
 ```bash
 npm run dev    # Electron with verbose logging
 npm start      # Normal launch
-npm run build  # Package as macOS DMG
+npm run build        # Package as macOS DMG
+npm run build:linux  # Package as Linux AppImage + deb
 ```

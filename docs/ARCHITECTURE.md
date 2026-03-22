@@ -64,9 +64,16 @@ src/
     animation/               # 2GIF animation feature (fal.ai cloud API)
       animation.js           # fal.ai API integration (upload, queue, poll, MP4 download)
       gif-encoder-worker.js  # Child process: ffmpeg MP4→frames extraction + GIF/APNG encoding
-    transcription/           # Text extraction via native macOS OCR
+    transcription/           # Text extraction via native macOS OCR (macOS only)
       transcription.js       # Node.js wrapper: compiles + spawns Swift helper, parses JSON result
       transcribe.swift       # Swift CLI: VNRecognizeTextRequest OCR + Unicode script detection, reads base64 via stdin
+    platform/                # Platform abstraction layer — ALL platform checks go through here
+      index.js                 # Router: loads correct module based on process.platform
+      darwin.js                # macOS: window management, Ollama paths, native addon, Dock hiding
+      linux.js                 # Linux: Wayland clipboard, GNOME compositor shortcuts, D-Bus portal, dependency checks
+      win32.js                 # Windows: stubs (placeholder)
+      shared.js                # Shared POSIX utilities (process kill, socket poll, CLI install paths)
+      portal-screenshot.py     # Linux D-Bus XDG Desktop Portal screenshot helper
 
   extensions/                # Extension manifests + main modules (loaded by extension-registry.js)
     select/extension.json      # Select tool (canvas-tool, no main module)
@@ -124,7 +131,7 @@ src/
     diagram-renderer.js      # Mermaid render IIFE: receives code via IPC, renders SVG, reports dimensions
 
   native/
-    window_utils.mm          # Obj-C++ N-API addon: setMoveToActiveSpace (Space behavior), getWindowList (CGWindowList for window snap — individual windows in z-order with PID)
+    window_utils.mm          # Obj-C++ N-API addon (macOS only): setMoveToActiveSpace (Space behavior), getWindowList (CGWindowList for window snap — individual windows in z-order with PID)
 
 assets/                      # App icons, tray icons
 site/                        # Marketing site (GitHub Pages, snipit.dev)
@@ -157,7 +164,8 @@ tests/                       # Vitest unit tests
 vendor/                      # Downloaded at dev time (NOT bundled in binary)
   models/                      # HuggingFace models for dev (npm run download-models)
   node/                        # Standalone Node.js binary for child processes (~100 MB)
-    arm64/node                   # Apple Silicon
+    arm64/node                   # Apple Silicon (macOS)
+    x64/node                     # x86_64 (Linux)
   (static animation presets inlined in src/main/animation/animation.js)
 ```
 
@@ -193,14 +201,17 @@ vendor/                      # Downloaded at dev time (NOT bundled in binary)
 | **Editor** | `editor.html` | Annotation canvas + toolbar | Pre-warmed hidden at startup; reused per capture (resized + shown), destroyed on close, then re-pre-warmed |
 
 All windows share:
-- `titleBarStyle: 'hiddenInset'` with custom traffic light positioning
-- `transparent: true`, `backgroundColor: '#00000000'`
-- Native Liquid Glass layer (macOS 26+) or vibrancy fallback
+- `titleBarStyle: 'hiddenInset'` with custom traffic light positioning (macOS); standard title bar on Linux
+- `transparent: true`, `backgroundColor: '#00000000'` (macOS); standard window chrome on Linux
+- Native Liquid Glass layer (macOS 26+) or vibrancy fallback; no native effects on Linux
 - Theme via `data-theme` attribute on `<html>`
 
 ---
 
 ## Key Architecture Decisions
+
+### Platform Abstraction
+All platform-specific code is centralized in `src/main/platform/`. The `index.js` router loads the correct module based on `process.platform` — no other file in the codebase checks `process.platform` directly. Platform modules export a common interface (window management, Ollama paths, clipboard, shortcuts, tray icon, etc.) with platform-specific implementations. Linux targets Wayland sessions (X11 is untested).
 
 ### Managed Ollama Process
 Ollama is **NOT bundled** — the user installs it separately (from [ollama.com](https://ollama.com/download) or via the in-app installer). The LLM model (`minicpm-v`, ~5 GB) is pulled on first launch. Models are stored in Ollama's standard location (`~/.ollama/models/`).
@@ -219,7 +230,7 @@ On quit, `stopOllama()` sends SIGTERM to the managed process, waits up to 3s, th
 
 The active Ollama host URL is communicated via **message passing** (not env vars): `ollama-manager.js` → `watcher.js:setOllamaHost()` → worker thread → `agent.js:setOllamaHost()`. The agent's `createClient()` reads the `ollamaHostOverride` module variable first, falling back to the user-configured URL. The animation module uses `ollamaManager.getClient()` directly.
 
-The in-app installer (`installOllama()`) downloads `Ollama-darwin.zip` from ollama.com, extracts `Ollama.app`, moves it to `/Applications/`, then calls `startOllama()` to spawn the managed server (does NOT launch the Ollama GUI app). Progress is pushed to all BrowserWindows via `webContents.send('ollama-install-progress', progress)`.
+On macOS, the in-app installer (`installOllama()`) downloads `Ollama-darwin.zip` from ollama.com, extracts `Ollama.app`, moves it to `/Applications/`, then calls `startOllama()` to spawn the managed server (does NOT launch the Ollama GUI app). Progress is pushed to all BrowserWindows via `webContents.send('ollama-install-progress', progress)`. On Linux, auto-install is not supported — the user must install Ollama manually (`curl -fsSL https://ollama.com/install.sh | sh`).
 
 Model pull uses `client.pull({ model, stream: true })` with per-digest progress accumulation, pushed via `webContents.send('ollama-pull-progress', progress)`. If the server is down during a pull, `pullModel()` attempts to restart the managed instance via `startOllama()`.
 
@@ -319,7 +330,7 @@ The packaged app checks for updates via `electron-updater` against GitHub Releas
 5. User clicks Restart Now → `pendingInstall` flag set → `quitAndInstall()` called → `will-quit` handler skips `e.preventDefault()` and does synchronous cleanup only → app relaunches with new version
 6. Re-checks every 12 hours for long-running tray sessions
 
-The `publish` config in `electron-builder.yml` points to `rixinhahaha/snip` GitHub Releases. The release workflow builds DMG + ZIP with `--publish always`, which uploads both artifacts and a `latest-mac.yml` manifest (contains version, SHA-512 hashes, download URLs). `electron-updater` fetches this manifest to detect new versions. Code signature verification happens automatically on macOS — the downloaded ZIP's signature must match the running app's Developer ID certificate.
+The `publish` config in `electron-builder.yml` points to `rixinhahaha/snip` GitHub Releases. The release workflow builds macOS DMG + ZIP and Linux AppImage + deb. macOS uses `--publish always` which uploads artifacts and a `latest-mac.yml` manifest. Linux uses `--publish never` with manual `gh release upload`, which also uploads a `latest-linux.yml` manifest. `electron-updater` fetches the appropriate manifest to detect new versions. On macOS, code signature verification happens automatically. On Linux, auto-update works for AppImage format only (deb users must update manually).
 
 ### Single Index File
 All screenshot metadata lives in `~/Documents/snip/screenshots/.index.json`. Simple, atomic, easy to debug. No database.
@@ -331,8 +342,8 @@ The editor uses **push-based initialization**: the main process sends `editor-im
 
 The screen capture (`desktopCapturer.getSources()`) runs **in parallel** with overlay window preparation via `Promise.all()`. The captured image is stored as a `NativeImage` reference — the expensive `toDataURL()` serialization is **deferred** until crop time when the renderer requests it via `getCaptureImage()` IPC.
 
-### Dock Hidden
-`app.dock.hide()` in dev mode (and `LSUIElement: true` in production) prevents macOS from switching Spaces when the app's windows activate. The native module sets `NSWindowCollectionBehaviorMoveToActiveSpace` on the overlay.
+### Dock Hidden (macOS) / Tray-Only (Linux)
+On macOS, `app.dock.hide()` in dev mode (and `LSUIElement: true` in production) prevents macOS from switching Spaces when the app's windows activate. The native module sets `NSWindowCollectionBehaviorMoveToActiveSpace` on the overlay. On Linux, the app runs as a system tray icon only — no Dock equivalent exists. The platform layer's `hideFromDock()` is a no-op on Linux.
 
 ### pendingFiles Gate
 Only app-saved files trigger AI processing. The `pendingFiles` Set in `watcher.js` tracks files written by the app. External file operations (manual renames, copies from Finder) are indexed with basic metadata but skip the Ollama agent.
@@ -560,7 +571,7 @@ User clicks theme button in Settings (or tray menu)
   -> Fabric.js selection colors re-read via ToolUtils.getAccentColor()
 ```
 
-The native Liquid Glass layer is always present (macOS 26+). Dark and Light themes cover it with opaque backgrounds. Glass theme reveals it via translucent purple-tinted backgrounds.
+On macOS 26+, the native Liquid Glass layer is always present. Dark and Light themes cover it with opaque backgrounds. Glass theme reveals it via translucent purple-tinted backgrounds. On Linux, there is no native glass layer — the Glass theme uses CSS `backdrop-filter` where supported by the Wayland compositor, falling back to solid backgrounds.
 
 ---
 
@@ -571,9 +582,9 @@ The native Liquid Glass layer is always present (macOS 26+). Dark and Light them
 | Screenshots | `~/Documents/snip/screenshots/<category>/` (default, configurable via `screenshotsDir`) | same |
 | Animations | `<screenshotsDir>/animations/` | same |
 | Index | `<screenshotsDir>/.index.json` | same |
-| Config | `~/Library/Application Support/snip/snip-config.json` | same |
-| MCP Socket | `~/Library/Application Support/snip/snip.sock` | same |
-| User Extensions | `~/Library/Application Support/snip/extensions/` | same |
+| Config | macOS: `~/Library/Application Support/snip/snip-config.json`; Linux: `~/.config/snip/snip-config.json` | same |
+| MCP Socket | macOS: `~/Library/Application Support/snip/snip.sock`; Linux: `$XDG_RUNTIME_DIR/snip/snip.sock` | same |
+| User Extensions | macOS: `~/Library/Application Support/snip/extensions/`; Linux: `~/.local/share/snip/extensions/` | same |
 
 **Config fields of note:**
 
@@ -590,8 +601,8 @@ The native Liquid Glass layer is always present (macOS 26+). Dark and Light them
 | `tagDescriptions` | `object` | Custom descriptions per tag/category name (e.g. `{ "code": "Code editors and terminals" }`). Used by the AI organizer prompt. |
 | `screenshotsDir` | `string \| undefined` | Custom save location for screenshots. When `undefined` or absent, defaults to `~/Documents/snip/screenshots/`. Set during onboarding or from Settings. |
 
-| Ollama binary | `/usr/local/bin/ollama`, `/opt/homebrew/bin/ollama`, or `/Applications/Ollama.app/Contents/Resources/ollama` | same (user-installed) |
+| Ollama binary | macOS: `/usr/local/bin/ollama`, `/opt/homebrew/bin/ollama`, `/Applications/Ollama.app/...`; Linux: `/usr/local/bin/ollama`, `/usr/bin/ollama`, `/snap/bin/ollama` | same (user-installed) |
 | Ollama models | `~/.ollama/models/` | same (shared with system Ollama) |
-| HF models (add-ons) | `vendor/models/` (dev) | `~/Library/Application Support/snip/addons/models/` (downloaded on demand) |
-| AI runtime (transformers.js + onnxruntime) | `node_modules/` (dev) | `~/Library/Application Support/snip/addons/runtime/` (downloaded on demand) |
+| HF models (add-ons) | `vendor/models/` (dev) | macOS: `~/Library/Application Support/snip/addons/models/`; Linux: `~/.local/share/snip/addons/models/` |
+| AI runtime (transformers.js + onnxruntime) | `node_modules/` (dev) | macOS: `~/Library/Application Support/snip/addons/runtime/`; Linux: `~/.local/share/snip/addons/runtime/` |
 | Animation presets | Inlined in `src/main/animation/animation.js` | same (bundled in asar) |

@@ -7,19 +7,29 @@
 
 **[snipit.dev](https://snipit.dev)**
 
-Visual communication layer between humans and AI agents for macOS.
+Visual communication layer between humans and AI agents for macOS and Linux.
 
-Capture and annotate screenshots, render diagrams from code, review agent-generated visuals with approve/request-changes flow — all from the menu bar. AI organizes and indexes everything for semantic search. CLI and MCP integration let any AI agent use Snip as their visual I/O.
+Capture and annotate screenshots, render diagrams from code, review agent-generated visuals with approve/request-changes flow — all from the menu bar / system tray. AI organizes and indexes everything for semantic search. CLI and MCP integration let any AI agent use Snip as their visual I/O.
 
 ## Install
+
+### macOS (Homebrew)
 
 ```bash
 brew install --cask rixinhahaha/snip/snip
 ```
 
-Or download the DMG directly from [Releases](https://github.com/rixinhahaha/snip/releases) (Apple Silicon only).
+Or download the DMG from [Releases](https://github.com/rixinhahaha/snip/releases) (Apple Silicon).
+
+### Linux
+
+Download from [Releases](https://github.com/rixinhahaha/snip/releases):
+- **AppImage** (portable, any distro) — `Snip-x.y.z-x86_64.AppImage`
+- **deb** (Ubuntu/Debian) — `Snip-x.y.z-amd64.deb`
 
 ## Quick Start (Development)
+
+### macOS
 
 ```bash
 npm install
@@ -29,14 +39,25 @@ npm start         # launch (tray icon appears in menu bar)
 
 Requires **macOS 14+**, **Node.js 18+**, and **Xcode CLT** (`xcode-select --install`). macOS 26+ recommended for native Liquid Glass effects.
 
+### Linux
+
+```bash
+npm install --ignore-scripts
+npm start
+```
+
+Requires **Node.js 18+** and a **Wayland** session (X11 is untested). For clipboard persistence, install `wl-copy` (`wl-clipboard` package). For portal-based screenshots, install `python3-gi` (PyGObject).
+
+### Both platforms
+
 For AI-powered organization, install [Ollama](https://ollama.com/download) separately. Snip detects your system Ollama and guides you through setup in Settings.
 
 ## How It Works
 
-1. **Cmd+Shift+2** — Fullscreen overlay appears on whichever display the cursor is on, drag to select a region
+1. **Cmd+Shift+2** (macOS) / **Ctrl+Shift+2** (Linux) — Fullscreen overlay appears on whichever display the cursor is on, drag to select a region
 2. **Annotate** — Rectangle, arrow, text, tag, blur brush, or AI segment tools
 3. **Esc** — Copies annotated screenshot to clipboard
-4. **Cmd+S** — Saves to disk + AI organizes in background
+4. **Cmd+S** / **Ctrl+S** — Saves to disk + AI organizes in background
 
 Screenshots saved to `~/Documents/snip/screenshots/`. AI renames, categorizes, and indexes them for search.
 
@@ -58,6 +79,8 @@ MCP tools: `render_diagram`, `open_in_snip`, `search_screenshots`, `list_screens
 
 ## Key Shortcuts
 
+On Linux, replace Cmd with Ctrl.
+
 | Shortcut | Action |
 |----------|--------|
 | Cmd+Shift+2 | Capture screenshot |
@@ -67,7 +90,7 @@ MCP tools: `render_diagram`, `open_in_snip`, `search_screenshots`, `list_screens
 | Esc / Enter | Copy to clipboard & close (in editor) |
 | V / R / T / A / G / B / S | Select / Rectangle / Text / Arrow / Tag / Blur / Segment tools |
 | U | Upscale image |
-| W | Transcribe text |
+| W | Transcribe text (macOS only) |
 
 ## Documentation
 
@@ -94,7 +117,7 @@ All AI runs locally — no cloud APIs needed for core features.
 | [SlimSAM-77-uniform](https://huggingface.co/Xenova/slimsam-77-uniform) | Object segmentation | Meta AI / Xenova | [HF](https://huggingface.co/Xenova/slimsam-77-uniform) |
 | [Swin2SR-lightweight-x2-64](https://huggingface.co/Xenova/swin2SR-lightweight-x2-64) | Image upscaling (2x) | Conde et al. / Xenova | [HF](https://huggingface.co/Xenova/swin2SR-lightweight-x2-64) |
 | [all-MiniLM-L6-v2](https://huggingface.co/Xenova/all-MiniLM-L6-v2) | Semantic search embeddings | Microsoft / Xenova | [HF](https://huggingface.co/Xenova/all-MiniLM-L6-v2) |
-| Vision OCR | Text transcription | Apple | Built into macOS |
+| Vision OCR | Text transcription | Apple | Built into macOS (macOS only) |
 
 ## License
 

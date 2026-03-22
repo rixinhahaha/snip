@@ -6,12 +6,24 @@
 
 ## Prerequisites
 
+### macOS
+
 | Requirement | Why |
 |-------------|-----|
-| **macOS** 10.13+ | Electron target platform (macOS 26+ for Liquid Glass) |
+| **macOS** 14+ | Electron target platform (macOS 26+ for Liquid Glass) |
 | **Node.js** 18+ | Used during development; a standalone Node.js binary is bundled for the packaged app |
 | **Xcode CLT** | `xcode-select --install` — compiles native `window_utils.node` addon |
 | **Screen Recording permission** | Required for `desktopCapturer` — grant in System Settings > Privacy |
+
+### Linux
+
+| Requirement | Why |
+|-------------|-----|
+| **Wayland session** | X11 is untested; Wayland is the supported display server |
+| **Node.js** 18+ | Used during development |
+| **wl-clipboard** | `wl-copy` persists clipboard after window close on Wayland |
+| **python3-gi** (PyGObject) | Portal-based screenshot fallback via D-Bus |
+| **GNOME** (recommended) | Compositor shortcuts registered via gsettings; other DEs use Electron native shortcuts (may fail on Wayland) |
 
 ---
 
@@ -55,17 +67,18 @@ The app runs as a **tray-only** process (no Dock icon). Look for the scissors ic
 | `npm run dev` | Launch with `ELECTRON_ENABLE_LOGGING=1` for verbose console output |
 | `npm run rebuild` | `electron-rebuild` — recompile all native modules for Electron's Node ABI |
 | `npm run prebuild` | `node-gyp rebuild` — compile just the `window_utils.node` addon |
-| `npm run build` | Full build for arm64: `node-gyp rebuild` + `electron-builder --mac --arm64` + ad-hoc sign |
-| `npm run sign:adhoc` | Ad-hoc `codesign` for local use (no Developer ID needed) |
-| `./scripts/build-signed.sh` | Production build (arm64): loads `.env` creds, validates cert, builds + signs + notarizes |
+| `npm run build` | Full macOS build for arm64: `node-gyp rebuild` + `electron-builder --mac --arm64` + ad-hoc sign |
+| `npm run build:linux` | Linux build for x64: `electron-builder --linux --x64` (AppImage + deb) |
+| `npm run sign:adhoc` | Ad-hoc `codesign` for local macOS use (no Developer ID needed) |
+| `./scripts/build-signed.sh` | Production macOS build (arm64): loads `.env` creds, validates cert, builds + signs + notarizes |
 | `node scripts/generate-app-icon.js` | Regenerate `assets/icon.png` and `assets/icon.icns` from SVG template |
 | `npm run download-models` | Download HuggingFace models to `vendor/models/` for dev use. NOT bundled in binary — users download via Settings → Add-ons. |
-| `node scripts/build-runtime-bundle.js` | Build the AI runtime tarball (`dist/snip-ai-runtime-darwin-arm64.tar.gz`) for GitHub release. Contains transformers.js + onnxruntime stripped to arm64-only. |
-| `npm run download-node` | Download standalone Node.js 22 LTS binary (~100 MB) for SAM segmentation subprocess (arm64 only). |
+| `node scripts/build-runtime-bundle.js` | Build the AI runtime tarball for GitHub release. Supports `--platform darwin\|linux` and `--arch arm64\|x64`. Contains transformers.js + onnxruntime stripped to target platform. |
+| `npm run download-node` | Download standalone Node.js 22 LTS binary (~100 MB) for SAM segmentation subprocess. Supports `--platform` and `--arch` flags for cross-platform builds. |
 
 ---
 
-## Native Module: `window_utils.node`
+## Native Module: `window_utils.node` (macOS only)
 
 **Source**: `src/native/window_utils.mm` (Objective-C++ / N-API)
 
@@ -82,7 +95,7 @@ If the addon is missing, the app still works but the capture overlay may appear 
 
 ---
 
-## Liquid Glass Native Module: `electron-liquid-glass`
+## Liquid Glass Native Module: `electron-liquid-glass` (macOS 26+ only)
 
 **npm package**: `electron-liquid-glass` (prebuild native addon)
 
@@ -120,13 +133,25 @@ npm run build
 4. No `CSC_LINK` detected -> `sign:adhoc` runs `codesign --force --deep --sign -`
 5. Output: `dist/mac-{arch}/Snip.app` + `Snip-{version}-{arch}.dmg`
 
-### DMG Naming Convention
+### Linux Build
 
-DMGs use the format `Snip-{version}-{arch}.dmg` (configured via `artifactName` in `electron-builder.yml`):
+```bash
+npm run build:linux
+```
 
-| Architecture | Example |
-|-------------|---------|
-| Apple Silicon | `Snip-1.0.9-arm64.dmg` |
+1. `electron-builder --linux --x64` packages the app
+2. `afterPack` hook copies arch-specific bundled Node.js binary to `resources/node/node` (no codesigning)
+3. Output: `dist/Snip-{version}-x86_64.AppImage` + `dist/Snip-{version}-amd64.deb`
+
+### Artifact Naming Convention
+
+All artifacts use the format `Snip-{version}-{arch}.{ext}` (configured via `artifactName` in `electron-builder.yml`):
+
+| Platform | Architecture | Example |
+|----------|-------------|---------|
+| macOS | Apple Silicon | `Snip-1.2.0-arm64.dmg` |
+| Linux | x64 | `Snip-1.2.0-x86_64.AppImage` |
+| Linux | x64 | `Snip-1.2.0-amd64.deb` |
 
 ### Production Build (Signed + Notarized)
 
@@ -178,12 +203,24 @@ git tag v1.0.9
 git push origin v1.0.9
 ```
 
-The workflow:
-1. Downloads HuggingFace models and the Node.js binary
-2. Builds arm64 DMG + ZIP (with models and Node.js bundled), signs with Developer ID, and notarizes with Apple
-3. Publishes directly to GitHub Releases via `electron-builder --publish always` (uploads DMG, ZIP, `latest-mac.yml` for auto-update)
-4. Generates release notes via `gh release edit --generate-notes`
-5. Auto-updates the Homebrew cask (with retry loop for asset availability)
+The workflow runs three jobs:
+
+**1. build-macos** (macOS arm64):
+1. Builds AI runtime bundle and downloads Node.js binary for darwin-arm64
+2. Builds arm64 DMG + ZIP, signs with Developer ID, notarizes with Apple
+3. Publishes to GitHub Releases via `electron-builder --publish always` (creates draft release, uploads DMG, ZIP, `latest-mac.yml`)
+4. Uploads `snip-ai-runtime-darwin-arm64.tar.gz` for AI add-on system
+5. Generates release notes via `gh release edit --generate-notes`, marks release as non-draft
+
+**2. build-linux** (depends on build-macos):
+1. Builds AI runtime bundle and downloads Node.js binary for linux-x64
+2. Builds AppImage + deb with `electron-builder --linux --x64 --publish never`
+3. Uploads all Linux artifacts via `gh release upload` (AppImage, deb, `latest-linux.yml`, `snip-ai-runtime-linux-x64.tar.gz`)
+
+**Note:** Linux uses `--publish never` + `gh release upload` instead of `--publish always` because electron-builder refuses to upload to a non-draft release (the macOS job already published it).
+
+**3. update-cask** (depends on build-macos, skips beta/alpha/rc):
+1. Auto-updates the Homebrew cask with new version and checksums
 
 ### Homebrew
 
@@ -199,18 +236,36 @@ The cask is hosted at [`rixinhahaha/homebrew-snip`](https://github.com/rixinhaha
 
 ## Data Directories
 
+### Cross-platform
+
 | Data | Path | Created By |
 |------|------|------------|
 | Screenshots | `~/Documents/snip/screenshots/` | `initStore()` on first launch |
 | Category subfolders | `~/Documents/snip/screenshots/<category>/` | AI agent when organizing |
 | Index | `~/Documents/snip/screenshots/.index.json` | Store module |
-| Config | `~/Library/Application Support/snip/snip-config.json` | Electron defaults |
-| Ollama binary | `/usr/local/bin/ollama`, `/opt/homebrew/bin/ollama`, or `/Applications/Ollama.app/Contents/Resources/ollama` | User-installed (or installed via in-app setup wizard) |
 | Ollama models | `~/.ollama/models/` | Shared with system Ollama; minicpm-v pulled on first launch |
-| AI add-on models | `vendor/models/` (dev) / `~/Library/Application Support/snip/addons/models/` (user) | Downloaded on demand via Settings → Add-ons |
-| AI runtime (transformers.js + onnxruntime) | `node_modules/` (dev) / `~/Library/Application Support/snip/addons/runtime/` (user) | Downloaded on demand with first add-on install |
 | Node.js binary (SAM subprocess) | `vendor/node/{arch}/node` (dev) / `Resources/node/node` (packaged) | Bundled — `npm run download-node` (~100 MB) |
 | Animation presets | Inlined in `src/main/animation/animation.js` | 6 static text-prompt presets (fallback when Ollama AI presets unavailable) |
+
+### macOS-specific paths
+
+| Data | Path |
+|------|------|
+| Config | `~/Library/Application Support/snip/snip-config.json` |
+| MCP Socket | `~/Library/Application Support/snip/snip.sock` |
+| AI add-on models | `~/Library/Application Support/snip/addons/models/` |
+| AI runtime | `~/Library/Application Support/snip/addons/runtime/` |
+| Ollama binary | `/usr/local/bin/ollama`, `/opt/homebrew/bin/ollama`, or `/Applications/Ollama.app/Contents/Resources/ollama` |
+
+### Linux-specific paths
+
+| Data | Path |
+|------|------|
+| Config | `~/.config/snip/snip-config.json` |
+| MCP Socket | `$XDG_RUNTIME_DIR/snip/snip.sock` (fallback: `~/.config/snip/snip.sock`) |
+| AI add-on models | `~/.local/share/snip/addons/models/` |
+| AI runtime | `~/.local/share/snip/addons/runtime/` |
+| Ollama binary | `/usr/local/bin/ollama`, `/usr/bin/ollama`, `/snap/bin/ollama` |
 
 ---
 
@@ -218,9 +273,9 @@ The cask is hosted at [`rixinhahaha/homebrew-snip`](https://github.com/rixinhaha
 
 | Setting | Value | Why |
 |---------|-------|-----|
-| `app.dock.hide()` | Dev mode | Prevents Space switching on window activate |
-| `LSUIElement: true` | Production (Info.plist) | Same as dock.hide but for packaged app |
-| `titleBarStyle` | `hiddenInset` | Custom traffic light position |
+| `app.dock.hide()` | Dev mode (macOS) | Prevents Space switching on window activate |
+| `LSUIElement: true` | Production (macOS, Info.plist) | Same as dock.hide but for packaged app |
+| `titleBarStyle` | `hiddenInset` (macOS) | Custom traffic light position (standard title bar on Linux) |
 | `transparent: true` | All windows | Required for glass/vibrancy effects |
 | `backgroundColor` | `#00000000` | Fully transparent behind web content |
 | `singleInstanceLock` | Enabled | Second launch focuses existing instance |
@@ -237,5 +292,9 @@ The cask is hosted at [`rixinhahaha/homebrew-snip`](https://github.com/rixinhaha
 | SAM segment tool hidden | Needs 4GB+ RAM. Run `npm run download-node` to bundle the Node.js binary (auto-detected in packaged app). Falls back to system Node.js if bundled binary not found. |
 | Animation (Animate) fails | Check fal.ai API key is set in Settings → Animation, and internet connection is available |
 | `electron-liquid-glass` fails | Only works on macOS 26+; older macOS falls back to vibrancy |
-| App switches Spaces on capture | Ensure `app.dock.hide()` is running and native module built |
+| App switches Spaces on capture | Ensure `app.dock.hide()` is running and native module built (macOS only) |
 | Glass theme looks opaque | Native glass layer failed — check console for `[Snip] Liquid glass` messages |
+| **Linux: Clipboard doesn't persist** | Install `wl-clipboard` package (`sudo apt install wl-clipboard`) |
+| **Linux: Screenshot capture fails** | Install `python3-gi` (`sudo apt install python3-gi gir1.2-glib-2.0`) for portal support |
+| **Linux: Global shortcut doesn't work** | On Wayland/GNOME, shortcuts use compositor (gsettings). On other DEs, Electron native shortcuts may not work — configure shortcuts in your DE's settings. |
+| **Linux: Tray icon missing** | Some DEs require an app indicator extension (e.g., GNOME needs `gnome-shell-extension-appindicator`) |
