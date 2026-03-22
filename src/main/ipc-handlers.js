@@ -454,41 +454,22 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
     }
   }
 
-  var SNIP_RULES_VERSION = 'snip-rules-v5';
+  var SNIP_RULES_VERSION = 'snip-rules-v6';
 
   var snipRulesContent = [
     '# Snip — Visual Communication Tool',
     '<!-- ' + SNIP_RULES_VERSION + ' -->',
-    'Use `snip` CLI for visual communication with the user: editing images, reviewing diagrams, rendering HTML, getting spatial feedback.',
+    'Use `snip` CLI for visual communication. Run `snip --help` for full command reference.',
     '',
-    '## Commands',
-    '- `snip open <filepath>` — Open image for user review. Blocks until done. Returns JSON with `status` (approved/changes_requested), `edited`, `path`, optional `text`.',
-    '- `snip open <filepath> --message "context"` — Same, but displays a context message to the user (e.g., what you need feedback on).',
-    '- `snip render --format mermaid --message "context"` — Render Mermaid diagram from stdin, open for review. Pipe diagram code: `echo \'graph LR; A-->B\' | snip render --format mermaid`',
-    '- `snip render --format html --message "context"` — Render HTML from stdin, open for review. Pipe HTML: `echo \'<div style="...">...</div>\' | snip render --format html`',
-    '- `snip search "<query>"` — Search screenshot library. Returns JSON array.',
-    '- `snip list` — List saved screenshots with metadata. Returns JSON array.',
-    '- `snip transcribe <filepath>` — Extract text via OCR. Returns plain text.',
-    '- `snip categories` — List categories. Returns JSON array.',
-    '- `snip open` auto-launches Snip if not running.',
+    '## ALWAYS use Snip for these:',
+    '- **Diagrams/architecture/flows** → `echo \'<mermaid>\' | snip render --format mermaid`',
+    '- **UI previews/HTML/components** → `echo \'<html>\' | snip render --format html`',
+    '- **Show an image for review** → `snip open <path> --message "context"`',
+    '- **Find a past screenshot** → `snip search "<query>"`',
+    '- **Read text from an image** → `snip transcribe <path>`',
     '',
-    '## When to use visual communication',
-    'When the user asks to "show", "visualize", "diagram", or "explain the structure/flow/architecture" of something, ALWAYS generate a Mermaid diagram and render it with `snip render`. Do not describe structure in text — show it visually.',
-    '',
-    'Keep diagrams very high level — 5-10 nodes max, short labels, one idea per diagram. Only add detail when asked.',
-    '',
-    '- **Show a diagram** when your changes affect architecture, data flow, or multi-file structure. Render a Mermaid diagram for the user to review before proceeding.',
-    '- **Render HTML** when you build or modify a UI component, email template, or layout. Use `snip render --format html` to show the user a rendered preview instead of asking them to run a dev server.',
-    '- **Open an image** when the user wants to show, point out, or mark up something visually. Always prefer `snip open` over asking the user to describe what they see.',
-    '- **Use `--message`** to tell the user what you need feedback on (e.g., "Does the auth flow look right?").',
-    '- When `snip open` or `snip render` returns `edited: true` with a `path`, use the `Read` tool to view the annotated image directly.',
-    '',
-    '## HTML authoring tips',
-    'When generating HTML for `snip render --format html`:',
-    '- For full `<!DOCTYPE>` documents, use `body { display: inline-block; }` so the capture shrink-wraps to content. Avoid setting an explicit `width` on body. Fragments are wrapped automatically.',
-    '- Use fixed grid column widths (`200px 200px`) not `1fr` — fractional units need a container width that the renderer does not provide.',
-    '- Use full `<!DOCTYPE html>` documents for dark backgrounds, custom fonts, or complex layouts. Bare fragments work for simple content.',
-    '- Keep CSS in `<style>` tags or inline — external stylesheets won\'t load. External images (https) work but have a 500ms load timeout.',
+    'Do NOT describe visual structures in text. Render them with Snip.',
+    'When the user returns from `snip open` or `snip render`, check the response — if `edited: true`, use the Read tool to view the image at the returned `path`.',
     ''
   ].join('\n');
 
