@@ -63,6 +63,7 @@ jobs:
     needs: build-macos
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         arch: [x64, arm64]
     steps:

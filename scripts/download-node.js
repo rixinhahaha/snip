@@ -69,6 +69,7 @@ async function main() {
   var binName = plat === 'win32' ? 'node.exe' : 'node';
   var destDir = path.join(VENDOR_NODE, arch);
   var destFile = path.join(destDir, binName);
+  var isCrossCompile = arch !== process.arch || plat !== process.platform;
 
   console.log('Snip Node.js Downloader');
   console.log('=======================');
@@ -80,16 +81,26 @@ async function main() {
 
   // Check if already downloaded
   if (fs.existsSync(destFile)) {
-    try {
-      var version = execSync('"' + destFile + '" --version', { encoding: 'utf8' }).trim();
-      if (version === 'v' + NODE_VERSION) {
-        console.log('==> Already downloaded: ' + version);
-        console.log('    Size: ' + formatBytes(fs.statSync(destFile).size));
+    var existingSize = fs.statSync(destFile).size;
+    if (isCrossCompile) {
+      if (existingSize > 10 * 1024 * 1024) {
+        console.log('==> Already downloaded (cross-compile, skipping exec verify)');
+        console.log('    Size: ' + formatBytes(existingSize));
         return;
       }
-      console.log('==> Existing binary is ' + version + ', need v' + NODE_VERSION + ' — re-downloading');
-    } catch (_) {
-      console.log('==> Existing binary is invalid — re-downloading');
+      console.log('==> Existing binary too small (' + formatBytes(existingSize) + ') — re-downloading');
+    } else {
+      try {
+        var version = execSync('"' + destFile + '" --version', { encoding: 'utf8' }).trim();
+        if (version === 'v' + NODE_VERSION) {
+          console.log('==> Already downloaded: ' + version);
+          console.log('    Size: ' + formatBytes(existingSize));
+          return;
+        }
+        console.log('==> Existing binary is ' + version + ', need v' + NODE_VERSION + ' — re-downloading');
+      } catch (_) {
+        console.log('==> Existing binary is invalid — re-downloading');
+      }
     }
   }
 
@@ -143,9 +154,13 @@ async function main() {
   fs.chmodSync(destFile, 0o755);
 
   // Verify
-  var ver = execSync('"' + destFile + '" --version', { encoding: 'utf8' }).trim();
   var size = fs.statSync(destFile).size;
-  console.log('==> Extracted: ' + ver + ' (' + formatBytes(size) + ')');
+  if (isCrossCompile) {
+    console.log('==> Extracted: (cross-compile, skipping exec verify) (' + formatBytes(size) + ')');
+  } else {
+    var ver = execSync('"' + destFile + '" --version', { encoding: 'utf8' }).trim();
+    console.log('==> Extracted: ' + ver + ' (' + formatBytes(size) + ')');
+  }
 
   // Clean up temp
   fs.rmSync(tmpDir, { recursive: true, force: true });
