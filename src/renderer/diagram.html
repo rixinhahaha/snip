@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta http-equiv="Content-Security-Policy"
-        content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; script-src 'self';">
+        content="default-src 'self'; frame-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; script-src 'self'; font-src 'self' https: data:; connect-src 'none';">
   <style>
     * { margin: 0; padding: 0; }
     body { background: #ffffff; overflow: hidden; }

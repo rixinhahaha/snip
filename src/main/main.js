@@ -507,6 +507,7 @@ function getDiagramWindow() {
   });
 
   cachedDiagramWin.loadFile(DIAGRAM_HTML);
+  cachedDiagramWin.webContents.setWindowOpenHandler(function () { return { action: 'deny' }; });
   cachedDiagramWin.on('closed', function () { cachedDiagramWin = null; });
 
   return cachedDiagramWin;
@@ -536,7 +537,7 @@ function renderDiagramToImage(code, format) {
       if (!result.success) {
         settled = true;
         cleanup();
-        reject(new Error('Mermaid syntax error: ' + String(result.error || 'unknown').slice(0, 500)));
+        reject(new Error('Render error (' + format + '): ' + String(result.error || 'unknown').slice(0, 500)));
         return;
       }
 
@@ -817,12 +818,14 @@ function startSocketHandlers() {
       if (!params.code || typeof params.code !== 'string') {
         throw new Error('Missing "code" parameter');
       }
-      if (params.code.length > 100 * 1024) {
-        throw new Error('Diagram code too large (max 100 KB)');
-      }
       var format = params.format || 'mermaid';
-      if (format !== 'mermaid') {
-        throw new Error('Unsupported format: ' + format + ' (supported: mermaid)');
+      var SUPPORTED_FORMATS = { mermaid: true, html: true };
+      if (!SUPPORTED_FORMATS[format]) {
+        throw new Error('Unsupported format: ' + format + ' (supported: mermaid, html)');
+      }
+      var maxSize = format === 'html' ? 500 * 1024 : 100 * 1024;
+      if (params.code.length > maxSize) {
+        throw new Error('Content too large (max ' + (maxSize / 1024) + ' KB)');
       }
 
       // Check editor is not already busy
