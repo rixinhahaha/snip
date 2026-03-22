@@ -78,15 +78,13 @@ jobs:
       - name: Download bundled Node.js binary
         run: node scripts/download-node.js --platform linux --arch x64
 
-      - name: Build & publish
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npx electron-builder --linux AppImage deb --x64 --publish always
+      - name: Build Linux packages
+        run: npx electron-builder --linux AppImage deb --x64 --publish never
 
-      - name: Upload AI runtime bundle
+      - name: Upload Linux artifacts
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release upload "$GITHUB_REF_NAME" dist/snip-ai-runtime-linux-x64.tar.gz --clobber
+        run: gh release upload "$GITHUB_REF_NAME" dist/Snip-*.AppImage dist/Snip-*.deb dist/latest-linux.yml dist/snip-ai-runtime-linux-x64.tar.gz --clobber
 
   update-cask:
     needs: build-macos
