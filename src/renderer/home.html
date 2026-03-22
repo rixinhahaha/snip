@@ -103,7 +103,7 @@
         </button>
       </div>
       <div id="file-grid"></div>
-      <div id="empty-folder" class="hidden">No snips yet. Press Cmd+Shift+2 to capture.</div>
+      <div id="empty-folder" class="hidden">No snips yet. Press <span id="empty-folder-shortcut"></span> to capture.</div>
     </div>
 
     <!-- Search page -->
@@ -498,6 +498,88 @@
       </div>
       <div id="setup-location-warning" class="setup-location-warning hidden">
         Snips will be saved to the default location shown above.
+      </div>
+    </div>
+
+    <!-- Linux deps view (Wayland clipboard) -->
+    <div id="setup-deps-view" class="setup-view hidden">
+      <div class="setup-header">
+        <div class="setup-header-icon">
+          <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+            <rect x="8" y="8" width="32" height="32" rx="6" stroke="var(--accent)" stroke-width="2.5" fill="none"/>
+            <path d="M16 24h16M24 16v16" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" opacity="0.7"/>
+            <circle cx="38" cy="10" r="5" fill="var(--accent)" opacity="0.9"/>
+            <path d="M36 10h4M38 8v4" stroke="var(--bg-primary)" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <h2>One more thing</h2>
+        <p>Wayland needs a clipboard tool to copy screenshots.</p>
+      </div>
+      <div class="setup-deps-command">
+        <code id="setup-deps-cmd">sudo apt install wl-clipboard</code>
+        <button id="setup-deps-copy-btn" class="setup-deps-copy-btn" title="Copy command">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+          </svg>
+        </button>
+      </div>
+      <p class="setup-deps-hint">Run this in your terminal, then click Check again.</p>
+      <div class="setup-deps-btns">
+        <button id="setup-deps-check-btn" class="setup-btn-icon setup-btn-glow">
+          Check again <kbd class="setup-kbd">Enter</kbd>
+        </button>
+        <button id="setup-deps-skip-btn" class="setup-btn-skip">
+          Skip for now <kbd class="setup-kbd">Esc</kbd>
+        </button>
+      </div>
+      <div id="setup-deps-ok" class="setup-cli-result hidden">
+        <span class="setup-cli-success-icon">&#10003;</span>
+        <span>wl-clipboard installed</span>
+      </div>
+    </div>
+
+    <!-- Shortcuts view (Wayland compositor shortcuts) -->
+    <div id="setup-shortcuts-view" class="setup-view hidden">
+      <div class="setup-header">
+        <div class="setup-header-icon">
+          <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+            <rect x="6" y="16" width="36" height="20" rx="4" stroke="var(--accent)" stroke-width="2.5" fill="none"/>
+            <rect x="12" y="22" width="6" height="4" rx="1" stroke="var(--accent)" stroke-width="1.5" fill="none" opacity="0.6"/>
+            <rect x="21" y="22" width="6" height="4" rx="1" stroke="var(--accent)" stroke-width="1.5" fill="none" opacity="0.6"/>
+            <rect x="30" y="22" width="6" height="4" rx="1" stroke="var(--accent)" stroke-width="1.5" fill="none" opacity="0.6"/>
+            <rect x="15" y="28" width="18" height="4" rx="1" stroke="var(--accent)" stroke-width="1.5" fill="none" opacity="0.4"/>
+          </svg>
+        </div>
+        <h2 id="setup-shortcuts-title">System Shortcuts</h2>
+        <p id="setup-shortcuts-desc">Register keyboard shortcuts so you can capture from anywhere.</p>
+      </div>
+      <div class="setup-shortcuts-list">
+        <label class="setup-shortcut-card" id="setup-shortcut-capture-card">
+          <input type="checkbox" id="setup-shortcut-capture-cb" checked>
+          <span class="setup-shortcut-info">
+            <span class="setup-shortcut-label">Capture</span>
+            <span class="setup-shortcut-keys">Ctrl + Shift + 2</span>
+          </span>
+        </label>
+        <label class="setup-shortcut-card" id="setup-shortcut-search-card">
+          <input type="checkbox" id="setup-shortcut-search-cb" checked>
+          <span class="setup-shortcut-info">
+            <span class="setup-shortcut-label">Search</span>
+            <span class="setup-shortcut-keys">Ctrl + Shift + S</span>
+          </span>
+        </label>
+      </div>
+      <div class="setup-shortcuts-btns">
+        <button id="setup-shortcuts-setup-btn" class="setup-btn-icon setup-btn-glow">
+          Set up <kbd class="setup-kbd">Enter</kbd>
+        </button>
+        <button id="setup-shortcuts-skip-btn" class="setup-btn-skip">
+          Skip for now <kbd class="setup-kbd">Esc</kbd>
+        </button>
+      </div>
+      <div id="setup-shortcuts-ok" class="setup-cli-result hidden">
+        <span class="setup-cli-success-icon">&#10003;</span>
+        <span>Shortcuts registered</span>
       </div>
     </div>
 

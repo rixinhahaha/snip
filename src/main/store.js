@@ -399,6 +399,17 @@ function setMcpConfig(update) {
   saveConfig();
 }
 
+function getShortcutsSkipped() {
+  var cfg = loadConfig();
+  return cfg.shortcutsSkipped === true;
+}
+
+function setShortcutsSkipped(skipped) {
+  var cfg = loadConfig();
+  cfg.shortcutsSkipped = !!skipped;
+  saveConfig();
+}
+
 module.exports = {
   initStore,
   reloadConfig,
@@ -434,5 +445,7 @@ module.exports = {
   resetShortcuts,
   getMcpConfig,
   setMcpConfig,
+  getShortcutsSkipped,
+  setShortcutsSkipped,
   flushConfig,
 };

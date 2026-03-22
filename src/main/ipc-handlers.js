@@ -12,7 +12,8 @@ const {
   getAiEnabled, setAiEnabled,
   getFalApiKey, setFalApiKey,
   getShortcuts, getDefaultShortcuts, setShortcut, resetShortcuts,
-  getMcpConfig, setMcpConfig
+  getMcpConfig, setMcpConfig,
+  getShortcutsSkipped, setShortcutsSkipped
 } = require('./store');
 const { queueNewFile } = require('./organizer/watcher');
 const ollamaManager = require('./ollama-manager');
@@ -152,7 +153,7 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
   // Copy annotated image to clipboard
   ipcMain.handle('copy-to-clipboard', async (event, dataURL) => {
     const image = nativeImage.createFromDataURL(dataURL);
-    clipboard.writeImage(image);
+    platform.copyImageToClipboard(image, clipboard);
     return true;
   });
 
@@ -589,6 +590,20 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
       } catch {}
     }
     return { removed: removed };
+  });
+
+  // Platform dependency check (Wayland clipboard, portal screenshot on Linux; no-op elsewhere)
+  ipcMain.handle('check-linux-deps', async () => {
+    return platform.checkDependencies();
+  });
+
+  ipcMain.handle('get-shortcuts-skipped', async () => {
+    return getShortcutsSkipped();
+  });
+
+  ipcMain.handle('set-shortcuts-skipped', async (event, skipped) => {
+    setShortcutsSkipped(skipped);
+    return true;
   });
 
   // Settings: User Extensions
@@ -1056,6 +1071,24 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
     return true;
   });
 
+  // Compositor shortcuts (Wayland)
+  var VALID_SHORTCUT_ACTIONS = ['capture', 'search'];
+
+  ipcMain.handle('get-shortcut-mode', async () => {
+    return platform.getShortcutMode();
+  });
+
+  ipcMain.handle('install-compositor-shortcut', async (event, { action, binding }) => {
+    if (!VALID_SHORTCUT_ACTIONS.includes(action)) throw new Error('Invalid action');
+    if (typeof binding !== 'string' || binding.length > 100) throw new Error('Invalid binding');
+    return platform.installCompositorShortcut(action, binding);
+  });
+
+  ipcMain.handle('check-compositor-shortcut', async (event, { action }) => {
+    if (!VALID_SHORTCUT_ACTIONS.includes(action)) return { installed: false, binding: null, unsupported: true };
+    return platform.checkCompositorShortcut(action);
+  });
+
   // Theme
   ipcMain.handle('get-theme', async () => {
     return getTheme();
@@ -1090,4 +1123,8 @@ function setPendingEditorData(data) {
   pendingEditorData = data;
 }
 
-module.exports = { registerIpcHandlers, getPendingEditorData, setPendingEditorData };
+function setEditorWindowRef(win) {
+  editorWindowRef = win;
+}
+
+module.exports = { registerIpcHandlers, getPendingEditorData, setPendingEditorData, setEditorWindowRef };

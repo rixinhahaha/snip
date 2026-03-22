@@ -844,6 +844,91 @@ function startSocketHandlers() {
         throw err;
       }
     },
+    portal_capture: async function () {
+      // Portal capture is only needed on Wayland where Electron can't capture the screen
+      if (platform.getShortcutMode && platform.getShortcutMode() !== 'compositor') {
+        throw new Error('Portal capture is only available on Wayland');
+      }
+
+      var { execFile: execFileCb } = require('child_process');
+      var { promisify } = require('util');
+      var execFileAsync = promisify(execFileCb);
+      var helperPath = path.join(__dirname, 'platform', 'portal-screenshot.py');
+
+      var { stdout } = await execFileAsync('python3', [helperPath, '--interactive'], { timeout: 65000 });
+      // Parse only the last non-empty line — GLib may emit warnings to stdout
+      var lines = stdout.trim().split('\n').filter(function (l) { return l.trim(); });
+      var result;
+      try { result = JSON.parse(lines[lines.length - 1]); }
+      catch (_) { throw new Error('Invalid portal response: ' + stdout.slice(0, 200)); }
+
+      if (result.error) throw new Error(result.error);
+      if (result.cancelled) return { cancelled: true };
+
+      var filePath = require('url').fileURLToPath(result.uri);
+      var fs = require('fs');
+      if (!fs.existsSync(filePath)) return { cancelled: true };
+
+      var buf = fs.readFileSync(filePath);
+      var ext = path.extname(filePath).slice(1).toLowerCase() || 'png';
+      var mimeType = ext === 'jpg' ? 'image/jpeg' : 'image/' + ext;
+      var dataURL = 'data:' + mimeType + ';base64,' + buf.toString('base64');
+
+      // Parse dimensions (PNG + JPEG)
+      var imgW = 0, imgH = 0;
+      if (buf.length > 24 && buf[1] === 0x50 && buf[2] === 0x4E && buf[3] === 0x47) {
+        imgW = buf.readUInt32BE(16); imgH = buf.readUInt32BE(20);
+      }
+      if (!imgW && buf.length > 2 && buf[0] === 0xFF && buf[1] === 0xD8) {
+        for (var si = 2; si < Math.min(buf.length - 9, 65536); si++) {
+          if (buf[si] === 0xFF && (buf[si + 1] === 0xC0 || buf[si + 1] === 0xC2)) {
+            imgH = buf.readUInt16BE(si + 5); imgW = buf.readUInt16BE(si + 7); break;
+          }
+        }
+      }
+      if (!imgW) { imgW = 1920; imgH = 1080; }
+
+      // Open in normal edit mode (not review mode) — same path as a regular capture
+      var data = { croppedDataURL: dataURL, cssWidth: imgW, cssHeight: imgH };
+      var extensionRegistry = require('./extension-registry');
+      data.extensions = extensionRegistry.getRendererManifest();
+
+      var { setPendingEditorData, setEditorWindowRef } = require('./ipc-handlers');
+      setPendingEditorData(data);
+
+      if (homeWindow && !homeWindow.isDestroyed() && homeWindow.isVisible()) {
+        homeWindow.hide();
+      }
+
+      var win = createEditorWindow(imgW, imgH);
+      setEditorWindowRef(win);
+      app.focus({ steal: true });
+
+      var pushData = function () {
+        if (win && !win.isDestroyed()) {
+          win.webContents.send('editor-image-data', data);
+          win.show();
+        }
+      };
+      if (win.webContents.isLoading()) {
+        win.webContents.once('did-finish-load', pushData);
+      } else {
+        pushData();
+      }
+
+      win.on('closed', function () {
+        setPendingEditorData(null);
+        setEditorWindowRef(null);
+        prewarmEditor();
+      });
+
+      return { captured: true };
+    },
+    show_search: async function () {
+      requireCategory('library');
+      showSearchPage();
+      return { shown: true };
+    },
     install_extension: async function (params) {
       if (!params.name || !params.manifest) throw new Error('Provide name and manifest');
 

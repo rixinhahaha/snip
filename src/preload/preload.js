@@ -45,6 +45,11 @@ contextBridge.exposeInMainWorld('snip', {
   requestScreenPermission: () => ipcRenderer.invoke('request-screen-permission'),
   restartApp: () => ipcRenderer.invoke('restart-app'),
 
+  // Linux dependency check
+  checkLinuxDeps: () => ipcRenderer.invoke('check-linux-deps'),
+  getShortcutsSkipped: () => ipcRenderer.invoke('get-shortcuts-skipped'),
+  setShortcutsSkipped: (skipped) => ipcRenderer.invoke('set-shortcuts-skipped', skipped),
+
   // AI preference
   getAiEnabled: () => ipcRenderer.invoke('get-ai-enabled'),
   setAiEnabled: (enabled) => ipcRenderer.invoke('set-ai-enabled', enabled),
@@ -213,5 +218,8 @@ contextBridge.exposeInMainWorld('snip', {
     var handler = (event, shortcuts) => callback(shortcuts);
     ipcRenderer.on('shortcuts-changed', handler);
     return () => ipcRenderer.removeListener('shortcuts-changed', handler);
-  }
+  },
+  getShortcutMode: () => ipcRenderer.invoke('get-shortcut-mode'),
+  installCompositorShortcut: (action, binding) => ipcRenderer.invoke('install-compositor-shortcut', { action, binding }),
+  checkCompositorShortcut: (action) => ipcRenderer.invoke('check-compositor-shortcut', { action })
 });
