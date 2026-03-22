@@ -212,10 +212,10 @@ The workflow runs three jobs:
 4. Uploads `snip-ai-runtime-darwin-arm64.tar.gz` for AI add-on system
 5. Generates release notes via `gh release edit --generate-notes`, marks release as non-draft
 
-**2. build-linux** (depends on build-macos):
-1. Builds AI runtime bundle and downloads Node.js binary for linux-x64
-2. Builds AppImage + deb with `electron-builder --linux --x64 --publish never`
-3. Uploads all Linux artifacts via `gh release upload` (AppImage, deb, `latest-linux.yml`, `snip-ai-runtime-linux-x64.tar.gz`)
+**2. build-linux** (depends on build-macos, matrix: x64 + arm64):
+1. Builds AI runtime bundle and downloads Node.js binary for each arch
+2. Builds AppImage + deb with `electron-builder --linux --publish never`
+3. Uploads all Linux artifacts via `gh release upload` (AppImage, deb, `latest-linux.yml`, runtime tarball)
 
 **Note:** Linux uses `--publish never` + `gh release upload` instead of `--publish always` because electron-builder refuses to upload to a non-draft release (the macOS job already published it).
 

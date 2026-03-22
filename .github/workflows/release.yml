@@ -62,6 +62,9 @@ jobs:
   build-linux:
     needs: build-macos
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [x64, arm64]
     steps:
       - uses: actions/checkout@v4
 
@@ -73,18 +76,18 @@ jobs:
       - run: npm ci --ignore-scripts --force
 
       - name: Build AI runtime bundle
-        run: node scripts/build-runtime-bundle.js --platform linux --arch x64
+        run: node scripts/build-runtime-bundle.js --platform linux --arch ${{ matrix.arch }}
 
       - name: Download bundled Node.js binary
-        run: node scripts/download-node.js --platform linux --arch x64
+        run: node scripts/download-node.js --platform linux --arch ${{ matrix.arch }}
 
       - name: Build Linux packages
-        run: npx electron-builder --linux AppImage deb --x64 --publish never
+        run: npx electron-builder --linux AppImage deb --${{ matrix.arch }} --publish never
 
       - name: Upload Linux artifacts
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release upload "$GITHUB_REF_NAME" dist/Snip-*.AppImage dist/Snip-*.deb dist/latest-linux.yml dist/snip-ai-runtime-linux-x64.tar.gz --clobber
+        run: gh release upload "$GITHUB_REF_NAME" dist/Snip-*.AppImage dist/Snip-*.deb dist/latest-linux.yml dist/snip-ai-runtime-linux-${{ matrix.arch }}.tar.gz --clobber
 
   update-cask:
     needs: build-macos

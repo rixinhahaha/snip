@@ -10,17 +10,52 @@
   var REPO = 'rixinhahaha/snip';
   var FALLBACK_URL = 'https://github.com/' + REPO + '/releases/latest';
 
-  // Platform detection
-  var userAgent = navigator.userAgent || '';
-  var platform = navigator.platform || '';
-  var IS_LINUX = /Linux/.test(platform) || /Linux/.test(userAgent);
-  var IS_MAC = /Mac/.test(platform);
+  // --- Platform detection ---
+  function detectPlatform() {
+    var ua = navigator.userAgent || '';
+    var platform = navigator.platform || '';
+    var isMac = /Mac/.test(platform) || /Macintosh/.test(ua);
+    var isLinux = /Linux/.test(platform) || /Linux/.test(ua);
+    var isArm = /aarch64|arm64/i.test(ua) || /aarch64/i.test(platform);
 
-  var ASSET_PATTERN = IS_LINUX ? /Snip-.*-x86_64\.AppImage$/ : /Snip-.*-arm64\.dmg$/;
-  var PLATFORM_LABEL = IS_LINUX ? 'Download for Linux (x86_64)' : 'Download for macOS (Apple Silicon)';
-  var PLATFORM_NOTE = IS_LINUX
-    ? 'Requires a Wayland session. Also available as .deb.'
-    : 'Requires macOS 14+ with Apple M-series chip (M1, M2, M3, M4).';
+    if (isMac) return 'mac-arm64';
+    if (isLinux && isArm) return 'linux-arm64';
+    if (isLinux) return 'linux-x64';
+    return 'unknown';
+  }
+
+  var PLATFORMS = {
+    'mac-arm64': {
+      pattern: /Snip-.*-arm64\.dmg$/,
+      label: 'Download for macOS (Apple Silicon)',
+      note: 'Requires macOS 14+ with Apple M-series chip (M1, M2, M3, M4). Free and open source.',
+      ctaNote: 'Requires macOS 14+ with Apple M-series chip.',
+      showBrew: true
+    },
+    'linux-x64': {
+      pattern: /Snip-.*-x86_64\.AppImage$/,
+      label: 'Download for Linux (x86_64)',
+      note: 'Linux x86_64 AppImage. Free and open source.',
+      ctaNote: 'Linux x86_64. Free and open source.',
+      showBrew: false
+    },
+    'linux-arm64': {
+      pattern: /Snip-.*-arm64\.AppImage$/,
+      label: 'Download for Linux (ARM64)',
+      note: 'Linux ARM64 AppImage. Free and open source.',
+      ctaNote: 'Linux ARM64. Free and open source.',
+      showBrew: false
+    },
+    'unknown': {
+      pattern: null,
+      label: 'Download from GitHub',
+      note: 'Free and open source.',
+      ctaNote: 'Free and open source.',
+      showBrew: false
+    }
+  };
+
+  var PLATFORM = PLATFORMS[detectPlatform()];
 
   // --- Nav scroll effect ---
   var nav = document.getElementById('nav');
@@ -122,47 +157,44 @@
     });
   }
 
-  function setDownloadLabels() {
+  function setDownloadLabel(text) {
     document.querySelectorAll('.download-link').forEach(function (link) {
-      // Only update text nodes inside the link (preserve SVG icon)
-      var textNodes = [];
-      for (var i = 0; i < link.childNodes.length; i++) {
-        if (link.childNodes[i].nodeType === 3) textNodes.push(link.childNodes[i]);
-      }
-      if (textNodes.length > 0) {
-        textNodes[textNodes.length - 1].textContent = '\n          ' + PLATFORM_LABEL + '\n        ';
-      }
-    });
-    document.querySelectorAll('.hero-note').forEach(function (note) {
-      // Only update notes that contain platform requirement text
-      if (/Requires|Wayland|macOS/.test(note.textContent)) {
-        note.textContent = PLATFORM_NOTE + ' Free and open source.';
-      }
-    });
-    // Show "All platforms" link
-    document.querySelectorAll('.all-platforms-link').forEach(function (el) {
-      el.style.display = '';
+      var svg = link.querySelector('svg');
+      link.textContent = '';
+      if (svg) link.appendChild(svg);
+      link.appendChild(document.createTextNode(' ' + text));
     });
   }
 
   function initDownloadLinks() {
-    // Start with fallback so buttons are never broken
+    // Set label and fallback URL immediately
     setDownloadHref(FALLBACK_URL);
-    setDownloadLabels();
+    setDownloadLabel(PLATFORM.label);
 
-    // Fetch latest release from GitHub API and update with direct asset link
+    // Update hero notes
+    var heroNotes = document.querySelectorAll('.hero-note');
+    if (heroNotes.length >= 1) heroNotes[0].textContent = PLATFORM.note;
+    if (heroNotes.length >= 2) heroNotes[1].textContent = PLATFORM.ctaNote;
+
+    // Show/hide brew install (macOS only)
+    var brewInstall = document.querySelector('.brew-install');
+    if (brewInstall) brewInstall.style.display = PLATFORM.showBrew ? '' : 'none';
+
+    // Fetch latest release asset for this platform
+    if (!PLATFORM.pattern) return;
+
     fetch('https://api.github.com/repos/' + REPO + '/releases/latest')
       .then(function (res) { return res.json(); })
       .then(function (release) {
         var asset = (release.assets || []).find(function (a) {
-          return ASSET_PATTERN.test(a.name);
+          return PLATFORM.pattern.test(a.name);
         });
         if (asset && asset.browser_download_url) {
           setDownloadHref(asset.browser_download_url);
         }
       })
       .catch(function () {
-        // Fallback URL already set — nothing to do
+        // Fallback URL already set
       });
   }
 

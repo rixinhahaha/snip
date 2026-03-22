@@ -13,7 +13,7 @@ The marketing site lives in `site/` and is hosted on GitHub Pages at [snipit.dev
 | `site/index.html` | Landing page (all features, download CTA) |
 | `site/guide.html` | Setup guide (permissions, AI, MCP) |
 | `site/styles.css` | Shared styles |
-| `site/script.js` | Platform-aware download link (detects macOS/Linux, fetches correct asset from GitHub API), sparkle canvas, scroll animations |
+| `site/script.js` | Platform-aware download (detects OS/arch, fetches correct asset from GitHub API), sparkle canvas, scroll animations |
 | `site/sitemap.xml` | Sitemap — update `lastmod` on every content change |
 | `site/robots.txt` | Crawler rules |
 | `site/CNAME` | Custom domain config (`snipit.dev`) |
@@ -147,7 +147,7 @@ Rules:
 
 ### Download Link
 
-`script.js` fetches the latest release from `https://api.github.com/repos/rixinhahaha/snip/releases/latest` at runtime. The DMG download link is always up to date — **no manual version update needed** in the HTML when releasing.
+`script.js` detects the visitor's OS and architecture (`navigator.userAgent` / `navigator.platform`) and fetches the matching asset from the latest GitHub release. Supported platforms: macOS arm64 (DMG), Linux x64 (AppImage). Unknown platforms fall back to the releases page. The button label, hero notes, and brew install visibility all adapt to the detected platform. **No manual version update needed** in the HTML when releasing.
 
 ---
 
