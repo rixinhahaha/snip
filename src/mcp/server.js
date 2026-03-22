@@ -108,12 +108,12 @@ var TOOLS = [
   },
   {
     name: 'render_diagram',
-    description: 'Render a diagram (e.g. Mermaid) to PNG and open in Snip editor for user review. User can approve, annotate with spatial feedback, send text feedback, or request changes. Blocks until the user finishes. Returns structured result with status, edited flag, image path, and optional text feedback.',
+    description: 'Render a diagram or HTML to PNG and open in Snip editor for user review. Supports Mermaid diagrams and arbitrary HTML (components, email templates, layouts). User can approve, annotate with spatial feedback, send text feedback, or request changes. Blocks until the user finishes. Returns structured result with status, edited flag, image path, and optional text feedback.',
     inputSchema: {
       type: 'object',
       properties: {
-        code: { type: 'string', description: 'Diagram source code (e.g. Mermaid syntax like "graph TD; A-->B")' },
-        format: { type: 'string', description: 'Diagram format (default: mermaid)', enum: ['mermaid'] },
+        code: { type: 'string', description: 'Source code to render. Mermaid syntax (e.g. "graph TD; A-->B") or HTML markup.' },
+        format: { type: 'string', description: 'Render format (default: mermaid)', enum: ['mermaid', 'html'] },
         message: { type: 'string', description: 'Context message to display to the user' }
       },
       required: ['code']

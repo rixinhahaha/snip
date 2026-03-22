@@ -125,13 +125,14 @@ Power users on macOS and Linux who take 5-50 screenshots per day: developers, de
 - **MCP Server**: Toggle to enable/disable the MCP (Model Context Protocol) server. When enabled, exposes Snip's library and tools to external AI agents (e.g., Claude Desktop) via a Unix domain socket. Per-tool toggles control which capabilities are exposed (Library, Upload, Transcribe, Organize). Copy-to-clipboard button provides the JSON config snippet needed for Claude Desktop.
 - **Extensions**: Lists user-installed extensions with name, type, and permissions. Install button opens a folder picker to load a new extension (shows a manifest preview and permission approval dialog before installing). Uninstall button removes extension and kills its sandbox process.
 
-### Diagram Rendering
+### Rendering
 - `snip render --format mermaid` — renders Mermaid diagram code piped via stdin to a PNG, opens in the editor with Review Mode
+- `snip render --format html` — renders arbitrary HTML (components, email templates, layouts) to a PNG via Electron's built-in Chromium, opens in editor. No dev server needed.
 - Enables the agent-to-human visual round-trip: agent generates diagram code → Snip renders it → user reviews → structured feedback returned to agent
 - Rendering uses Electron's built-in Chromium via a hidden BrowserWindow — zero agent-side dependencies (no mmdc, no Puppeteer)
 - Also available as `render_diagram` MCP tool for direct agent integration
 - `--message` parameter lets the agent provide context (e.g., "Does the auth flow look right?")
-- Extensible to additional formats (DOT, SVG, HTML) via `--format` flag
+- Extensible to additional formats (DOT, SVG) via `--format` flag. HTML is already supported.
 
 ### Review Mode
 - When the editor opens via MCP (`open_in_snip` or `render_diagram`), a review panel appears at the bottom

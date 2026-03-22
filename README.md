@@ -69,6 +69,9 @@ Snip exposes a CLI and MCP server so AI agents can use it as their visual I/O:
 # Render a Mermaid diagram and open for review
 echo 'graph LR; A-->B-->C' | snip render --format mermaid --message "Does this flow look right?"
 
+# Render HTML (components, email templates) and open for review
+echo '<div style="padding:20px;font-family:sans-serif"><h1>Hello</h1><p>Preview</p></div>' | snip render --format html
+
 # Open an image for agent review
 snip open screenshot.png --message "Is the layout correct?"
 ```

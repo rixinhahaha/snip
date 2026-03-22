@@ -128,7 +128,7 @@ src/
       animate.js             # 2GIF animation tool (preset picker, save/copy panel)
       transcribe.js          # TranscribeTool IIFE — text extraction side panel (native macOS OCR)
     diagram.html             # Minimal page for headless Mermaid diagram rendering (hidden BrowserWindow)
-    diagram-renderer.js      # Mermaid render IIFE: receives code via IPC, renders SVG, reports dimensions
+    diagram-renderer.js      # Render IIFE: dispatches by format (Mermaid SVG or HTML), measures dimensions, reports to main
 
   native/
     window_utils.mm          # Obj-C++ N-API addon (macOS only): setMoveToActiveSpace (Space behavior), getWindowList (CGWindowList for window snap — individual windows in z-order with PID)
@@ -535,21 +535,24 @@ The preload script (`preload.js`) exposes `window.snip` with these methods:
   -> subsequent clicks skip OCR call and reopen panel instantly
 ```
 
-### Diagram Rendering Data Flow
+### Rendering Data Flow (Mermaid and HTML)
+
+Supported formats: `mermaid` (diagram code) and `html` (arbitrary HTML markup). Both follow the same pipeline:
 
 ```
-[Agent pipes Mermaid code: echo 'graph TD; A-->B' | snip render --format mermaid]
+[Agent pipes content: echo '...' | snip render --format mermaid|html]
   -> CLI reads stdin, sends { action: 'render_diagram', params: { code, format } } via socket
-  -> main.js render_diagram handler calls renderDiagramToImage(code, format)
-  -> hidden BrowserWindow created (4096x4096, show:false) with diagram-preload.js
-  -> diagram.html loads mermaid.min.js from node_modules
-  -> main sends code via 'render-diagram-code' IPC to diagram renderer
-  -> diagram-renderer.js calls mermaid.render(), injects SVG, measures dimensions
-  -> sends 'diagram-rendered' IPC back with { success, width, height }
-  -> main calls webContents.capturePage(rect) -> NativeImage -> PNG data URL
-  -> diagram window destroyed
+  -> main.js render_diagram handler validates format and size (100 KB mermaid, 500 KB html)
+  -> calls renderDiagramToImage(code, format)
+  -> hidden BrowserWindow (4096x2048, show:false, sandboxed) with diagram-preload.js
+  -> main sends { code, format } via 'render-diagram-code' IPC to diagram renderer
+  -> diagram-renderer.js dispatches by format:
+     - mermaid: calls mermaid.render(), injects SVG, scales 2x for crisp text
+     - html: replaces body with HTML content, waits 500ms for images/fonts
+  -> measures dimensions, sends 'diagram-rendered' IPC back with { success, width, height }
+  -> main resizes window to content, calls webContents.capturePage() -> PNG data URL
   -> editor window opened with rendered PNG (reuses open_in_snip editor flow)
-  -> user annotates diagram in editor
+  -> user annotates in editor
   -> Esc/Enter closes editor, 'editor-result' IPC returns annotated data URL
   -> annotated image saved to .tmp/, path returned to CLI via socket
   -> CLI outputs { status: 'done', path, message }
