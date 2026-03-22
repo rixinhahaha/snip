@@ -2,7 +2,10 @@
   "name": "snip",
   "version": "1.2.0",
   "description": "Visual communication layer between humans and AI agents — capture, annotate, render diagrams, review",
-  "author": "rixinw",
+  "author": {
+    "name": "rixinw",
+    "email": "lamwh55@gmail.com"
+  },
   "license": "MIT",
   "main": "src/main/main.js",
   "bin": {
