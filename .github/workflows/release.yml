@@ -88,7 +88,13 @@ jobs:
       - name: Upload Linux artifacts
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release upload "$GITHUB_REF_NAME" dist/Snip-*.AppImage dist/Snip-*.deb dist/latest-linux.yml dist/snip-ai-runtime-linux-${{ matrix.arch }}.tar.gz --clobber
+        run: gh release upload "$GITHUB_REF_NAME" dist/Snip-*.AppImage dist/Snip-*.deb dist/snip-ai-runtime-linux-${{ matrix.arch }}.tar.gz --clobber
+
+      - name: Upload auto-update manifest
+        if: matrix.arch == 'x64'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "$GITHUB_REF_NAME" dist/latest-linux.yml --clobber
 
   update-cask:
     needs: build-macos
