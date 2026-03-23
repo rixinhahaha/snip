@@ -135,7 +135,7 @@ function callSnip(action, params, isRetry) {
     var id = 'cli-' + Date.now();
 
     conn.on('connect', function () {
-      var msg = JSON.stringify({ id: id, action: action, params: params || {} }) + '\n';
+      var msg = JSON.stringify({ id: id, action: action, params: params || {}, source: 'cli' }) + '\n';
       conn.write(msg);
     });
 

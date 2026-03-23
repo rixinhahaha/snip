@@ -475,7 +475,8 @@ function requireScreenshotPath(filepath) {
   return resolved;
 }
 
-function requireCategory(category) {
+function requireCategory(category, source) {
+  if (source === 'cli') return;
   var config = getMcpConfig();
   if (!config.enabled) {
     throw new Error('MCP is disabled in settings');
@@ -695,17 +696,17 @@ ipcMain.on('editor-result', function (event, payload) {
 
 function startSocketHandlers() {
   startSocketServer({
-    search_screenshots: async function (params) {
-      requireCategory('library');
+    search_screenshots: async function (params, source) {
+      requireCategory('library', source);
       const { searchScreenshots } = require('./organizer/embeddings');
       return searchScreenshots(params.query);
     },
-    list_screenshots: async function () {
-      requireCategory('library');
+    list_screenshots: async function (params, source) {
+      requireCategory('library', source);
       return readIndex();
     },
-    get_screenshot: async function (params) {
-      requireCategory('library');
+    get_screenshot: async function (params, source) {
+      requireCategory('library', source);
       var filepath = requireScreenshotPath(params.filepath);
       var fs = require('fs');
       var buf = fs.readFileSync(filepath);
@@ -719,27 +720,27 @@ function startSocketHandlers() {
         metadata: entry || null
       };
     },
-    transcribe_screenshot: async function (params) {
-      requireCategory('transcribe');
+    transcribe_screenshot: async function (params, source) {
+      requireCategory('transcribe', source);
       var filepath = requireScreenshotPath(params.filepath);
       var buf = require('fs').readFileSync(filepath);
       var base64 = buf.toString('base64');
       const { transcribe } = require('./transcription/transcription');
       return transcribe(base64);
     },
-    organize_screenshot: async function (params) {
-      requireCategory('organize');
+    organize_screenshot: async function (params, source) {
+      requireCategory('organize', source);
       var filepath = requireScreenshotPath(params.filepath);
       const { queueNewFile } = require('./organizer/watcher');
       queueNewFile(filepath);
       return { queued: true, filepath: filepath };
     },
-    get_categories: async function () {
-      requireCategory('library');
+    get_categories: async function (params, source) {
+      requireCategory('library', source);
       return getAllCategories();
     },
-    open_in_snip: async function (params) {
-      requireCategory('upload');
+    open_in_snip: async function (params, source) {
+      requireCategory('upload', source);
 
       if (!params.filepath && !params.imageDataURL) {
         throw new Error('Provide either filepath or imageDataURL');
@@ -817,8 +818,8 @@ function startSocketHandlers() {
         mcpMessage: (params.message || '').slice(0, 2000)
       });
     },
-    render_diagram: async function (params) {
-      requireCategory('upload');
+    render_diagram: async function (params, source) {
+      requireCategory('upload', source);
 
       if (!params.code || typeof params.code !== 'string') {
         throw new Error('Missing "code" parameter');
@@ -931,13 +932,13 @@ function startSocketHandlers() {
 
       return { captured: true };
     },
-    show_search: async function () {
-      requireCategory('library');
+    show_search: async function (params, source) {
+      requireCategory('library', source);
       showSearchPage();
       return { shown: true };
     },
-    install_extension: async function (params) {
-      requireCategory('upload');
+    install_extension: async function (params, source) {
+      requireCategory('upload', source);
       if (!params.name || !params.manifest) throw new Error('Provide name and manifest');
 
       var extName = String(params.name);

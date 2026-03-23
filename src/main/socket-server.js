@@ -81,8 +81,10 @@ async function handleMessage(conn, msg, handlers) {
     return;
   }
 
+  var source = msg.source || null;
+
   try {
-    var result = await handler(params);
+    var result = await handler(params, source);
     sendResponse(conn, id, result, null);
   } catch (err) {
     sendResponse(conn, id, null, err.message || String(err));
