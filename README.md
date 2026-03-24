@@ -1,14 +1,15 @@
 <p align="center">
-  <img src="assets/icon.png" alt="Snip" width="128" height="128">
+  <img src="assets/icon.png" alt="Snip" width="128" height="128"><br><br>
+  <a href="https://www.producthunt.com/products/snip-ai-powered-macos-screenshot-tool?utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-snip-ai-powered-macos-screenshot-tool-2" target="_blank"><img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1089620&theme=dark" alt="Snip on Product Hunt" height="40"></a>
 </p>
 
 # Snip
 
-**Give your AI coding agent eyes.**
+**A visual whiteboard between you and your AI agent.**
 
-When your AI agent builds something visual — a diagram, a component, an HTML layout — Snip shows it to you. You approve, annotate, or request changes. The agent gets your feedback and keeps going.
+AI agents are great at generating visuals — HTML layouts, Mermaid diagrams, posters, UI components. And they're increasingly good at analyzing visuals too. So why are we still going back and forth in text trying to describe what's wrong?
 
-No browser needed. No copy-pasting screenshots. The agent renders, you review, it iterates.
+Snip bridges this gap. The agent renders something and it pops up on your screen. You approve it, or draw directly on it — circle what's wrong, add an arrow, write a note. The agent sees your annotations and iterates.
 
 <p align="center">
   <img src="assets/demo.gif" alt="Snip demo — agent renders a diagram, user reviews and approves" width="720">
