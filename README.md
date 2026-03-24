@@ -1,15 +1,40 @@
 <p align="center">
-  <img src="assets/icon.png" alt="Snip" width="128" height="128"><br><br>
-  <a href="https://www.producthunt.com/products/snip-ai-powered-macos-screenshot-tool?utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-snip-ai-powered-macos-screenshot-tool-2" target="_blank"><img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1089620&theme=dark" alt="Snip on Product Hunt" height="40"></a>
+  <img src="assets/icon.png" alt="Snip" width="128" height="128">
 </p>
 
 # Snip
 
-**[snipit.dev](https://snipit.dev)**
+**Give your AI coding agent eyes.**
 
-Visual communication layer between humans and AI agents for macOS and Linux.
+When your AI agent builds something visual — a diagram, a component, an HTML layout — Snip shows it to you. You approve, annotate, or request changes. The agent gets your feedback and keeps going.
 
-Capture and annotate screenshots, render diagrams from code, review agent-generated visuals with approve/request-changes flow — all from the menu bar / system tray. AI organizes and indexes everything for semantic search. CLI and MCP integration let any AI agent use Snip as their visual I/O.
+No browser needed. No copy-pasting screenshots. The agent renders, you review, it iterates.
+
+<p align="center">
+  <img src="assets/demo.gif" alt="Snip demo — agent renders a diagram, user reviews and approves" width="720">
+</p>
+
+## How It Works
+
+Snip runs as a menu bar / system tray app with a CLI that any AI coding agent can call directly:
+
+```bash
+# Agent renders a Mermaid diagram and blocks until you review it
+echo 'graph LR; A-->B-->C' | snip render --format mermaid --message "Does this flow look right?"
+
+# Agent renders HTML (components, email templates) for your review
+echo '<h1>Hello</h1><p>Preview this layout</p>' | snip render --format html
+
+# Agent opens an image for your review
+snip open screenshot.png --message "Is the layout correct?"
+
+# Search your screenshot library
+snip search "login page error"
+```
+
+The agent gets structured JSON back: `{ status: "approved" | "changes_requested", edited, path, text }`. You can annotate spatially, type text feedback, or just approve.
+
+Works with **Claude Code**, **Cursor**, **Aider**, and anything that can run a shell command. Also ships an [MCP server](#mcp-server) for agents without shell access.
 
 ## Install
 
@@ -27,58 +52,56 @@ Download from [Releases](https://github.com/rixinhahaha/snip/releases):
 - **AppImage** (portable, any distro) — `Snip-x.y.z-x86_64.AppImage`
 - **deb** (Ubuntu/Debian) — `Snip-x.y.z-amd64.deb`
 
-## Quick Start (Development)
+## Use with Claude Code
 
-### macOS
+The CLI works out of the box — Claude Code calls it via Bash. No config needed.
 
-```bash
-npm install
-npm run rebuild   # compile native modules
-npm start         # launch (tray icon appears in menu bar)
+Try it: ask Claude *"Render a diagram of this project's architecture using Mermaid and show it to me with snip"*
+
+## CLI Reference
+
+| Command | What it does |
+|---------|-------------|
+| `snip render --format mermaid` | Render Mermaid diagram from stdin, open for review |
+| `snip render --format html` | Render HTML from stdin, open for review |
+| `snip open <path>` | Open any image for annotated review |
+| `snip search <query>` | Search screenshot library by description |
+| `snip transcribe <path>` | Extract text from an image via OCR |
+| `snip list` | List all saved screenshots with metadata |
+| `snip get <path>` | Get metadata for a specific screenshot |
+| `snip organize <path>` | Queue screenshot for AI categorization |
+| `snip categories` | List all categories |
+
+All review commands (`render`, `open`) block until the user finishes and return structured JSON.
+
+## MCP Server
+
+For agents without shell access (Claude Desktop, hosted environments), Snip also ships an MCP server:
+
+```json
+{
+  "mcpServers": {
+    "snip": {
+      "command": "node",
+      "args": ["/path/to/snip/src/mcp/server.js"]
+    }
+  }
+}
 ```
 
-Requires **macOS 14+**, **Node.js 18+**, and **Xcode CLT** (`xcode-select --install`). macOS 26+ recommended for native Liquid Glass effects.
+The MCP server exposes the same capabilities: `render_diagram`, `open_in_snip`, `search_screenshots`, `list_screenshots`, `get_screenshot`, `transcribe_screenshot`, `organize_screenshot`, `get_categories`, `install_extension`.
 
-### Linux
+## Also a Screenshot Tool
 
-```bash
-npm install --ignore-scripts
-npm start
-```
+Snip is a full screenshot + annotation app on its own:
 
-Requires **Node.js 18+** and a **Wayland** session (X11 is untested). For clipboard persistence, install `wl-copy` (`wl-clipboard` package). For portal-based screenshots, install `python3-gi` (PyGObject).
+- **Cmd+Shift+2** (macOS) / **Ctrl+Shift+2** (Linux) — Capture with region select or window snap
+- **Cmd+Shift+1** / **Ctrl+Shift+1** — Quick Snip (capture straight to clipboard)
+- **Annotate** — Rectangle, arrow, text, tag, blur brush, AI segment
+- **Esc** — Copy to clipboard and close
+- **Cmd+S** — Save to disk + AI organizes in background
 
-### Both platforms
-
-For AI-powered organization, install [Ollama](https://ollama.com/download) separately. Snip detects your system Ollama and guides you through setup in Settings.
-
-## How It Works
-
-1. **Cmd+Shift+2** (macOS) / **Ctrl+Shift+2** (Linux) — Fullscreen overlay appears on whichever display the cursor is on, drag to select a region
-2. **Annotate** — Rectangle, arrow, text, tag, blur brush, or AI segment tools
-3. **Esc** — Copies annotated screenshot to clipboard
-4. **Cmd+S** / **Ctrl+S** — Saves to disk + AI organizes in background
-
-Screenshots saved to `~/Documents/snip/screenshots/`. AI renames, categorizes, and indexes them for search.
-
-## Agent Integration (CLI & MCP)
-
-Snip exposes a CLI and MCP server so AI agents can use it as their visual I/O:
-
-```bash
-# Render a Mermaid diagram and open for review
-echo 'graph LR; A-->B-->C' | snip render --format mermaid --message "Does this flow look right?"
-
-# Render HTML (components, email templates) and open for review
-echo '<div style="padding:20px;font-family:sans-serif"><h1>Hello</h1><p>Preview</p></div>' | snip render --format html
-
-# Open an image for agent review
-snip open screenshot.png --message "Is the layout correct?"
-```
-
-The agent gets structured feedback: `{ status: "approved" | "changes_requested", edited, path, text? }`. The user can annotate spatially, type text feedback, or just approve.
-
-MCP tools: `render_diagram`, `open_in_snip`, `search_screenshots`, `list_screenshots`, `get_screenshot`, `transcribe_screenshot`, `organize_screenshot`, `get_categories`, `install_extension`.
+AI organization uses a local vision LLM (via [Ollama](https://ollama.com/download)) to name, categorize, and tag every saved screenshot. Semantic search finds any screenshot by describing what was in it.
 
 ## Key Shortcuts
 
@@ -92,35 +115,32 @@ On Linux, replace Cmd with Ctrl.
 | Cmd+S | Save to disk (in editor) |
 | Esc / Enter | Copy to clipboard & close (in editor) |
 | V / R / T / A / G / B / S | Select / Rectangle / Text / Arrow / Tag / Blur / Segment tools |
-| U | Upscale image |
-| W | Transcribe text (macOS only) |
+
+## Development
+
+```bash
+npm install
+npm run rebuild   # compile native modules (macOS)
+npm start         # launch (tray icon appears)
+```
+
+Requires **macOS 14+** or **Linux (Wayland)**, **Node.js 18+**. macOS 26+ for native frosted glass UI.
 
 ## Documentation
 
-| Doc | Role | Contents |
-|-----|------|----------|
-| [`docs/PRODUCT.md`](docs/PRODUCT.md) | Product Manager | Vision, feature specs, terminology, product principles |
-| [`docs/DESIGN.md`](docs/DESIGN.md) | Designer | Color palettes (Dark/Light/Glass), component patterns, glass effects, icon specs |
-| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Developer | Code structure, conventions, IPC channels, data flow, key decisions |
-| [`docs/DEVOPS.md`](docs/DEVOPS.md) | DevOps | Build pipeline, signing, native modules, environment setup |
-| [`docs/USER_FLOWS.md`](docs/USER_FLOWS.md) | QA / PM | Detailed user flows for every feature, edge cases, test cases |
-| [`CLAUDE.md`](CLAUDE.md) | Claude Code | Autonomous agent instructions, role references, documentation rules |
+| Doc | Contents |
+|-----|----------|
+| [`docs/PRODUCT.md`](docs/PRODUCT.md) | Vision, feature specs, terminology |
+| [`docs/DESIGN.md`](docs/DESIGN.md) | Color palettes, component patterns, glass effects |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Code structure, IPC channels, data flow |
+| [`docs/DEVOPS.md`](docs/DEVOPS.md) | Build pipeline, signing, native modules |
+| [`docs/USER_FLOWS.md`](docs/USER_FLOWS.md) | Step-by-step flows, edge cases, test cases |
 
 ## Tech Stack
 
-Electron 33 / Fabric.js 7 / Mermaid.js 11 / Ollama (local LLM) / HuggingFace Transformers.js / SlimSAM (ONNX) / Chokidar 4 / electron-liquid-glass
-
-### On-Device Models
+Electron 33 / Fabric.js 7 / Mermaid.js 11 / Ollama (local LLM) / HuggingFace Transformers.js / SlimSAM (ONNX) / electron-liquid-glass
 
 All AI runs locally — no cloud APIs needed for core features.
-
-| Model | Purpose | By | Link |
-|-------|---------|----|------|
-| [MiniCPM-V](https://huggingface.co/openbmb/MiniCPM-V) | Vision LLM (naming, tagging, categorizing) | OpenBMB | [HF](https://huggingface.co/openbmb/MiniCPM-V) |
-| [SlimSAM-77-uniform](https://huggingface.co/Xenova/slimsam-77-uniform) | Object segmentation | Meta AI / Xenova | [HF](https://huggingface.co/Xenova/slimsam-77-uniform) |
-| [Swin2SR-lightweight-x2-64](https://huggingface.co/Xenova/swin2SR-lightweight-x2-64) | Image upscaling (2x) | Conde et al. / Xenova | [HF](https://huggingface.co/Xenova/swin2SR-lightweight-x2-64) |
-| [all-MiniLM-L6-v2](https://huggingface.co/Xenova/all-MiniLM-L6-v2) | Semantic search embeddings | Microsoft / Xenova | [HF](https://huggingface.co/Xenova/all-MiniLM-L6-v2) |
-| Vision OCR | Text transcription | Apple | Built into macOS (macOS only) |
 
 ## License
 
