@@ -1,4 +1,4 @@
-const { ipcMain, clipboard, nativeImage, app, Notification, shell, BrowserWindow, screen, systemPreferences, desktopCapturer, dialog } = require('electron');
+const { ipcMain, clipboard, nativeImage, app, Notification, shell, BrowserWindow, screen, systemPreferences, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const platform = require('./platform');
@@ -252,21 +252,22 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
   });
 
   // Screen recording permission (macOS-specific; other platforms return 'granted')
+  function getScreenPermissionStatus() {
+    return systemPreferences.getMediaAccessStatus
+      ? systemPreferences.getMediaAccessStatus('screen')
+      : 'granted';
+  }
+
   ipcMain.handle('get-screen-permission', async () => {
-    if (systemPreferences.getMediaAccessStatus) {
-      return systemPreferences.getMediaAccessStatus('screen');
-    }
-    return 'granted';
+    return getScreenPermissionStatus();
   });
 
   ipcMain.handle('request-screen-permission', async () => {
-    try {
-      await desktopCapturer.getSources({ types: ['screen'], thumbnailSize: { width: 1, height: 1 } });
-    } catch (e) { console.log('[Snip] Screen permission probe error (expected):', e.message); }
-    if (systemPreferences.getMediaAccessStatus) {
-      return systemPreferences.getMediaAccessStatus('screen');
-    }
-    return 'granted';
+    // CGRequestScreenCaptureAccess registers the app in the Screen Recording
+    // list in System Settings. Called right before the user opens Settings
+    // so Snip is already visible in the list when they get there.
+    platform.requestScreenCaptureAccess();
+    return getScreenPermissionStatus();
   });
 
   ipcMain.handle('restart-app', () => {

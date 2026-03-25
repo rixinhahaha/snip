@@ -141,11 +141,21 @@ Napi::Value GetWindowList(const Napi::CallbackInfo& info) {
   return result;
 }
 
+// Request screen capture access via CGRequestScreenCaptureAccess().
+// On first call, adds the app to the Screen Recording list in System Settings
+// and shows the macOS permission prompt. Returns true if access is granted.
+Napi::Boolean RequestScreenCaptureAccess(const Napi::CallbackInfo& info) {
+  Napi::Env env = info.Env();
+  return Napi::Boolean::New(env, CGRequestScreenCaptureAccess());
+}
+
 Napi::Object Init(Napi::Env env, Napi::Object exports) {
   exports.Set("setMoveToActiveSpace",
               Napi::Function::New(env, SetMoveToActiveSpace));
   exports.Set("getWindowList",
               Napi::Function::New(env, GetWindowList));
+  exports.Set("requestScreenCaptureAccess",
+              Napi::Function::New(env, RequestScreenCaptureAccess));
   return exports;
 }
 

@@ -2120,7 +2120,12 @@
 
     permAllowBtn.addEventListener('click', handlePermissionAllow);
 
-    permSettingsBtn.addEventListener('click', function() {
+    permSettingsBtn.addEventListener('click', async function() {
+      // Register in Screen Recording list before opening Settings
+      // so Snip is already visible when the user gets there
+      permSettingsBtn.disabled = true;
+      try { await window.snip.requestScreenPermission(); } catch (_) {}
+      permSettingsBtn.disabled = false;
       window.snip.openExternalUrl('x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture');
     });
 

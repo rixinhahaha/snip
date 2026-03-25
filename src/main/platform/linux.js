@@ -263,6 +263,7 @@ module.exports = {
   pollForSocket: shared.pollForSocket,
   launchApp,
   canTranscribe,
+  requestScreenCaptureAccess: function () { return false; },
   getCliInstallPaths: shared.getCliInstallPaths,
   getCliWrapperContent: shared.getCliWrapperContent,
   getTrayIcon,

@@ -206,6 +206,16 @@ function launchApp() {
   return false;
 }
 
+// ── Screen capture permission ──
+
+function requestScreenCaptureAccess() {
+  var utils = getWindowUtils();
+  if (utils && utils.requestScreenCaptureAccess) {
+    return utils.requestScreenCaptureAccess();
+  }
+  return false;
+}
+
 // ── Capabilities ──
 
 function canTranscribe() {
@@ -232,6 +242,7 @@ module.exports = {
   pollForSocket: shared.pollForSocket,
   launchApp,
   canTranscribe,
+  requestScreenCaptureAccess,
   getCliInstallPaths: shared.getCliInstallPaths,
   getCliWrapperContent: shared.getCliWrapperContent,
   getTrayIcon,
