@@ -2,6 +2,16 @@
 /* exported TextTool */
 
 const TextTool = (() => {
+  var PLACEHOLDER = 'Type here';
+
+  function removeIfEmpty(canvas, textbox) {
+    if (!textbox) return;
+    var text = textbox.text.trim();
+    if (!text || text === PLACEHOLDER) {
+      canvas.remove(textbox);
+    }
+  }
+
   function attach(canvas, getColor, getFont, getFontSize) {
     function onMouseDown(opt) {
       if (opt.target && opt.target.type === 'textbox') return;
@@ -16,11 +26,16 @@ const TextTool = (() => {
       const pointer = ToolUtils.clampedScenePoint(canvas, opt.e);
 
       var minWidth = 200;
-      const textbox = new fabric.Textbox('Type here', {
+      const textbox = new fabric.Textbox(PLACEHOLDER, {
         left: pointer.x, top: pointer.y, width: minWidth,
         originX: 'left', originY: 'top',
         fontSize: getFontSize(), fontFamily: getFont(), fill: getColor(),
         editable: true, cursorColor: getColor(), padding: 5
+      });
+
+      // Remove empty/placeholder textboxes when editing ends
+      textbox.on('editing:exited', function() {
+        removeIfEmpty(canvas, textbox);
       });
 
       // Auto-expand width as user types
@@ -52,7 +67,9 @@ const TextTool = (() => {
         canvas.selection = true;
         canvas.defaultCursor = 'default';
         const active = canvas.getActiveObject();
-        if (active && active.type === 'textbox' && active.isEditing) active.exitEditing();
+        if (active && active.type === 'textbox' && active.isEditing) {
+          active.exitEditing();
+        }
         canvas.renderAll();
       }
     };
