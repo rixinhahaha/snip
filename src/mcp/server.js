@@ -42,7 +42,7 @@ if (isPackaged || __dirname.includes('app.asar')) {
 
 var PROTOCOL_VERSION = '2025-11-25';
 var SERVER_NAME = 'snip';
-var SERVER_VERSION = '1.2.6';
+var SERVER_VERSION = '1.2.7';
 
 // ── MCP Tool Definitions ──
 
