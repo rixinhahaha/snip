@@ -51,7 +51,7 @@ body {
   display: flex;
   flex-direction: row;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: center;
   gap: 0;
   padding: 6px 8px;
   overflow: hidden;
@@ -71,7 +71,6 @@ body {
   flex-direction: row;
   align-items: center;
   gap: 4px;
-  flex: 1;
   min-width: 0;
   overflow-x: auto;
   overflow-y: hidden;
