@@ -890,6 +890,7 @@ function startSocketHandlers() {
       var { promisify } = require('util');
       var execFileAsync = promisify(execFileCb);
       var helperPath = path.join(__dirname, 'platform', 'portal-screenshot.py');
+      if (helperPath.includes('app.asar')) helperPath = helperPath.replace('app.asar', 'app.asar.unpacked');
 
       var { stdout } = await execFileAsync('python3', [helperPath, '--interactive'], { timeout: 65000 });
       // Parse only the last non-empty line — GLib may emit warnings to stdout
