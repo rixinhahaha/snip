@@ -88,7 +88,12 @@ deb:
     - libgtk-3-0
     - libnss3
     - libatspi2.0-0
+    - libayatana-appindicator3-1
     - xdg-utils
+  recommends:
+    - wl-clipboard
+    - python3-gi
+    - gir1.2-gdkpixbuf-2.0
   afterInstall: scripts/afterInstall.sh
 
 publish:

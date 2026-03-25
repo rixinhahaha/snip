@@ -58,6 +58,13 @@ function getSocketPath() {
 // ── App launch ──
 
 function launchApp() {
+  var fs = require('fs');
+  var { spawn } = require('child_process');
+  // Packaged deb installs the binary to /opt/Snip/snip
+  if (fs.existsSync('/opt/Snip/snip')) {
+    spawn('/opt/Snip/snip', [], { detached: true, stdio: 'ignore' }).unref();
+    return true;
+  }
   return false;
 }
 

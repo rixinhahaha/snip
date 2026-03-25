@@ -42,6 +42,10 @@ function launchApp() {
     child_process.execFile('open', ['-a', 'Snip']);
     return true;
   }
+  if (process.platform === 'linux' && fs.existsSync('/opt/Snip/snip')) {
+    child_process.spawn('/opt/Snip/snip', [], { detached: true, stdio: 'ignore' }).unref();
+    return true;
+  }
   return false;
 }
 
