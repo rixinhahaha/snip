@@ -167,7 +167,10 @@ const Toolbar = (() => {
     activeTool = tool;
     document.querySelectorAll('#toolbar-tools .tool-btn').forEach(btn => btn.classList.remove('active'));
     var toolBtn = document.getElementById('tool-' + tool);
-    if (toolBtn) toolBtn.classList.add('active');
+    if (toolBtn) {
+      toolBtn.classList.add('active');
+      toolBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+    }
 
     // Show/hide contextual controls based on extension toolbar groups
     var allGroups = ['rect-mode-group', 'stroke-group', 'font-group', 'tag-color-group', 'brush-group', 'segment-color-group'];

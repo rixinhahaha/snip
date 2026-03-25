@@ -47,14 +47,14 @@ body {
   top: 0;
   left: 0;
   right: 0;
-  min-width: fit-content;
   height: 48px;
   display: flex;
   flex-direction: row;
   align-items: center;
-  justify-content: center;
-  gap: 4px;
+  justify-content: flex-start;
+  gap: 0;
   padding: 6px 8px;
+  overflow: hidden;
   -webkit-app-region: drag;
   background: var(--bg-toolbar);
   backdrop-filter: blur(var(--glass-blur));
@@ -64,6 +64,37 @@ body {
 }
 [data-platform="darwin"] #toolbar {
   padding-left: 76px; /* space for macOS traffic lights */
+}
+
+#toolbar-scroll {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-app-region: no-drag;
+  mask-image: linear-gradient(to right, black calc(100% - 16px), transparent);
+  -webkit-mask-image: linear-gradient(to right, black calc(100% - 16px), transparent);
+  padding-right: 8px;
+}
+#toolbar-scroll.no-overflow {
+  mask-image: none;
+  -webkit-mask-image: none;
+}
+#toolbar-scroll::-webkit-scrollbar { height: 3px; }
+#toolbar-scroll::-webkit-scrollbar-track { background: transparent; }
+#toolbar-scroll::-webkit-scrollbar-thumb { background: var(--text-muted); border-radius: 2px; }
+
+#toolbar-actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  padding-left: 4px;
 }
 
 #toolbar-tools {

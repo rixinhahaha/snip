@@ -22,6 +22,9 @@ contextBridge.exposeInMainWorld('snip', {
   onEditorImageData: (callback) => {
     ipcRenderer.on('editor-image-data', (event, data) => callback(data));
   },
+  onEditorResized: (callback) => {
+    ipcRenderer.on('editor-resized', () => callback());
+  },
   closeEditor: () => ipcRenderer.send('close-editor'),
   sendEditorResult: (dataURL) => ipcRenderer.send('editor-result', dataURL),
 
@@ -195,9 +198,6 @@ contextBridge.exposeInMainWorld('snip', {
   },
   saveAnimation: ({ buffer, format, timestamp }) =>
     ipcRenderer.invoke('save-animation', { buffer, format, timestamp }),
-
-  // Editor resize
-  resizeEditor: (minWidth) => ipcRenderer.invoke('resize-editor', { minWidth }),
 
   // Theme
   getTheme: () => ipcRenderer.invoke('get-theme'),

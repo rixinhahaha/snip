@@ -87,7 +87,9 @@ function prewarmEditor() {
       y: -9999,
       show: false,
       frame: true,
-      resizable: false,
+      resizable: true,
+      minWidth: 600,
+      minHeight: 400,
       webPreferences: { ...BASE_WEB_PREFERENCES }
     }, platform.getWindowOptions('editor')));
     prewarmedEditor.setMenuBarVisibility(false);
@@ -190,15 +192,18 @@ function createHomeWindow() {
 
 function computeEditorBounds(cssWidth, cssHeight) {
   const TOOLBAR_HEIGHT = 48;
-  const MARGIN = 48;
-  const TOOLBAR_MIN_WIDTH = 1100;
+  const PADDING = 48;
+  const MIN_W = 600;
+  const MIN_H = 400;
   const primaryDisplay = screen.getPrimaryDisplay();
   const { width: screenW, height: screenH } = primaryDisplay.workAreaSize;
-  const PANEL_CLEARANCE = 260;
-  const winWidth = Math.min(Math.max(cssWidth + MARGIN, TOOLBAR_MIN_WIDTH), screenW);
-  const winHeight = Math.min(Math.max(cssHeight + TOOLBAR_HEIGHT + MARGIN, cssHeight + TOOLBAR_HEIGHT + PANEL_CLEARANCE, 500), screenH);
-  const x = Math.round((screenW - winWidth) / 2);
-  const y = Math.round((screenH - winHeight) / 2);
+
+  var w = cssWidth + PADDING;
+  var h = cssHeight + TOOLBAR_HEIGHT + PADDING;
+  var winWidth = Math.min(Math.max(w, MIN_W), screenW);
+  var winHeight = Math.min(Math.max(h, MIN_H), screenH);
+  var x = Math.round((screenW - winWidth) / 2);
+  var y = Math.round((screenH - winHeight) / 2);
   return { winWidth, winHeight, x, y };
 }
 
@@ -231,7 +236,9 @@ function createEditorWindow(cssWidth, cssHeight) {
       y,
       show: false,
       frame: true,
-      resizable: false,
+      resizable: true,
+      minWidth: 600,
+      minHeight: 400,
       webPreferences: { ...BASE_WEB_PREFERENCES }
     }, platform.getWindowOptions('editor'));
 
@@ -273,6 +280,12 @@ function createEditorWindow(cssWidth, cssHeight) {
     overlayWindow.destroy();
     overlayWindow = null;
   }
+
+  // Notify renderer to re-fit image when window is resized
+  editorWindow.on('resize', () => {
+    if (!editorWindow || editorWindow.isDestroyed()) return;
+    editorWindow.webContents.send('editor-resized');
+  });
 
   editorWindow.on('closed', () => {
     editorWindow = null;

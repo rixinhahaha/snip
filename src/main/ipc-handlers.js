@@ -1091,19 +1091,6 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
     return true;
   });
 
-  // Resize editor window to fit toolbar
-  ipcMain.handle('resize-editor', async (event, { minWidth }) => {
-    try {
-      if (!editorWindowRef || editorWindowRef.isDestroyed()) return;
-      const [currentW, currentH] = editorWindowRef.getContentSize();
-      if (currentW < minWidth) {
-        editorWindowRef.setContentSize(minWidth, currentH);
-        editorWindowRef.center();
-      }
-    } catch (e) {
-      console.warn('[Snip] resize-editor failed:', e.message);
-    }
-  });
 }
 
 function getPendingEditorData() {

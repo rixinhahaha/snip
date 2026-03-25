@@ -80,8 +80,29 @@
     // Setup canvas zoom (pinch, scroll, keyboard)
     setupZoom();
 
-    // Ensure window is wide enough for full toolbar
-    await ensureToolbarFits();
+    // Re-fit image when window is resized
+    var _resizeFitTimer = null;
+    window.snip.onEditorResized(function () {
+      if (_resizeFitTimer) clearTimeout(_resizeFitTimer);
+      _resizeFitTimer = setTimeout(function () {
+        if (_zoomState.imgW && _zoomState.imgH) {
+          scaleImageToFit(_zoomState.imgW, _zoomState.imgH);
+        }
+      }, 50);
+    });
+
+    // Detect toolbar overflow and toggle fade mask
+    updateToolbarOverflow();
+    var toolbarScrollEl = document.getElementById('toolbar-scroll');
+    new ResizeObserver(updateToolbarOverflow).observe(toolbarScrollEl);
+    // Scroll toolbar horizontally on wheel and prevent canvas zoom
+    toolbarScrollEl.addEventListener('wheel', function(e) {
+      e.stopPropagation();
+      if (e.deltaY && !e.deltaX) {
+        e.preventDefault();
+        toolbarScrollEl.scrollLeft += e.deltaY;
+      }
+    });
 
     // Review mode: show review panel for MCP sessions
     if (_mcpUpload) {
@@ -556,6 +577,24 @@
       }
     }, true);
 
+    // Left-click drag on empty canvas space to pan (select tool only)
+    if (canvas) {
+      canvas.on('mouse:down', function(opt) {
+        if (opt.target) return;
+        if (Toolbar.getActiveTool() !== TOOLS.SELECT) return;
+        _zoomState.isPanning = true;
+        _zoomState.lastPanX = opt.e.clientX;
+        _zoomState.lastPanY = opt.e.clientY;
+        container.style.cursor = 'grabbing';
+      });
+      canvas.on('mouse:up', function() {
+        if (_zoomState.isPanning) {
+          _zoomState.isPanning = false;
+          container.style.cursor = '';
+        }
+      });
+    }
+
     window.addEventListener('mouseup', function(e) {
       if (_zoomState.isPanning && (e.button === 0 || e.button === 1)) {
         _zoomState.isPanning = false;
@@ -590,16 +629,10 @@
     });
   }
 
-  async function ensureToolbarFits() {
-    var toolbar = document.getElementById('toolbar');
-    toolbar.style.right = 'auto';
-    toolbar.style.width = 'max-content';
-    var neededWidth = toolbar.offsetWidth;
-    toolbar.style.right = '';
-    toolbar.style.width = '';
-    if (neededWidth > document.documentElement.clientWidth) {
-      await window.snip.resizeEditor(neededWidth);
-    }
+  function updateToolbarOverflow() {
+    var scrollEl = document.getElementById('toolbar-scroll');
+    if (!scrollEl) return;
+    scrollEl.classList.toggle('no-overflow', scrollEl.scrollWidth <= scrollEl.clientWidth);
   }
 
   /**
@@ -738,7 +771,7 @@
 
     Toolbar.initToolbar({
       getCanvas: function() { return canvas; },
-      onToolChange: function(tool) { switchTool(tool); ensureToolbarFits(); },
+      onToolChange: function(tool) { switchTool(tool); updateToolbarOverflow(); },
       onColorChange: function(color) {
         var active = canvas.getActiveObject();
         if (active) {
@@ -957,7 +990,7 @@
             Toolbar.setActiveFontSize(obj.fontSize);
           }
         });
-        ensureToolbarFits();
+        updateToolbarOverflow();
       } else if (active && active.type === 'textbox' && active._snipEditingTagId) {
         // Textbox being edited as part of a tag
         fontGroup.classList.remove('hidden');
@@ -978,7 +1011,7 @@
         }
         Toolbar.setActiveFont(active.fontFamily);
         Toolbar.setActiveFontSize(active.fontSize);
-        ensureToolbarFits();
+        updateToolbarOverflow();
       } else if (active && active.type === 'textbox') {
         // Standalone textbox selected: show font controls + color picker
         fontGroup.classList.remove('hidden');
@@ -988,7 +1021,7 @@
         // Sync font/size from the selected textbox
         Toolbar.setActiveFont(active.fontFamily);
         Toolbar.setActiveFontSize(active.fontSize);
-        ensureToolbarFits();
+        updateToolbarOverflow();
       } else if (Toolbar.getActiveTool() !== TOOLS.TAG) {
         // Other object type: restore defaults
         tagColorGroup.classList.add('hidden');
