@@ -51,6 +51,7 @@ files:
   - "!**/node_modules/canvas{,/**}"
 
 asarUnpack:
+  - "src/main/platform/portal-screenshot.py"
   - "src/main/segmentation/segmentation-worker.js"
   - "src/main/upscaler/upscaler-worker.js"
   - "src/main/organizer/embeddings-worker.js"
