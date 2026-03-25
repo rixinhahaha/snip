@@ -57,7 +57,8 @@ Power users on macOS and Linux who take 5-50 screenshots per day: developers, de
 - **Pinch-to-zoom** on trackpad or **⌘+scroll** to zoom toward cursor
 - **⌘+** / **⌘-** to zoom in/out, **⌘0** to reset to fit
 - **Two-finger scroll** or scroll wheel to pan
-- **Space+drag** or middle-click drag to pan
+- **Space+drag**, middle-click drag, or **left-click drag on empty canvas** (Select tool) to pan
+- Editor window is **resizable** (min 600×400); image re-fits on resize
 - Zoom indicator shown in bottom-right corner when zoomed/panned
 - **?** help button (bottom-right) opens a canvas navigation guide modal
 

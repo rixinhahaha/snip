@@ -423,7 +423,7 @@ The preload script (`preload.js`) exposes `window.snip` with these methods:
 | `copyToClipboard(dataURL)` | R -> M | Write PNG to system clipboard |
 | `saveScreenshot(dataURL, ts)` | R -> M | Save JPEG + queue for AI |
 | `closeEditor()` | R -> M | Close editor window |
-| `resizeEditor(minWidth)` | R -> M | Widen editor to minimum width |
+| `onEditorResized(cb)` | M -> R | Notify renderer when editor window is resized (for image re-fit) |
 | `getSystemFonts()` | R -> M | List installed fonts |
 | `checkSegmentSupport()` | R -> M | Check SAM availability |
 | `segmentAtPoint(data)` | R -> M | Run SAM segmentation at click points |

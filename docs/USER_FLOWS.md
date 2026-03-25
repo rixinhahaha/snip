@@ -182,15 +182,17 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 | Step | Action | Expected Result |
 |------|--------|-----------------|
 | 1 | Press T | Text tool active |
-| 2 | Click on canvas | Editable text box created at click position |
-| 3 | Type text | Text appears in active color, selected font and size (default 16px) |
+| 2 | Click on empty canvas | Editable text box created at click position with placeholder "Type here" selected |
+| 3 | Type text | Text replaces placeholder; appears in active color, selected font and size (scaled to image width, clamped 12–48px) |
 | 4 | -- | Font dropdown visible with system fonts |
-| 5 | -- | Font size dropdown: 16 (default), 20, 24, 32, 48px |
+| 5 | -- | Font size dropdown: 16, 20, 24, 32, 48px |
 | 6 | Press Enter | Exits text editing and switches to Select (cursor) mode |
 | 7 | Press Shift+Enter | Inserts a newline within the textbox |
-| 8 | Click outside textbox (while selected) | Textbox deselected — no new textbox created |
-| 9 | Click on canvas (no textbox selected) | New textbox created at click position |
-| 10 | In Select mode, click on a textbox | First click selects; second click enters editing; toolbar shows font controls |
+| 8 | Press Escape | Exits editing, keeps textbox selected (can press Delete to remove) |
+| 9 | Click outside textbox (while editing) | Exits editing, textbox deselected |
+| 10 | Click on existing annotation (while text tool active) | Click ignored — no textbox created on top of existing objects |
+| 11 | Don't type, click elsewhere / press Enter / Escape / switch tool | Empty/placeholder textbox auto-removed |
+| 12 | In Select mode, click on a textbox | First click selects; second click enters editing; toolbar shows font controls |
 
 ### 3.3 Arrow Tool
 
@@ -403,16 +405,18 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 | 3 | Press Cmd+Shift+Z | Object restored (redo) |
 | 4 | Draw after undo | Redo stack cleared |
 
-### 3.11 Toolbar Minimum Width
+### 3.11 Toolbar Overflow & Window Resize
 
-**Preconditions:** Capture a very small region (e.g. 50x50px).
+**Preconditions:** Editor open with any screenshot.
 
 | Step | Action | Expected Result |
 |------|--------|-----------------|
-| 1 | Capture small region, editor opens | Window width >= 900px (`TOOLBAR_MIN_WIDTH`) |
-| 2 | -- | All toolbar controls visible and accessible |
-| 3 | -- | Toolbar horizontally centered in window |
-| 4 | Select Rectangle tool | Mode and Thickness dropdowns appear, still fit in toolbar |
+| 1 | Editor opens | Window sized to fit image (min 600×400). Toolbar centered with save/done/cancel pinned to right of tools. |
+| 2 | Resize window narrower | Toolbar tools region scrolls horizontally. Save/done/cancel always visible. Fade gradient appears on scroll region edge. |
+| 3 | Scroll/swipe on toolbar | Tools scroll horizontally. Vertical scroll wheel converts to horizontal scroll. |
+| 4 | Resize window wider | Fade gradient disappears when all tools fit. |
+| 5 | Switch tools | Active tool scrolls into view. Contextual controls appear; overflow recalculates. |
+| 6 | Resize window | Image re-fits to new viewport (zoom-to-fit). |
 
 ### 3.12 Transcribe Text
 
@@ -474,6 +478,8 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 | 5 | Two-finger scroll (trackpad) or scroll wheel | Pan canvas in any direction |
 | 6 | Space + drag | Pan canvas (cursor shows grab hand) |
 | 7 | Middle-click drag | Pan canvas |
+| 8 | Left-click drag on empty canvas (Select tool) | Pan canvas (cursor shows grabbing hand) |
+| 9 | Resize editor window | Image re-fits to new viewport (zoom resets to fit) |
 
 **Edge cases:**
 
