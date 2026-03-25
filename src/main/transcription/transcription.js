@@ -16,27 +16,37 @@ const path = require('path');
 const fs = require('fs');
 const { app } = require('electron');
 
-const SWIFT_SRC = path.join(__dirname, 'transcribe.swift');
-const COMPILED_DIR = path.join(app.getPath('userData'), 'transcribe-bin');
-const COMPILED_BIN = path.join(COMPILED_DIR, 'transcribe');
-
-let compilePromise = null;
-
 /**
- * Compile the Swift helper binary (once, cached across calls).
+ * Resolve the transcription binary path.
+ * Packaged app: use pre-compiled binary in Resources/transcribe-bin/
+ * Dev mode: compile from source on demand.
  */
+let compilePromise = null;
+let resolvedBin = null;
+
 function ensureCompiled() {
+  // Packaged app: use the pre-compiled binary bundled at build time
+  if (app.isPackaged) {
+    if (resolvedBin) return Promise.resolve(resolvedBin);
+    const bundledBin = path.join(process.resourcesPath, 'transcribe-bin', 'transcribe');
+    if (fs.existsSync(bundledBin)) {
+      resolvedBin = bundledBin;
+      return Promise.resolve(resolvedBin);
+    }
+    return Promise.reject(new Error('Pre-compiled transcription binary not found. The app may be incorrectly packaged.'));
+  }
+
+  // Dev mode: compile from source
   if (compilePromise) return compilePromise;
 
+  const SWIFT_SRC = path.join(__dirname, 'transcribe.swift');
+  const COMPILED_DIR = path.join(app.getPath('userData'), 'transcribe-bin');
+  const COMPILED_BIN = path.join(COMPILED_DIR, 'transcribe');
+
   compilePromise = new Promise((resolve, reject) => {
-    // Check if already compiled and source hasn't changed
     try {
       const binStat = fs.statSync(COMPILED_BIN);
-      let srcPath = SWIFT_SRC;
-      if (srcPath.includes('app.asar')) {
-        srcPath = srcPath.replace('app.asar', 'app.asar.unpacked');
-      }
-      const srcStat = fs.statSync(srcPath);
+      const srcStat = fs.statSync(SWIFT_SRC);
       if (binStat.mtimeMs > srcStat.mtimeMs) {
         return resolve(COMPILED_BIN);
       }
@@ -44,14 +54,9 @@ function ensureCompiled() {
 
     fs.mkdirSync(COMPILED_DIR, { recursive: true });
 
-    let srcPath = SWIFT_SRC;
-    if (srcPath.includes('app.asar')) {
-      srcPath = srcPath.replace('app.asar', 'app.asar.unpacked');
-    }
-
     console.log('[Transcription] Compiling Swift helper...');
     child_process.execFile('swiftc', [
-      '-O', srcPath,
+      '-O', SWIFT_SRC,
       '-o', COMPILED_BIN,
       '-framework', 'Vision',
       '-framework', 'AppKit'

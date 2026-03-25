@@ -20,9 +20,52 @@ var net = require('net');
 var path = require('path');
 var os = require('os');
 var fs = require('fs');
-var platform = require('../main/platform');
+var child_process = require('child_process');
 
-var SOCKET_PATH = process.env.SNIP_SOCKET_PATH || platform.getSocketPath();
+// IMPORTANT: This file runs under plain Node.js (not Electron) from
+// Resources/cli/snip.js in the packaged app. It CANNOT require() anything
+// from src/main/ — those modules are inside app.asar and only Electron's
+// patched require can resolve into it. All platform helpers must be inlined.
+// A test in tests/cli/cli.test.js enforces this constraint.
+
+function getSocketPath() {
+  if (process.platform === 'darwin') {
+    return path.join(os.homedir(), 'Library', 'Application Support', 'snip', 'snip.sock');
+  }
+  var runtimeDir = process.env.XDG_RUNTIME_DIR;
+  if (runtimeDir) return path.join(runtimeDir, 'snip', 'snip.sock');
+  return path.join(os.homedir(), '.config', 'snip', 'snip.sock');
+}
+
+function launchApp() {
+  if (process.platform === 'darwin' && fs.existsSync('/Applications/Snip.app')) {
+    child_process.execFile('open', ['-a', 'Snip']);
+    return true;
+  }
+  return false;
+}
+
+function pollForSocket(socketPath, callback) {
+  var attempts = 0;
+  function check() {
+    attempts++;
+    if (attempts > 20) {
+      return callback(new Error('Snip did not start in time'));
+    }
+    var conn = net.createConnection(socketPath);
+    conn.on('connect', function () {
+      conn.end();
+      callback(null);
+    });
+    conn.on('error', function () {
+      conn.destroy();
+      setTimeout(check, 500);
+    });
+  }
+  setTimeout(check, 500);
+}
+
+var SOCKET_PATH = process.env.SNIP_SOCKET_PATH || getSocketPath();
 
 // ── Parse args ──
 
@@ -180,7 +223,7 @@ function callSnip(action, params, isRetry) {
 }
 
 function launchAndRetry(action, params) {
-  var launched = platform.launchApp();
+  var launched = launchApp();
   if (!launched) {
     return Promise.reject(new Error('Snip is not running. Start it first.'));
   }
@@ -188,7 +231,7 @@ function launchAndRetry(action, params) {
   process.stderr.write('Launching Snip...\n');
 
   return new Promise(function (resolve, reject) {
-    platform.pollForSocket(SOCKET_PATH, function (err) {
+    pollForSocket(SOCKET_PATH, function (err) {
       if (err) return reject(err);
       callSnip(action, params, true).then(resolve).catch(reject);
     });

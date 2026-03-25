@@ -101,6 +101,34 @@ function runCliWithStdin(args, stdinData, opts) {
   });
 }
 
+// ── Module isolation ──
+// The CLI runs as a standalone script under plain Node.js (not Electron),
+// launched from Resources/cli/snip.js in the packaged app. It CANNOT
+// require() anything from src/main/ because that code lives inside app.asar
+// and only Electron's patched require can resolve into it. If someone adds
+// a require('../main/...') to snip.js, it will work in dev but crash in
+// the packaged app. This test catches that.
+
+describe('CLI module isolation', () => {
+  it('does not require any modules outside of node builtins and child_process', async () => {
+    var source = readFileSync(CLI_PATH, 'utf8');
+    var requires = source.match(/require\(['"][^'"]+['"]\)/g) || [];
+    var nodeBuiltins = [
+      'net', 'path', 'os', 'fs', 'child_process', 'node:net', 'node:path',
+      'node:os', 'node:fs', 'node:child_process'
+    ];
+    for (var req of requires) {
+      var mod = req.match(/require\(['"]([^'"]+)['"]\)/)[1];
+      expect(
+        nodeBuiltins.includes(mod),
+        'snip.js requires "' + mod + '" which is not a Node builtin — ' +
+        'the CLI runs outside app.asar under plain Node, so it cannot ' +
+        'require from src/main/. Inline the needed code instead.'
+      ).toBe(true);
+    }
+  });
+});
+
 // ── Help and argument parsing ──
 
 describe('CLI help and args', () => {

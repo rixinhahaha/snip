@@ -101,7 +101,40 @@ module.exports = async function afterPack(context) {
   }
 
   // ---------------------------------------------------------------
-  // 2. Remove unused native modules (canvas)
+  // 2. Pre-compile Swift transcription helper
+  //    End users don't have swiftc (Xcode Command Line Tools),
+  //    so we compile the binary at build time and bundle it.
+  // ---------------------------------------------------------------
+  // Read source from the project tree (not from app.asar.unpacked — the .swift
+  // file is not in asarUnpack since it's only needed at build time, not runtime).
+  var swiftSrc = path.join(__dirname, '..', 'src', 'main', 'transcription', 'transcribe.swift');
+  var transcribeBinDir = path.join(resourcesDir, 'transcribe-bin');
+  var transcribeBin = path.join(transcribeBinDir, 'transcribe');
+
+  if (fs.existsSync(swiftSrc)) {
+    fs.mkdirSync(transcribeBinDir, { recursive: true });
+    console.log('[afterPack] Compiling Swift transcription helper...');
+    try {
+      // Keep framework flags in sync with src/main/transcription/transcription.js (dev-mode compile)
+      execSync(
+        'swiftc -O "' + swiftSrc + '"' +
+        ' -o "' + transcribeBin + '"' +
+        ' -target ' + targetArch + '-apple-macos13.0' +
+        ' -framework Vision -framework AppKit',
+        { stdio: 'pipe', timeout: 60000 }
+      );
+      fs.chmodSync(transcribeBin, 0o755);
+      console.log('[afterPack] Swift transcription helper compiled successfully');
+    } catch (err) {
+      var stderr = err.stderr ? err.stderr.toString().trim() : err.message;
+      throw new Error('[afterPack] Failed to compile transcription helper: ' + stderr);
+    }
+  } else {
+    console.warn('[afterPack] transcribe.swift not found at ' + swiftSrc + ' — skipping');
+  }
+
+  // ---------------------------------------------------------------
+  // 3. Remove unused native modules (canvas)
   // ---------------------------------------------------------------
   var nmDir = path.join(unpackedDir, 'node_modules');
 
@@ -187,6 +220,11 @@ module.exports = async function afterPack(context) {
   var bundledNode = path.join(resourcesDir, 'node', 'node');
   if (fs.existsSync(bundledNode)) {
     binaries.push(bundledNode);
+  }
+
+  // Also sign the pre-compiled transcribe binary
+  if (fs.existsSync(transcribeBin)) {
+    binaries.push(transcribeBin);
   }
 
   if (binaries.length === 0) {
