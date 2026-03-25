@@ -1,4 +1,10 @@
 const { app, BrowserWindow, screen, ipcMain } = require('electron');
+
+// Disable GPU on Linux — Chromium's GPU fallback can fatally crash on VMs
+// and broken Mesa drivers. Snip uses Canvas 2D (not WebGL), so the
+// performance impact is negligible. Matches Slack Flatpak's approach.
+if (process.platform === 'linux') app.disableHardwareAcceleration();
+
 const path = require('path');
 const platform = require('./platform');
 const { registerShortcuts, unregisterShortcuts, reregisterShortcuts } = require('./shortcuts');

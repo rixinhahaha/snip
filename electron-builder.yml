@@ -80,7 +80,7 @@ linux:
         - x64
         - arm64
   category: Utility
-  icon: assets/icon.png
+  icon: assets/icons
 
 deb:
   depends:
