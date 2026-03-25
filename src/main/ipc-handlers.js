@@ -262,12 +262,17 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
     return getScreenPermissionStatus();
   });
 
+  var screenPermissionFirstCall = true;
   ipcMain.handle('request-screen-permission', async () => {
     // CGRequestScreenCaptureAccess registers the app in the Screen Recording
-    // list in System Settings. Called right before the user opens Settings
-    // so Snip is already visible in the list when they get there.
-    platform.requestScreenCaptureAccess();
-    return getScreenPermissionStatus();
+    // list and shows a system dialog on first call (from a separate process).
+    // On subsequent calls it does nothing silently.
+    var isFirst = screenPermissionFirstCall;
+    if (screenPermissionFirstCall) {
+      screenPermissionFirstCall = false;
+      platform.requestScreenCaptureAccess();
+    }
+    return { status: getScreenPermissionStatus(), firstCall: isFirst };
   });
 
   ipcMain.handle('restart-app', () => {

@@ -2121,12 +2121,16 @@
     permAllowBtn.addEventListener('click', handlePermissionAllow);
 
     permSettingsBtn.addEventListener('click', async function() {
-      // Register in Screen Recording list before opening Settings
-      // so Snip is already visible when the user gets there
       permSettingsBtn.disabled = true;
-      try { await window.snip.requestScreenPermission(); } catch (_) {}
+      var result;
+      try { result = await window.snip.requestScreenPermission(); } catch (_) {}
       permSettingsBtn.disabled = false;
-      window.snip.openExternalUrl('x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture');
+      // First click: CGRequestScreenCaptureAccess shows its own dialog (separate
+      // process) that directs user to System Settings — don't also open Settings.
+      // Subsequent clicks: CGRequest does nothing, so open Settings directly.
+      if (!result || !result.firstCall) {
+        window.snip.openExternalUrl('x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture');
+      }
     });
 
     var handleRestart = function() { window.snip.restartApp(); };
@@ -2341,7 +2345,7 @@
   };
   var PERM_DESC_SUB = {
     'restart': 'Restart is needed for the permission to take effect.',
-    'denied': 'Enable Snip in System Settings, then restart.'
+    'denied': 'Grant Screen Recording permission, then restart Snip.'
   };
 
   function setPermDesc(key) {
@@ -2376,8 +2380,9 @@
   async function handlePermissionAllow() {
     var allowBtn = document.getElementById('setup-perm-allow-btn');
     allowBtn.disabled = true;
-    var result = await window.snip.requestScreenPermission();
+    var response = await window.snip.requestScreenPermission();
     allowBtn.disabled = false;
+    var result = response ? response.status : null;
 
     if (result === 'granted') {
       // Permission granted but needs restart to take effect
