@@ -54,7 +54,6 @@ body {
   justify-content: center;
   gap: 0;
   padding: 6px 8px;
-  overflow: hidden;
   -webkit-app-region: drag;
   background: var(--bg-toolbar);
   backdrop-filter: blur(var(--glass-blur));
@@ -72,20 +71,9 @@ body {
   align-items: center;
   gap: 4px;
   min-width: 0;
-  overflow-x: auto;
-  overflow-y: hidden;
+  overflow: visible;
   -webkit-app-region: no-drag;
-  mask-image: linear-gradient(to right, black calc(100% - 16px), transparent);
-  -webkit-mask-image: linear-gradient(to right, black calc(100% - 16px), transparent);
-  padding-right: 8px;
 }
-#toolbar-scroll.no-overflow {
-  mask-image: none;
-  -webkit-mask-image: none;
-}
-#toolbar-scroll::-webkit-scrollbar { height: 3px; }
-#toolbar-scroll::-webkit-scrollbar-track { background: transparent; }
-#toolbar-scroll::-webkit-scrollbar-thumb { background: var(--text-muted); border-radius: 2px; }
 
 #toolbar-actions {
   display: flex;

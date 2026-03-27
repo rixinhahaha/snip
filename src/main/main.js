@@ -58,7 +58,7 @@ const OVERLAY_WINDOW_OPTIONS = {
 };
 
 const OVERLAY_HTML = path.join(__dirname, '..', 'renderer', 'index.html');
-const EDITOR_MIN_WIDTH = 600;
+const EDITOR_MIN_WIDTH = 700;
 const EDITOR_MIN_HEIGHT = 400;
 
 /**
