@@ -1747,14 +1747,14 @@ input:focus { border-color: var(--accent); }
   gap: 12px;
   padding: 10px 14px;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--bg-hover);
+  border: 1px solid var(--glass-border);
 }
 
 .ai-provider-name {
   font-size: 13px;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--text-primary);
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -1764,7 +1764,7 @@ input:focus { border-color: var(--accent); }
 .ai-provider-status {
   font-size: 11px;
   font-weight: 400;
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--text-muted);
   font-family: 'SF Mono', 'Menlo', monospace;
 }
 
@@ -1774,17 +1774,17 @@ input:focus { border-color: var(--accent); }
   font-family: inherit;
   font-size: 12px;
   padding: 5px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid var(--glass-border);
   border-radius: 6px;
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.6);
+  background: var(--bg-hover);
+  color: var(--text-secondary);
   cursor: pointer;
   transition: all 0.15s;
 }
 
 .ai-provider-btn:hover {
-  color: rgba(255, 255, 255, 0.9);
-  border-color: var(--accent, #8b5cf6);
+  color: var(--text-primary);
+  border-color: var(--accent);
   background: rgba(139, 92, 246, 0.1);
 }
 
