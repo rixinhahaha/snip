@@ -242,6 +242,7 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
     }
   });
 
+
   // Get system fonts
   ipcMain.handle('get-system-fonts', async () => {
     return [

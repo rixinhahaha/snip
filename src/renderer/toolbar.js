@@ -169,7 +169,6 @@ const Toolbar = (() => {
     var toolBtn = document.getElementById('tool-' + tool);
     if (toolBtn) {
       toolBtn.classList.add('active');
-      toolBtn.scrollIntoView({ behavior: 'instant', block: 'nearest', inline: 'nearest' });
     }
 
     // Show/hide contextual controls based on extension toolbar groups

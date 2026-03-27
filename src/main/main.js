@@ -58,7 +58,7 @@ const OVERLAY_WINDOW_OPTIONS = {
 };
 
 const OVERLAY_HTML = path.join(__dirname, '..', 'renderer', 'index.html');
-const EDITOR_MIN_WIDTH = 700;
+const EDITOR_MIN_WIDTH = 1200;
 const EDITOR_MIN_HEIGHT = 400;
 
 /**
@@ -199,7 +199,7 @@ function createHomeWindow() {
 }
 
 function computeEditorBounds(cssWidth, cssHeight) {
-  const TOOLBAR_HEIGHT = 48;
+  const TOOLBAR_HEIGHT = 44;
   const PADDING = 48;
   const MIN_W = EDITOR_MIN_WIDTH;
   const MIN_H = EDITOR_MIN_HEIGHT;
@@ -229,6 +229,7 @@ function createEditorWindow(cssWidth, cssHeight) {
     editorWindow = prewarmedEditor;
     prewarmedEditor = null;
 
+    editorWindow.setMinimumSize(EDITOR_MIN_WIDTH, EDITOR_MIN_HEIGHT);
     editorWindow.setContentSize(winWidth, winHeight);
     editorWindow.setPosition(x, y);
 

@@ -18,7 +18,7 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  padding-top: 48px; /* toolbar height */
+  padding-top: 44px; /* toolbar height */
   overflow: hidden;
 }
 
@@ -47,13 +47,14 @@ body {
   top: 0;
   left: 0;
   right: 0;
-  height: 48px;
+  height: 44px;
   display: flex;
   flex-direction: row;
   align-items: center;
   justify-content: center;
-  gap: 0;
-  padding: 6px 8px;
+  gap: 2px;
+  padding: 0 10px;
+  overflow: hidden;
   -webkit-app-region: drag;
   background: var(--bg-toolbar);
   backdrop-filter: blur(var(--glass-blur));
@@ -69,8 +70,7 @@ body {
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 4px;
-  min-width: 0;
+  gap: 2px;
   overflow: visible;
   -webkit-app-region: no-drag;
 }
@@ -79,9 +79,9 @@ body {
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
   flex-shrink: 0;
-  padding-left: 4px;
+  -webkit-app-region: no-drag;
 }
 
 #toolbar-tools {
@@ -93,50 +93,59 @@ body {
 }
 
 .tool-btn {
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   background: transparent;
   color: var(--text-secondary);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.15s;
+  transition: background 0.12s ease, color 0.12s ease, box-shadow 0.12s ease;
   flex-shrink: 0;
+}
+
+.tool-btn svg {
+  width: 16px;
+  height: 16px;
 }
 
 .tool-btn:hover {
   background: var(--bg-hover-strong);
   color: var(--text-primary);
-  box-shadow: var(--glass-inner-glow);
 }
 
 .tool-btn.active {
   background: var(--accent-active);
   color: white;
-  box-shadow: var(--glass-inner-glow), var(--accent-glow);
+  box-shadow: var(--accent-glow);
 }
 
 .toolbar-separator {
   width: 1px;
-  height: 24px;
-  background: var(--border-input);
-  margin: 0 4px;
+  height: 20px;
+  background: var(--glass-specular);
+  margin: 0 6px;
   flex-shrink: 0;
 }
 
 #color-picker {
-  width: 32px;
-  height: 32px;
-  border: 2px solid var(--border-subtle);
-  border-radius: 6px;
+  width: 26px;
+  height: 26px;
+  border: 2px solid var(--glass-specular);
+  border-radius: 8px;
   background: transparent;
   cursor: pointer;
   padding: 0;
   -webkit-appearance: none;
   flex-shrink: 0;
+  transition: border-color 0.12s ease;
+}
+
+#color-picker:hover {
+  border-color: var(--text-muted);
 }
 
 #color-picker::-webkit-color-swatch-wrapper {
@@ -145,37 +154,40 @@ body {
 
 #color-picker::-webkit-color-swatch {
   border: none;
-  border-radius: 3px;
+  border-radius: 4px;
 }
 
 select {
   width: auto;
-  min-width: 60px;
-  padding: 4px 6px;
-  border: 1px solid var(--border-input);
+  min-width: 56px;
+  padding: 3px 6px;
+  border: 1px solid var(--glass-specular);
   border-radius: 6px;
   background: var(--bg-input);
   color: var(--text-dim);
-  font-size: 12px;
+  font-size: 11px;
+  font-family: inherit;
   cursor: pointer;
   outline: none;
+  transition: background 0.12s ease, border-color 0.12s ease;
 }
 
 select:hover {
   background: var(--bg-input-hover);
+  border-color: var(--text-muted);
 }
 
 .action-btn {
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   padding: 0;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   background: var(--bg-hover);
   color: var(--text-secondary);
   font-size: 0; /* hide text, icon only */
   cursor: pointer;
-  transition: all 0.15s;
+  transition: background 0.12s ease, color 0.12s ease, box-shadow 0.12s ease, transform 0.1s ease;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -183,10 +195,18 @@ select:hover {
   position: relative;
 }
 
+.action-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
 .action-btn:hover {
   background: var(--bg-hover-strong);
   color: var(--text-primary);
-  box-shadow: var(--glass-inner-glow);
+}
+
+.action-btn:active {
+  transform: scale(0.94);
 }
 
 .action-btn.save {
@@ -197,6 +217,7 @@ select:hover {
 .action-btn.save:hover {
   background: var(--accent-active);
   color: white;
+  box-shadow: var(--accent-glow);
 }
 
 .action-btn.primary {
@@ -206,15 +227,17 @@ select:hover {
 
 .action-btn.primary:hover {
   background: var(--accent-hover);
+  box-shadow: var(--accent-glow);
 }
 
 .action-btn.cancel {
   background: transparent;
+  color: var(--text-muted);
 }
 
 .action-btn.cancel:hover {
-  background: var(--bg-hover);
-  color: var(--error-hover);
+  background: var(--error-bg);
+  color: var(--error);
 }
 
 /* Toolbar groups with labels */
@@ -222,13 +245,15 @@ select:hover {
   display: flex;
   align-items: center;
   gap: 4px;
-  margin-left: 10px;
+  margin-left: 8px;
+  padding-left: 8px;
+  border-left: 1px solid var(--glass-specular);
 }
 
 .toolbar-label {
   font-size: 10px;
-  font-weight: 500;
-  color: var(--text-secondary);
+  font-weight: 600;
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   white-space: nowrap;
@@ -247,23 +272,24 @@ select:hover {
   position: absolute;
   top: calc(100% + 6px);
   left: 50%;
-  transform: translateX(-50%);
+  transform: translateX(-50%) translateY(2px);
   padding: 4px 8px;
   background: var(--tooltip-bg);
   color: #fff;
-  font-size: 11px;
-  font-weight: 400;
-  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 500;
+  border-radius: 5px;
   white-space: nowrap;
   pointer-events: none;
   opacity: 0;
-  transition: opacity 0.15s;
+  transition: opacity 0.15s ease, transform 0.15s ease;
   z-index: 1001;
 }
 
 .tool-btn:hover[data-tooltip]::after,
 .action-btn:hover[data-tooltip]::after {
   opacity: 1;
+  transform: translateX(-50%) translateY(0);
 }
 
 /* Tooltip for animate button (bottom → top, since button is at the bottom) */
@@ -293,28 +319,28 @@ select:hover {
 /* Tag color swatches */
 .tag-color-swatches {
   display: flex;
-  gap: 4px;
+  gap: 3px;
   align-items: center;
 }
 
 .tag-color-swatch {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
   border: 2px solid transparent;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: transform 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
   flex-shrink: 0;
   padding: 0;
 }
 
 .tag-color-swatch:hover {
-  transform: scale(1.15);
+  transform: scale(1.2);
 }
 
 .tag-color-swatch.active {
   border-color: white;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.2), 0 0 6px rgba(255, 255, 255, 0.15);
 }
 
 .hidden {
@@ -324,7 +350,7 @@ select:hover {
 /* Toast notification — top center, below toolbar */
 .toast {
   position: fixed;
-  top: 60px;
+  top: 56px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 2000;
@@ -386,7 +412,7 @@ select:hover {
 /* Segment accept/reject action bar — top center, below toolbar */
 .segment-actions {
   position: fixed;
-  top: 60px;
+  top: 56px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 2000;
@@ -1369,7 +1395,7 @@ select:hover {
 /* ── Transcript Side Panel ── */
 .transcript-panel {
   position: fixed;
-  top: 48px;
+  top: 44px;
   right: 0;
   bottom: 0;
   width: 320px;
