@@ -4,6 +4,7 @@ contextBridge.exposeInMainWorld('snip', {
   // Platform info
   platform: process.platform,
   homedir: require('os').homedir(),
+  appVersion: require('../../package.json').version,
 
   // Screenshot overlay
   onScreenshotCaptured: (callback) => {

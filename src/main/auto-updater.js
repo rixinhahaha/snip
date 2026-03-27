@@ -1,27 +1,11 @@
-const { app, BrowserWindow, dialog } = require('electron');
-
 const CHECK_DELAY_MS = 10000;
 const RECHECK_INTERVAL_MS = 12 * 60 * 60 * 1000; // 12 hours
 
 var timeoutHandle = null;
 var intervalHandle = null;
 var updaterRef = null;
-var dialogOpen = false;
 var isDownloading = false;
 var pendingInstall = false;
-
-function getParentWindow() {
-  return BrowserWindow.getFocusedWindow() ||
-    BrowserWindow.getAllWindows().find(function (w) { return !w.isDestroyed() && w.isVisible(); }) ||
-    null;
-}
-
-function showDialog(opts) {
-  // LSUIElement apps are background agents — bring to front so dialog is visible
-  if (app.isPackaged) app.focus({ steal: true });
-  var parent = getParentWindow();
-  return parent ? dialog.showMessageBox(parent, opts) : dialog.showMessageBox(opts);
-}
 
 function initAutoUpdater() {
   timeoutHandle = setTimeout(function () {
@@ -29,29 +13,14 @@ function initAutoUpdater() {
     try {
       var { autoUpdater } = require('electron-updater');
       updaterRef = autoUpdater;
-      autoUpdater.autoDownload = false;
-      autoUpdater.autoInstallOnAppQuit = false;
+      autoUpdater.autoDownload = true;
+      autoUpdater.autoInstallOnAppQuit = true;
       autoUpdater.allowDowngrade = false;
       autoUpdater.logger = null; // suppress default logging
 
       autoUpdater.on('update-available', function (info) {
-        console.log('[AutoUpdate] Update available:', info.version);
-        if (dialogOpen) return;
-        dialogOpen = true;
-        showDialog({
-          type: 'info',
-          title: 'Update Available',
-          message: 'Snip ' + info.version + ' is available.',
-          detail: 'Download and install the update?',
-          buttons: ['Download', 'Later'],
-          defaultId: 1
-        }).then(function (result) {
-          dialogOpen = false;
-          if (result.response === 0) {
-            isDownloading = true;
-            autoUpdater.downloadUpdate();
-          }
-        }).catch(function () { dialogOpen = false; });
+        console.log('[AutoUpdate] Update available:', info.version, '— downloading automatically');
+        isDownloading = true;
       });
 
       autoUpdater.on('update-not-available', function () {
@@ -59,25 +28,9 @@ function initAutoUpdater() {
       });
 
       autoUpdater.on('update-downloaded', function (info) {
-        console.log('[AutoUpdate] Downloaded:', info.version);
+        console.log('[AutoUpdate] Downloaded:', info.version, '— will install on quit');
         isDownloading = false;
-        if (dialogOpen) return;
-        dialogOpen = true;
-        showDialog({
-          type: 'info',
-          title: 'Update Ready',
-          message: 'Snip ' + info.version + ' has been downloaded.',
-          detail: 'Restart now to apply the update.',
-          buttons: ['Restart Now', 'Later'],
-          defaultId: 1
-        }).then(function (result) {
-          dialogOpen = false;
-          if (result.response === 0) {
-            // Set flag so will-quit handler doesn't block the quit
-            pendingInstall = true;
-            autoUpdater.quitAndInstall(false, true);
-          }
-        }).catch(function () { dialogOpen = false; });
+        pendingInstall = true;
       });
 
       autoUpdater.on('error', function (err) {
@@ -89,7 +42,7 @@ function initAutoUpdater() {
 
       // Periodic re-check for long-running tray app
       intervalHandle = setInterval(function () {
-        if (!dialogOpen && !isDownloading) {
+        if (!isDownloading) {
           try { autoUpdater.checkForUpdates(); } catch (err) {
             console.error('[AutoUpdate] Check failed:', err.message);
           }

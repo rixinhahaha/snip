@@ -447,6 +447,13 @@ body {
   margin-bottom: 20px;
 }
 
+.app-version {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-left: 6px;
+}
+
 .settings-section {
   margin-bottom: 28px;
   padding-top: 20px;

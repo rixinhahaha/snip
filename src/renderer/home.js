@@ -80,6 +80,12 @@
     var theme = await window.snip.getTheme();
     updateThemeButtons(theme);
 
+    // Display app version
+    var versionEl = document.getElementById('app-version');
+    if (versionEl && window.snip.appVersion) {
+      versionEl.textContent = 'v' + window.snip.appVersion;
+    }
+
     document.getElementById('theme-dark').addEventListener('click', function() {
       window.snip.setTheme('dark');
     });
