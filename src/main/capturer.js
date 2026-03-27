@@ -2,12 +2,13 @@ const { app, BrowserWindow, desktopCapturer, screen } = require('electron');
 const path = require('path');
 const platform = require('./platform');
 
-// Stored NativeImage from the last capture — converted to dataURL on demand (deferred)
+// Stored NativeImage and its data URL from the last capture
 let storedNativeImage = null;
+let storedDataURL = null;
 
 /**
- * Capture screen image via desktopCapturer. Stores the NativeImage for deferred
- * serialization — toDataURL() is only called when the renderer requests it at crop time.
+ * Capture screen image via desktopCapturer. Stores the NativeImage; the data URL
+ * is converted eagerly so the overlay can display a frozen frame of the screen.
  */
 async function captureScreenImage(cursorDisplay) {
   const { width, height } = cursorDisplay.size;
@@ -85,7 +86,10 @@ async function captureScreen(createOverlayFn, getOverlayFn, opts) {
   // 3. Move window to whichever Space/desktop is active (macOS Spaces, no-op elsewhere)
   platform.setMoveToActiveSpace(overlayWindow);
 
-  // 4. Show overlay and send metadata (image data is deferred until crop time)
+  // 4. Convert screenshot to data URL now so the overlay can display a frozen frame
+  storedDataURL = storedNativeImage.toDataURL();
+
+  // 5. Show overlay and send screenshot data
   // Explicitly activate so the overlay can receive keyboard events.
   // On macOS packaged builds, LSUIElement:true makes this a background agent —
   // app.focus() is needed to bring it forward. Skip in macOS dev mode where
@@ -119,6 +123,8 @@ async function captureScreen(createOverlayFn, getOverlayFn, opts) {
   overlayWindow.setBounds({ x: bounds.x, y: bounds.y, width, height });
   const actualBounds = overlayWindow.getBounds();
   overlayWindow.webContents.send('screenshot-captured', {
+    dataURL: storedDataURL,
+    displaySize: { width, height },
     displayOrigin: { x: bounds.x, y: bounds.y },
     overlayOrigin: { x: actualBounds.x, y: actualBounds.y },
     windowList, mode
@@ -126,12 +132,11 @@ async function captureScreen(createOverlayFn, getOverlayFn, opts) {
 }
 
 /**
- * Return the captured screenshot as a data URL. Called on demand by the renderer
- * at crop time, deferring the expensive toDataURL() off the critical show path.
+ * Return the captured screenshot as a data URL (already converted at capture time).
  */
 function getCapturedImage() {
-  if (!storedNativeImage) return null;
-  return storedNativeImage.toDataURL();
+  if (!storedDataURL) return null;
+  return storedDataURL;
 }
 
 module.exports = { captureScreen, getCapturedImage };

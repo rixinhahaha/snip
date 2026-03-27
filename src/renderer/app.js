@@ -9,9 +9,10 @@
   let captureMode = 'capture';
 
   let windowList = [];
+  let cachedDataURL = null;
 
   window.snip.onScreenshotCaptured(async (data) => {
-    // Image data is deferred — fetched on demand at crop time via getCaptureImage()
+    cachedDataURL = data.dataURL;
     displayOrigin = data.displayOrigin || { x: 0, y: 0 };
     captureMode = data.mode || 'capture';
     const width = window.innerWidth;
@@ -24,6 +25,19 @@
     overlayOrigin = data.overlayOrigin || displayOrigin;
     var winOffsetX = overlayOrigin.x - displayOrigin.x;
     var winOffsetY = overlayOrigin.y - displayOrigin.y;
+
+    // Display the captured screenshot as a frozen background so hover states
+    // on the underlying desktop are preserved visually during area selection.
+    // The screenshot covers the full display, but the overlay window may be
+    // offset (e.g. below menu bar), so shift the image to compensate.
+    const bgImg = document.getElementById('frozen-screen');
+    var displaySize = data.displaySize || { width: width, height: height };
+    bgImg.style.width = displaySize.width + 'px';
+    bgImg.style.height = displaySize.height + 'px';
+    bgImg.style.top = (-winOffsetY) + 'px';
+    bgImg.style.left = (-winOffsetX) + 'px';
+    bgImg.src = cachedDataURL;
+    bgImg.classList.remove('hidden');
     windowList = (data.windowList || []).map(function(w) {
       // Convert to overlay-viewport-relative coords, then clip to viewport bounds.
       // Windows partially off-screen (e.g. spanning two displays, or behind the menu bar)
@@ -107,11 +121,15 @@
 
   function finishAndClose() {
     if (selectionInstance) { selectionInstance.cleanup(); selectionInstance = null; }
+    cachedDataURL = null;
+    const bgImg = document.getElementById('frozen-screen');
+    bgImg.classList.add('hidden');
+    bgImg.src = '';
     window.snip.closeOverlay();
   }
 
   async function cropAndCopyToClipboard(region) {
-    const dataURL = await window.snip.getCaptureImage();
+    const dataURL = cachedDataURL || await window.snip.getCaptureImage();
     const fullImg = new Image();
     fullImg.onload = () => {
       window.snip.copyToClipboard(cropRegion(fullImg, region, dataURL));
@@ -122,7 +140,7 @@
   }
 
   async function cropAndOpenEditor(region) {
-    const dataURL = await window.snip.getCaptureImage();
+    const dataURL = cachedDataURL || await window.snip.getCaptureImage();
     const fullImg = new Image();
     fullImg.onload = () => {
       const croppedDataURL = cropRegion(fullImg, region, dataURL);
