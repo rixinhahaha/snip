@@ -21,7 +21,6 @@
 | File watching | Chokidar | 4 |
 | Native bridge | Node-API (N-API) | node-addon-api 8 |
 | Diagram rendering | Mermaid.js | 11 |
-| macOS glass effects | electron-liquid-glass | 1.1+ |
 | Font | Plus Jakarta Sans | variable 200-800 |
 
 ---
@@ -31,7 +30,7 @@
 ```
 src/
   main/                     # Main process (Node.js / CommonJS)
-    main.js                  # App lifecycle, window creation, liquid glass init, MCP socket handlers
+    main.js                  # App lifecycle, window creation, MCP socket handlers
     capturer.js              # Screen capture via desktopCapturer
     ipc-handlers.js          # Core IPC channel handlers (non-extension)
     extension-registry.js    # Loads extension manifests, registers IPC handlers, manages lifecycle
@@ -115,7 +114,7 @@ src/
     editor-canvas-manager.js # Fabric.js canvas wrapper (init, export, undo/redo)
     extension-loader.js      # Builds toolbar buttons dynamically from extension manifests
     toolbar.js               # Editor toolbar state machine
-    theme.css                # ALL theme tokens (Dark, Light, Glass + solid fallback)
+    theme.css                # ALL theme tokens (Dark, Light + solid fallback)
     tools/
       tool-utils.js          # Shared: SEGMENT_OUTLINE_WIDTH, SEGMENT_OVERLAY_OPACITY, getAccentColor(), hexToRgba(), createMosaicImage(), recolorMaskWithOutline() (highlight fill + dilation outline), nextTagId(), lineEndpointForTag()
       selection.js           # Selection tool (move, resize, multi-select)
@@ -203,7 +202,7 @@ vendor/                      # Downloaded at dev time (NOT bundled in binary)
 All windows share:
 - `titleBarStyle: 'hiddenInset'` with custom traffic light positioning (macOS); standard title bar on Linux
 - `transparent: true`, `backgroundColor: '#00000000'` (macOS); standard window chrome on Linux
-- Native Liquid Glass layer (macOS 26+) or vibrancy fallback; no native effects on Linux
+- Vibrancy (`under-window`) on macOS; no native effects on Linux
 - Theme via `data-theme` attribute on `<html>`
 
 ---
@@ -364,7 +363,7 @@ Only app-saved files trigger AI processing. The `pendingFiles` Set in `watcher.j
 
 ### CSS
 - **All colors via CSS variables** from `theme.css` — never hardcode hex/rgb in component CSS
-- Three themes: `[data-theme="dark"]`, `[data-theme="light"]`, `[data-theme="glass"]`
+- Two themes: `[data-theme="dark"]`, `[data-theme="light"]`
 - Solid fallback via `@supports not (backdrop-filter: blur(1px))`
 - See [`DESIGN.md`](DESIGN.md) for the full color system
 
@@ -566,15 +565,15 @@ Themes flow through the entire stack:
 
 ```
 User clicks theme button in Settings (or tray menu)
-  -> home.js calls window.snip.setTheme('glass')
+  -> home.js calls window.snip.setTheme('dark')
   -> ipc-handlers.js stores in config
   -> broadcastTheme() sends 'theme-changed' to all windows
   -> each window sets document.documentElement.dataset.theme
-  -> CSS variables activate via [data-theme="glass"] selector
+  -> CSS variables activate via [data-theme="dark"] selector
   -> Fabric.js selection colors re-read via ToolUtils.getAccentColor()
 ```
 
-On macOS 26+, the native Liquid Glass layer is always present. Dark and Light themes cover it with opaque backgrounds. Glass theme reveals it via translucent purple-tinted backgrounds. On Linux, there is no native glass layer — the Glass theme uses CSS `backdrop-filter` where supported by the Wayland compositor, falling back to solid backgrounds.
+On macOS, windows use `vibrancy: 'under-window'` for native translucency effects. On Linux, there are no native effects — CSS `backdrop-filter` is used where supported by the Wayland compositor, falling back to solid backgrounds.
 
 ---
 
@@ -598,7 +597,7 @@ On macOS 26+, the native Liquid Glass layer is always present. Dark and Light th
 | `mcpCategories` | `object` | Per-category toggles: `{ library, upload, transcribe, organize }`. Each is boolean, all default to `true`. Controls which MCP tools are active. |
 | `ollamaModel` | `string` | Ollama model name. Default `'minicpm-v'`. |
 | `ollamaUrl` | `string` | Ollama server URL. Default `'http://127.0.0.1:11434'`. |
-| `theme` | `string` | Active theme: `'dark'`, `'light'`, or `'glass'`. Default `'dark'`. |
+| `theme` | `string` | Active theme: `'dark'` or `'light'`. Default `'dark'`. |
 | `shortcuts` | `object` | Custom shortcut overrides keyed by action ID (e.g. `{ "capture": "CommandOrControl+Shift+2" }`). Only overridden shortcuts are stored; defaults come from `DEFAULT_SHORTCUTS` in `store.js`. |
 | `falApiKey` | `string` | fal.ai API key for cloud animation. Empty string if not configured. |
 | `tagDescriptions` | `object` | Custom descriptions per tag/category name (e.g. `{ "code": "Code editors and terminals" }`). Used by the AI organizer prompt. |

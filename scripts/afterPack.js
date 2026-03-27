@@ -7,7 +7,7 @@
  *   2. Removes unused native modules (canvas)
  *   3. Removes AI runtime deps that may leak in as transitive deps
  *      (transformers, onnxruntime, ffmpeg — these are downloaded on demand via addon system)
- *   4. Removes wrong-arch native binaries (sharp, electron-liquid-glass)
+ *   4. Removes wrong-arch native binaries (sharp)
  *   5. Pre-signs remaining .node and .dylib files with Developer ID cert
  */
 
@@ -150,24 +150,7 @@ module.exports = async function afterPack(context) {
   removeDir(path.join(nmDir, 'ffmpeg-static'), 'ffmpeg-static (not bundled — addon runtime)');
 
   // ---------------------------------------------------------------
-  // 3c. Remove wrong-arch electron-liquid-glass prebuilds
-  // ---------------------------------------------------------------
-  var elgPrebuildsDir = path.join(nmDir, 'electron-liquid-glass', 'prebuilds');
-  if (fs.existsSync(elgPrebuildsDir)) {
-    var elgPlatforms = fs.readdirSync(elgPrebuildsDir);
-    for (var ep = 0; ep < elgPlatforms.length; ep++) {
-      var elgPlat = elgPlatforms[ep];
-      if (elgPlat !== 'darwin-' + targetArch) {
-        removeDir(
-          path.join(elgPrebuildsDir, elgPlat),
-          'electron-liquid-glass ' + elgPlat + ' (building for ' + targetArch + ')'
-        );
-      }
-    }
-  }
-
-  // ---------------------------------------------------------------
-  // 3d. Remove wrong-platform/arch @img/sharp-* packages
+  // 3c. Remove wrong-platform/arch @img/sharp-* packages
   //     npm only installs the matching platform, but strip any
   //     that don't match darwin-{targetArch} as a safety net.
   // ---------------------------------------------------------------

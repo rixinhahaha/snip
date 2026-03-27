@@ -10,7 +10,7 @@
 
 | Requirement | Why |
 |-------------|-----|
-| **macOS** 14+ | Electron target platform (macOS 26+ for Liquid Glass) |
+| **macOS** 14+ | Electron target platform |
 | **Node.js** 18+ | Used during development; a standalone Node.js binary is bundled for the packaged app |
 | **Xcode CLT** | `xcode-select --install` — compiles native `window_utils.node` addon |
 | **Screen Recording permission** | Required for `desktopCapturer` — grant in System Settings > Privacy |
@@ -95,25 +95,6 @@ If the addon is missing, the app still works but the capture overlay may appear 
 
 ---
 
-## Liquid Glass Native Module: `electron-liquid-glass` (macOS 26+ only)
-
-**npm package**: `electron-liquid-glass` (prebuild native addon)
-
-**Purpose**: Applies a native `NSGlassEffectView` behind web content on macOS 26+ (Tahoe). Provides the frosted-glass backdrop that the Glass theme reveals.
-
-**Loading** (in `main.js`):
-```js
-let liquidGlass = null;
-try {
-  const lg = require('electron-liquid-glass');
-  if (lg.isGlassSupported() && lg._addon) liquidGlass = lg;
-} catch { /* not available */ }
-```
-
-**Usage**: `liquidGlass.addView(nativeWindowHandle, { cornerRadius: 12, tintColor: '#22000008' })` called after `did-finish-load` on home and editor windows. Falls back to `setVibrancy('under-window')` if addView fails.
-
----
-
 ## Build Pipeline
 
 ### Local Build (Ad-Hoc Signed)
@@ -128,7 +109,6 @@ npm run build
    - Copies arch-specific bundled Node.js binary to `Resources/node/node`
    - Removes unused native modules (`canvas`)
    - Strips non-macOS ONNX Runtime binaries
-   - Removes wrong-arch `electron-liquid-glass` prebuilds
    - Pre-signs remaining `.node`, `.dylib` files and the bundled Node.js binary
 4. No `CSC_LINK` detected -> `sign:adhoc` runs `codesign --force --deep --sign -`
 5. Output: `dist/mac-{arch}/Snip.app` + `Snip-{version}-{arch}.dmg`
@@ -181,7 +161,7 @@ base64 -i certificate.p12 | tr -d '\n' | pbcopy
 1. Loads `.env` credentials, validates cert type
 2. `npm run prebuild` compiles native addon
 3. `electron-builder --mac` assembles + signs with Developer ID cert
-4. `afterPack` hook copies bundled Node.js binary, cleans unused modules, removes wrong-arch prebuilds, pre-signs native binaries
+4. `afterPack` hook copies bundled Node.js binary, cleans unused modules, pre-signs native binaries
 5. App submitted to Apple notary service
 6. Notarization ticket stapled to DMG on success
 7. Output: signed + notarized `dist/Snip-{version}-{arch}.dmg`
@@ -277,7 +257,7 @@ The cask is hosted at [`rixinhahaha/homebrew-snip`](https://github.com/rixinhaha
 | `app.dock.hide()` | Dev mode (macOS) | Prevents Space switching on window activate |
 | `LSUIElement: true` | Production (macOS, Info.plist) | Same as dock.hide but for packaged app |
 | `titleBarStyle` | `hiddenInset` (macOS) | Custom traffic light position (standard title bar on Linux) |
-| `transparent: true` | All windows | Required for glass/vibrancy effects |
+| `transparent: true` | All windows | Required for vibrancy effects |
 | `backgroundColor` | `#00000000` | Fully transparent behind web content |
 | `singleInstanceLock` | Enabled | Second launch focuses existing instance |
 
@@ -292,9 +272,7 @@ The cask is hosted at [`rixinhahaha/homebrew-snip`](https://github.com/rixinhaha
 | Screen capture blank | Grant Screen Recording permission, restart app |
 | SAM segment tool hidden | Needs 4GB+ RAM. Run `npm run download-node` to bundle the Node.js binary (auto-detected in packaged app). Falls back to system Node.js if bundled binary not found. |
 | Animation (Animate) fails | Check fal.ai API key is set in Settings → Animation, and internet connection is available |
-| `electron-liquid-glass` fails | Only works on macOS 26+; older macOS falls back to vibrancy |
 | App switches Spaces on capture | Ensure `app.dock.hide()` is running and native module built (macOS only) |
-| Glass theme looks opaque | Native glass layer failed — check console for `[Snip] Liquid glass` messages |
 | **Linux: Clipboard doesn't persist** | Install `wl-clipboard` package (`sudo apt install wl-clipboard`) |
 | **Linux: Screenshot capture fails** | Install `python3-gi` (`sudo apt install python3-gi gir1.2-glib-2.0`) for portal support |
 | **Linux: Global shortcut doesn't work** | On Wayland/GNOME, shortcuts use compositor (gsettings). On other DEs, Electron native shortcuts may not work — configure shortcuts in your DE's settings. |

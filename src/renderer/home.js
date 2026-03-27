@@ -86,9 +86,6 @@
     document.getElementById('theme-light').addEventListener('click', function() {
       window.snip.setTheme('light');
     });
-    document.getElementById('theme-glass').addEventListener('click', function() {
-      window.snip.setTheme('glass');
-    });
 
     // Sync when theme changes externally (tray menu or other window)
     window.snip.onThemeChanged(function(t) {
@@ -99,7 +96,6 @@
   function updateThemeButtons(theme) {
     document.getElementById('theme-dark').classList.toggle('active', theme === 'dark');
     document.getElementById('theme-light').classList.toggle('active', theme === 'light');
-    document.getElementById('theme-glass').classList.toggle('active', theme === 'glass');
   }
 
   async function loadFolder(subdir) {

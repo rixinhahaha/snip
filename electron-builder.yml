@@ -23,8 +23,6 @@ mac:
   extendInfo:
     LSUIElement: true
     NSScreenCaptureUsageDescription: "Snip needs screen recording permission to capture screenshots."
-  asarUnpack:
-    - "node_modules/electron-liquid-glass/**"
   extraResources:
     - from: "build/Release/window_utils.node"
       to: "native/window_utils.node"

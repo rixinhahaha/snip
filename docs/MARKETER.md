@@ -46,7 +46,7 @@ The marketing site lives in `site/` and is hosted on GitHub Pages at [snipit.dev
 **Platform messaging:**
 - Snip supports **macOS and Linux**. Download buttons detect the user's platform and show the correct asset.
 - Linux targets **Wayland** sessions (X11 is untested). Always note this when mentioning Linux support.
-- macOS-only features (Liquid Glass, Transcribe/OCR, auto Ollama install) should be labeled "(macOS only)" in copy.
+- macOS-only features (Transcribe/OCR, auto Ollama install) should be labeled "(macOS only)" in copy.
 
 ---
 
