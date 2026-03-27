@@ -168,11 +168,14 @@ describe('getTheme / setTheme', () => {
     expect(store.getTheme()).toBe('dark');
   });
 
-  it('persists light and glass themes', () => {
+  it('persists light theme', () => {
     store.setTheme('light');
     expect(store.getTheme()).toBe('light');
+  });
+
+  it('migrates glass theme to dark', () => {
     store.setTheme('glass');
-    expect(store.getTheme()).toBe('glass');
+    expect(store.getTheme()).toBe('dark');
   });
 });
 
