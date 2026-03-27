@@ -74,42 +74,17 @@ Both icons use a squircle shape (`rx="22.5"` on a 100x100 viewBox).
 - **Shadows**: Multi-layer — outer shadow for depth + inner glow for glass edge
 - **Borders**: Semi-transparent, never fully opaque
 
-### Glass Theme
-
-The **Glass** theme (`[data-theme="glass"]`) is a third theme option with lavender/purple-tinted translucent surfaces. It reveals the native `NSGlassEffectView` (macOS 26+) or vibrancy material through purple-tinted backgrounds. Uses light text (like Dark) but with a distinct violet palette.
-
-| Role | Value | Usage |
-|------|-------|-------|
-| **Accent** | `#A78BFA` (Violet 400) | Lighter purple for glass contrast |
-| **Accent hover** | `#8B5CF6` (Violet 500) | Hover/pressed states |
-| **Background body** | `rgba(22, 10, 42, 0.24)` | Subtle deep-purple wash |
-| **Background primary** | `rgba(22, 10, 42, 0.34)` | Main content area (readable tint) |
-| **Background secondary** | `rgba(22, 10, 42, 0.44)` | Sidebar (strong structural tint) |
-| **Background elevated** | `rgba(28, 14, 55, 0.42)` | Cards/panels (accent-tinted) |
-| **Background toolbar** | `rgba(22, 10, 42, 0.40)` | Toolbar with strong tint |
-| **Text primary** | `#f0eafa` | Bright lavender body text |
-| **Text muted** | `#9a90b0` | Secondary labels (~4.2:1 contrast) |
-| **Text bright** | `#ffffff` | Headings, active labels |
-
-CSS `backdrop-filter` is disabled (`--glass-blur: 0px`) since the native glass/vibrancy layer handles blur. Enhanced specular highlights and purple-tinted borders provide visual contrast.
-
-### Native Glass Layer (macOS 26+)
-
-On macOS 26 (Tahoe) and later, `electron-liquid-glass` applies a native `NSGlassEffectView` behind the web content in both home and editor windows. This layer is always active regardless of theme — the Dark and Light themes have opaque enough backgrounds to cover it, while the Glass theme's translucent backgrounds reveal it.
-
-**Fallback chain**: Native glass → `vibrancy: 'under-window'` → CSS `backdrop-filter` → solid opaque (no blur support).
-
 ### Solid Fallback (No Glass)
 
 When the OS or renderer doesn't support `backdrop-filter`, translucent `rgba()` backgrounds look broken (washed out, unreadable). A `@supports not (backdrop-filter: blur(1px))` block in `theme.css` swaps all surfaces to opaque equivalents.
 
-| Role | Dark solid | Light solid | Glass solid |
-|------|-----------|-------------|-------------|
-| **Body** | `#0a0a0a` | `#FBF8F2` (cream) | `#100c1c` (deep purple) |
-| **Primary** | `#141414` | `#FFFDF9` | `#161128` |
-| **Secondary** | `#121212` | `#F7F3EC` | `#1e1630` |
-| **Elevated** | `#1e1e1e` | `#FFFFFF` | `#261e38` |
-| **Toolbar** | `#191919` | `#FFFDF9` | `#1c1430` |
+| Role | Dark solid | Light solid |
+|------|-----------|-------------|
+| **Body** | `#0a0a0a` | `#FBF8F2` (cream) |
+| **Primary** | `#141414` | `#FFFDF9` |
+| **Secondary** | `#121212` | `#F7F3EC` |
+| **Elevated** | `#1e1e1e` | `#FFFFFF` |
+| **Toolbar** | `#191919` | `#FFFDF9` |
 
 The fallback also:
 - Sets `--glass-blur` to `0px`
@@ -177,7 +152,7 @@ This affects all canvas objects (rectangles, arrows, textboxes, blur images).
 
 ### Setting Up Your AI Assistant (Inline Overlay)
 
-The setup wizard is an **inline overlay** (`#setup-overlay`) inside the home window — `position: fixed; inset: 0; z-index: 100`. Fully opaque per-theme backgrounds: dark `#111113`, light `#f5f3ef`, glass `rgba(20,20,24,0.92)` with 40px backdrop blur.
+The setup wizard is an **inline overlay** (`#setup-overlay`) inside the home window — `position: fixed; inset: 0; z-index: 100`. Fully opaque per-theme backgrounds: dark `#111113`, light `#f5f3ef`, matching each theme.
 
 **Three views** (one visible at a time):
 
@@ -195,7 +170,7 @@ The setup wizard is an **inline overlay** (`#setup-overlay`) inside the home win
 
 **Settings page** (when overlay is not showing):
 - **Current model card** (ready state): `--bg-elevated` with `--border-card`, 10px radius. Shows "Active Model" uppercase label, large bold model name, and circular info button.
-- **Info tooltip**: Per-theme backgrounds (dark: `rgba(30,30,30,0.95)`, light: `rgba(255,255,255,0.95)`, glass: `rgba(15,8,30,0.90)` with backdrop blur). Positioned below card, `z-index: 20`. Contains a specs table with label column in `--text-secondary` and value column in `--text-primary`.
+- **Info tooltip**: Per-theme backgrounds (dark: `rgba(30,30,30,0.95)`, light: `rgba(255,255,255,0.95)`). Positioned below card, `z-index: 20`. Contains a specs table with label column in `--text-secondary` and value column in `--text-primary`.
 
 ### Buttons
 - **Primary**: Solid accent fill, white text, rounded corners (8px)
@@ -285,13 +260,13 @@ Search results use overlay-style cards with hardcoded colors (intentional — ov
 
 A small borderless `BrowserWindow` that appears top-center after copy/save actions and auto-dismisses. Created in `ipc-handlers.js` via `showFloatingToast()`, triggered by the `show-notification` IPC channel.
 
-| Property | Dark | Light | Glass |
-|----------|------|-------|-------|
-| **Background** | `rgba(20,20,20,0.7)` | `rgba(255,253,250,0.85)` | `rgba(22,10,42,0.75)` |
-| **Text** | `#e0e0e0` | `#1a1a1a` | `#f0eafa` |
-| **Checkmark** | `#8B5CF6` | `#7C3AED` | `#A78BFA` |
-| **Border** | `rgba(255,255,255,0.08)` | `rgba(124,58,237,0.15)` | `rgba(167,139,250,0.25)` |
-| **Blur** | 24px | 24px | 0px (native glass) |
+| Property | Dark | Light |
+|----------|------|-------|
+| **Background** | `rgba(20,20,20,0.7)` | `rgba(255,253,250,0.85)` |
+| **Text** | `#e0e0e0` | `#1a1a1a` |
+| **Checkmark** | `#8B5CF6` | `#7C3AED` |
+| **Border** | `rgba(255,255,255,0.08)` | `rgba(124,58,237,0.15)` |
+| **Blur** | 24px | 24px |
 
 Animation: fade-in (0.25s ease, translateY -6→0), fade-out (0.3s ease after 1.1s delay). Window is `focusable: false`, `ignoreMouseEvents: true`, auto-destroyed after 1.6s. Size: 260×48px.
 

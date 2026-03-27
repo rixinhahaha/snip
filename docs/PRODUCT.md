@@ -27,7 +27,7 @@ Power users on macOS and Linux who take 5-50 screenshots per day: developers, de
 1. **Fastest capture-to-clipboard** — Two keystrokes: Cmd+Shift+2 to capture, Esc to copy annotated image to clipboard. Under 5 seconds.
 2. **Smart organization** — AI names, categorizes, and tags every saved screenshot. No manual filing.
 3. **Semantic search** — Find any screenshot by describing what was in it. "slack message about deployment" finds the right one.
-4. **Native feel** — Liquid Glass UI on macOS 26+, tray-only app, no Dock icon, works across macOS Spaces without switching. On Linux, uses standard system tray with Wayland compositor integration.
+4. **Native feel** — Glass-effect UI with vibrancy on macOS, tray-only app, no Dock icon, works across macOS Spaces without switching. On Linux, uses standard system tray with Wayland compositor integration.
 
 ---
 
@@ -164,7 +164,7 @@ Power users on macOS and Linux who take 5-50 screenshots per day: developers, de
 | **Snip and Annotate** | The capture action that opens the annotation editor (menu item and tray label) |
 | **Category** | AI-assigned folder: code, chat, web, design, documents, terminal, personal, fun, other |
 | **Tag** | AI-assigned keyword for search/filtering |
-| **Glass** | The translucent Liquid Glass theme (native on macOS 26+, CSS fallback on Linux) |
+| **Glass effects** | The translucent backdrop-filter effects used by both Dark and Light themes (specular highlights, blur, inner glow) |
 
 ---
 
@@ -185,7 +185,7 @@ Power users on macOS and Linux who take 5-50 screenshots per day: developers, de
 |---------|-------|-----------------|
 | Capture shortcut | Cmd+Shift+2 | Ctrl+Shift+2 |
 | Global shortcuts | Electron native | GNOME compositor via gsettings (other DEs: Electron native, may fail) |
-| Liquid Glass | Native NSGlassEffectView (macOS 26+) | CSS `backdrop-filter` fallback |
+| Glass effects | Native vibrancy (`under-window`) | CSS `backdrop-filter` fallback |
 | Vibrancy | Native `under-window` | Not supported (standard window chrome) |
 | Transcribe (OCR) | Native Vision framework | Not available |
 | Window snap (capture) | CGWindowList via native addon | Not available (drag-select only) |

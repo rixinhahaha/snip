@@ -91,18 +91,6 @@
       }, 50);
     });
 
-    // Detect toolbar overflow and toggle fade mask
-    updateToolbarOverflow();
-    var toolbarScrollEl = document.getElementById('toolbar-scroll');
-    new ResizeObserver(updateToolbarOverflow).observe(toolbarScrollEl);
-    // Scroll toolbar horizontally on wheel and prevent canvas zoom
-    toolbarScrollEl.addEventListener('wheel', function(e) {
-      e.stopPropagation();
-      if (e.deltaY && !e.deltaX) {
-        e.preventDefault();
-        toolbarScrollEl.scrollLeft += e.deltaY;
-      }
-    });
 
     // Review mode: show review panel for MCP sessions
     if (_mcpUpload) {
@@ -391,7 +379,7 @@
 
   var MIN_ZOOM = 0.25;
   var MAX_ZOOM = 8;
-  var TOOLBAR_HEIGHT = 48;
+  var TOOLBAR_HEIGHT = 44;
 
   function scaleImageToFit(imgW, imgH) {
     var container = document.getElementById('editor-container');
@@ -632,11 +620,6 @@
     });
   }
 
-  function updateToolbarOverflow() {
-    var scrollEl = document.getElementById('toolbar-scroll');
-    if (!scrollEl) return;
-    scrollEl.classList.toggle('no-overflow', scrollEl.scrollWidth <= scrollEl.clientWidth);
-  }
 
   /**
    * Re-render the highlight overlay for a segment tag when color changes.
@@ -774,7 +757,7 @@
 
     Toolbar.initToolbar({
       getCanvas: function() { return canvas; },
-      onToolChange: function(tool) { switchTool(tool); updateToolbarOverflow(); },
+      onToolChange: function(tool) { switchTool(tool); },
       onColorChange: function(color) {
         var active = canvas.getActiveObject();
         if (active) {
@@ -993,7 +976,6 @@
             Toolbar.setActiveFontSize(obj.fontSize);
           }
         });
-        updateToolbarOverflow();
       } else if (active && active.type === 'textbox' && active._snipEditingTagId) {
         // Textbox being edited as part of a tag
         fontGroup.classList.remove('hidden');
@@ -1014,7 +996,6 @@
         }
         Toolbar.setActiveFont(active.fontFamily);
         Toolbar.setActiveFontSize(active.fontSize);
-        updateToolbarOverflow();
       } else if (active && active.type === 'textbox') {
         // Standalone textbox selected: show font controls + color picker
         fontGroup.classList.remove('hidden');
@@ -1024,7 +1005,6 @@
         // Sync font/size from the selected textbox
         Toolbar.setActiveFont(active.fontFamily);
         Toolbar.setActiveFontSize(active.fontSize);
-        updateToolbarOverflow();
       } else if (Toolbar.getActiveTool() !== TOOLS.TAG) {
         // Other object type: restore defaults
         tagColorGroup.classList.add('hidden');

@@ -41,14 +41,6 @@ const TOAST_THEMES = {
     accent: '#7C3AED',
     blur: '24px'
   },
-  glass: {
-    bg: 'rgba(22, 10, 42, 0.75)',
-    shadow: '0 8px 24px rgba(20,8,40,0.55), inset 0 1px 0 0 rgba(255,255,255,0.14)',
-    specular: 'rgba(167, 139, 250, 0.25)',
-    color: '#f0eafa',
-    accent: '#A78BFA',
-    blur: '0px'
-  }
 };
 
 function showFloatingToast(message) {
@@ -241,6 +233,7 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
       editorWindowRef.close();
     }
   });
+
 
   // Get system fonts
   ipcMain.handle('get-system-fonts', async () => {

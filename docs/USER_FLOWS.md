@@ -25,27 +25,7 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 | 8 | -- | AI disabled by default — Ollama is not started on first launch |
 | 8a | -- | User can enable AI later from Settings, which triggers Ollama install/model download (see §8.1, §8.2) |
 
-### 1.2 Native Glass Layer Initialization
-
-**Preconditions:** macOS 26+ (Tahoe), `electron-liquid-glass` native addon built.
-
-| Step | Action | Expected Result |
-|------|--------|-----------------|
-| 1 | App starts | `electron-liquid-glass` module loaded, `isGlassSupported()` and `_addon` checked |
-| 2 | -- | If both pass: native glass path used (no `vibrancy` set on windows) |
-| 3 | -- | If either fails: `vibrancy: 'under-window'` set on home/editor windows |
-| 4 | Home window's `did-finish-load` fires | `liquidGlass.addView()` called with native window handle |
-| 5 | -- | If `addView` returns valid ID (>= 0): native glass layer active behind web content |
-| 6 | -- | Glass layer is always present; the Glass theme's CSS reveals it via transparent backgrounds |
-| 7 | -- | If `addView` fails (returns < 0): `setVibrancy('under-window')` applied as fallback |
-
-**Fallback chain:**
-1. Native Liquid Glass (`NSGlassEffectView` via `electron-liquid-glass`)
-2. Electron vibrancy (`vibrancy: 'under-window'`)
-3. CSS `backdrop-filter: blur()` with translucent backgrounds
-4. Solid opaque backgrounds (when `backdrop-filter` unsupported)
-
-### 1.3 Single Instance Lock
+### 1.2 Single Instance Lock
 
 | Step | Action | Expected Result |
 |------|--------|-----------------|
@@ -901,13 +881,10 @@ The setup wizard appears as a **full-window inline overlay** inside the home win
 
 | Step | Action | Expected Result |
 |------|--------|-----------------|
-| 1 | Click Dark, Light, or Glass button in Settings | Theme changes immediately |
-| 2 | -- | `data-theme` attribute updated on `<html>` (`dark`, `light`, or `glass`) |
+| 1 | Click Dark or Light button in Settings | Theme changes immediately |
+| 2 | -- | `data-theme` attribute updated on `<html>` (`dark` or `light`) |
 | 3 | -- | Preference saved to config |
 | 4 | -- | All open windows receive `theme-changed` IPC event |
-| 5 | Select Glass theme | Backgrounds become lavender-tinted translucent, native glass/vibrancy visible |
-| 6 | -- | CSS `backdrop-filter` disabled (native layer handles blur) |
-| 7 | Select Dark or Light theme | Standard opaque backgrounds restored, glass layer hidden |
 
 ### 8.5 Category Management
 

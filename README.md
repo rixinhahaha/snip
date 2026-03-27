@@ -125,7 +125,7 @@ npm run rebuild   # compile native modules (macOS)
 npm start         # launch (tray icon appears)
 ```
 
-Requires **macOS 14+** or **Linux (Wayland)**, **Node.js 18+**. macOS 26+ for native frosted glass UI.
+Requires **macOS 14+** or **Linux (Wayland)**, **Node.js 18+**.
 
 ## Documentation
 
@@ -139,7 +139,7 @@ Requires **macOS 14+** or **Linux (Wayland)**, **Node.js 18+**. macOS 26+ for na
 
 ## Tech Stack
 
-Electron 33 / Fabric.js 7 / Mermaid.js 11 / Ollama (local LLM) / HuggingFace Transformers.js / SlimSAM (ONNX) / electron-liquid-glass
+Electron 33 / Fabric.js 7 / Mermaid.js 11 / Ollama (local LLM) / HuggingFace Transformers.js / SlimSAM (ONNX)
 
 All AI runs locally — no cloud APIs needed for core features.
 

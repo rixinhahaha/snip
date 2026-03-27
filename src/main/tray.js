@@ -43,12 +43,6 @@ function buildTrayMenu() {
           checked: currentTheme === 'light',
           click: () => broadcastTheme('light')
         },
-        {
-          label: 'Glass',
-          type: 'radio',
-          checked: currentTheme === 'glass',
-          click: () => broadcastTheme('glass')
-        }
       ]
     },
     { type: 'separator' },

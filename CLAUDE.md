@@ -9,7 +9,7 @@ This project is **fully autonomous**. Claude Code operates independently across 
 | Doc | When to Read |
 |-----|-------------|
 | [`docs/PRODUCT.md`](docs/PRODUCT.md) | Before adding features, changing UX, or making product decisions. Contains vision, terminology, and product principles. |
-| [`docs/DESIGN.md`](docs/DESIGN.md) | Before touching CSS, colors, or UI components. Contains the full color system (Dark/Light/Glass), component patterns, and glass effect specs. |
+| [`docs/DESIGN.md`](docs/DESIGN.md) | Before touching CSS, colors, or UI components. Contains the full color system (Dark/Light), component patterns, and glass effect specs. |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Before writing code. Contains directory structure, code conventions, IPC channels, data flow, and key architectural constraints. |
 | [`docs/DEVOPS.md`](docs/DEVOPS.md) | Before changing build scripts, native modules, or deployment config. Contains build pipeline, signing, and environment setup. |
 | [`docs/USER_FLOWS.md`](docs/USER_FLOWS.md) | Before modifying user-facing behavior. Contains step-by-step flows with edge cases — use as acceptance criteria. |
@@ -58,8 +58,8 @@ These are non-negotiable rules. Violating them causes crashes or broken UX:
 
 ### CSS
 - **Never hardcode colors.** All colors come from CSS variables in `src/renderer/theme.css`.
-- Three themes exist: `dark`, `light`, `glass`. Changes must work in all three + the solid fallback.
-- **All new UI must align with the Liquid Glass design language** documented in `docs/DESIGN.md`. Before writing CSS, read the design doc for the correct variables, component patterns, and glass effect specs. Reuse existing patterns (e.g. tutorial-modal, toast pill, toolbar button states) rather than inventing new ones.
+- Two themes exist: `dark`, `light`. Changes must work in both + the solid fallback.
+- **All new UI must align with the glass design language** documented in `docs/DESIGN.md`. Before writing CSS, read the design doc for the correct variables, component patterns, and glass effect specs. Reuse existing patterns (e.g. tutorial-modal, toast pill, toolbar button states) rather than inventing new ones.
 
 ### Renderer Code Style
 - **No ES modules** in renderer JS: prefer `var`, no `import`/`export`. All tools attach to `window` via IIFEs.
@@ -70,10 +70,6 @@ These are non-negotiable rules. Violating them causes crashes or broken UX:
 
 ### Purple Brand
 - Accent color is **purple/violet**. Never blue. See `docs/DESIGN.md` for exact values per theme.
-
-### Liquid Glass
-- The native `NSGlassEffectView` layer is always active on macOS 26+. Dark/Light themes cover it with opaque backgrounds. The Glass theme reveals it.
-- `--glass-blur: 0px` in Glass theme because the native layer handles blur.
 
 ### Marketing Site (`site/`)
 - **Maximize SEO on every change.** When editing `site/index.html`, always update structured data (`ld+json`), meta description, Open Graph tags, and `featureList` to reflect new or changed features.

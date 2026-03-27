@@ -19,10 +19,11 @@ const EditorCanvasManager = (() => {
     // Set accent-colored selection controls for all fabric objects
     var accent = ToolUtils.getAccentColor();
     fabric.FabricObject.ownDefaults.borderColor = accent;
-    fabric.FabricObject.ownDefaults.cornerColor = accent;
+    fabric.FabricObject.ownDefaults.cornerColor = 'white';
     fabric.FabricObject.ownDefaults.cornerStrokeColor = accent;
     fabric.FabricObject.ownDefaults.transparentCorners = false;
-    fabric.FabricObject.ownDefaults.cornerSize = 8;
+    fabric.FabricObject.ownDefaults.cornerSize = 10;
+    fabric.FabricObject.ownDefaults.cornerStyle = 'circle';
 
     const canvasEl = document.getElementById('annotation-canvas');
     canvas = new fabric.Canvas(canvasEl, {

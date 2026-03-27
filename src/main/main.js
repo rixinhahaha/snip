@@ -18,17 +18,6 @@ const { BASE_WEB_PREFERENCES } = require('./constants');
 const extensionRegistry = require('./extension-registry');
 const { startSocketServer, stopSocketServer } = require('./socket-server');
 
-// Native Liquid Glass (macOS 26+) — safe no-op on older systems
-let liquidGlass = null;
-try {
-  const lg = require('electron-liquid-glass');
-  // isGlassSupported() checks macOS >= 26; _addon confirms the native binary loaded
-  if (lg.isGlassSupported() && lg._addon) liquidGlass = lg;
-} catch {
-  // Not available — fall back to vibrancy
-}
-if (!liquidGlass) console.log('[Snip] Liquid glass not available — using vibrancy fallback');
-
 // Single instance lock
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
@@ -58,7 +47,7 @@ const OVERLAY_WINDOW_OPTIONS = {
 };
 
 const OVERLAY_HTML = path.join(__dirname, '..', 'renderer', 'index.html');
-const EDITOR_MIN_WIDTH = 700;
+const EDITOR_MIN_WIDTH = 1200;
 const EDITOR_MIN_HEIGHT = 400;
 
 /**
@@ -167,31 +156,11 @@ function createHomeWindow() {
     webPreferences: { ...BASE_WEB_PREFERENCES }
   }, platform.getWindowOptions('home'));
 
-  // Use native vibrancy only if liquid glass is not available
-  if (!liquidGlass) {
-    homeOpts.vibrancy = 'under-window';
-  }
+  homeOpts.vibrancy = 'under-window';
 
   homeWindow = new BrowserWindow(homeOpts);
   homeWindow.setMenuBarVisibility(false);
   homeWindow.loadFile(path.join(__dirname, '..', 'renderer', 'home.html'));
-  // Apply native liquid glass if available, with vibrancy fallback
-  if (liquidGlass) {
-    homeWindow.setWindowButtonVisibility(true);
-    homeWindow.webContents.once('did-finish-load', () => {
-      try {
-        var glassId = liquidGlass.addView(homeWindow.getNativeWindowHandle(), {
-          cornerRadius: 12,
-          tintColor: '#22000008'
-        });
-        if (glassId < 0) throw new Error('addView returned ' + glassId);
-        console.log('[Snip] Liquid glass active on home window (id=' + glassId + ')');
-      } catch (e) {
-        console.warn('[Snip] Liquid glass failed for home window, falling back to vibrancy:', e.message);
-        homeWindow.setVibrancy('under-window');
-      }
-    });
-  }
 
   homeWindow.on('closed', () => {
     homeWindow = null;
@@ -199,7 +168,7 @@ function createHomeWindow() {
 }
 
 function computeEditorBounds(cssWidth, cssHeight) {
-  const TOOLBAR_HEIGHT = 48;
+  const TOOLBAR_HEIGHT = 44;
   const PADDING = 48;
   const MIN_W = EDITOR_MIN_WIDTH;
   const MIN_H = EDITOR_MIN_HEIGHT;
@@ -229,12 +198,10 @@ function createEditorWindow(cssWidth, cssHeight) {
     editorWindow = prewarmedEditor;
     prewarmedEditor = null;
 
+    editorWindow.setMinimumSize(EDITOR_MIN_WIDTH, EDITOR_MIN_HEIGHT);
     editorWindow.setContentSize(winWidth, winHeight);
     editorWindow.setPosition(x, y);
-
-    if (!liquidGlass) {
-      editorWindow.setVibrancy('under-window');
-    }
+    editorWindow.setVibrancy('under-window');
   } else {
     // Fallback: create fresh window (show: false — IPC handler will show after data push)
     const editorOpts = Object.assign({
@@ -250,37 +217,11 @@ function createEditorWindow(cssWidth, cssHeight) {
       webPreferences: { ...BASE_WEB_PREFERENCES }
     }, platform.getWindowOptions('editor'));
 
-    if (!liquidGlass) {
-      editorOpts.vibrancy = 'under-window';
-    }
+    editorOpts.vibrancy = 'under-window';
 
     editorWindow = new BrowserWindow(editorOpts);
     editorWindow.setMenuBarVisibility(false);
     editorWindow.loadFile(EDITOR_HTML);
-  }
-
-  // Apply native liquid glass if available, with vibrancy fallback
-  if (liquidGlass) {
-    editorWindow.setWindowButtonVisibility(true);
-    // Apply glass when content is ready (may already be loaded for pre-warmed)
-    const applyGlass = () => {
-      try {
-        var glassId = liquidGlass.addView(editorWindow.getNativeWindowHandle(), {
-          cornerRadius: 12,
-          tintColor: '#22000008'
-        });
-        if (glassId < 0) throw new Error('addView returned ' + glassId);
-        console.log('[Snip] Liquid glass active on editor window (id=' + glassId + ')');
-      } catch (e) {
-        console.warn('[Snip] Liquid glass failed for editor window, falling back to vibrancy:', e.message);
-        editorWindow.setVibrancy('under-window');
-      }
-    };
-    if (editorWindow.webContents.isLoading()) {
-      editorWindow.webContents.once('did-finish-load', applyGlass);
-    } else {
-      applyGlass();
-    }
   }
 
   // Destroy overlay (will be recreated fresh next capture)

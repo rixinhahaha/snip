@@ -314,7 +314,12 @@ function rebuildIndex() {
 }
 
 function getTheme() {
-  return loadConfig().theme || 'dark';
+  var theme = loadConfig().theme || 'dark';
+  if (theme === 'glass') {
+    theme = 'dark';
+    setTheme(theme);
+  }
+  return theme;
 }
 
 function setTheme(theme) {
