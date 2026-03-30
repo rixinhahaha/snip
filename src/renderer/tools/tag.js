@@ -52,20 +52,40 @@ var TagTool = (function() {
     var items = group.removeAll();
     canvas.remove(group);
 
-    var textbox = null;
+    var textObj = null;
     var bubbleRect = null;
     for (var i = 0; i < items.length; i++) {
-      canvas.add(items[i]);
-      if (items[i].type === 'textbox') {
-        textbox = items[i];
-        items[i].set({ selectable: true, evented: true, editable: true });
+      if (items[i].type === 'text' || items[i].type === 'textbox') {
+        textObj = items[i];
       } else {
         if (items[i].type === 'rect') bubbleRect = items[i];
+        canvas.add(items[i]);
         items[i].set({ selectable: false, evented: false });
       }
     }
 
-    if (!textbox) return;
+    if (!textObj) return;
+
+    // Create editable Textbox from the display FabricText
+    var textbox = new fabric.Textbox(textObj.text, {
+      left: textObj.left,
+      top: textObj.top,
+      width: textObj.width || 80,
+      fontSize: textObj.fontSize,
+      fontFamily: textObj.fontFamily,
+      fill: textObj.fill,
+      originX: textObj.originX || 'left',
+      originY: textObj.originY || 'top',
+      selectable: true,
+      evented: true,
+      editable: true,
+      cursorColor: textObj.fill,
+      padding: 2
+    });
+    canvas.add(textbox);
+
+    // Track the textbox in items for regrouping later
+    items = items.map(function(item) { return item === textObj ? textbox : item; });
 
     // Mark textbox as part of a tag edit so toolbar can show tag controls
     textbox._snipEditingTagId = tagId;
@@ -90,9 +110,13 @@ var TagTool = (function() {
     textbox.on('changed', onChanged);
 
     canvas.setActiveObject(textbox);
-    textbox.enterEditing();
-    textbox.selectAll();
-    canvas.renderAll();
+    if (window._snipEnterEditing) {
+      window._snipEnterEditing(textbox);
+    } else {
+      textbox.enterEditing();
+      textbox.selectAll();
+      canvas.renderAll();
+    }
 
     var onExitEditing = function() {
       textbox.off('editing:exited', onExitEditing);
@@ -106,10 +130,26 @@ var TagTool = (function() {
         canvas.remove(items[m]);
       }
 
-      var newGroup = new fabric.Group(items, {
+      // Replace Textbox with non-editable FabricText for display inside group
+      var displayText = new fabric.FabricText(textbox.text, {
+        left: textbox.left,
+        top: textbox.top,
+        fontSize: textbox.fontSize,
+        fontFamily: textbox.fontFamily,
+        fill: textbox.fill,
+        originX: textbox.originX || 'left',
+        originY: textbox.originY || 'top',
+        selectable: false,
+        evented: false
+      });
+      var regroupItems = items.map(function(item) {
+        return item === textbox ? displayText : item;
+      });
+
+      var newGroup = new fabric.Group(regroupItems, {
         selectable: true,
         evented: true,
-        subTargetCheck: true,
+        subTargetCheck: false,
         lockRotation: true,
         hasControls: false
       });
@@ -191,10 +231,26 @@ var TagTool = (function() {
       canvas.remove(items[j]);
     }
 
-    var newGroup = new fabric.Group(items, {
+    // Replace Textbox with non-editable FabricText for display inside group
+    var displayText = new fabric.FabricText(textbox.text, {
+      left: textbox.left,
+      top: textbox.top,
+      fontSize: textbox.fontSize,
+      fontFamily: textbox.fontFamily,
+      fill: textbox.fill,
+      originX: textbox.originX || 'left',
+      originY: textbox.originY || 'top',
+      selectable: false,
+      evented: false
+    });
+    var regroupItems = items.map(function(item) {
+      return item === textbox ? displayText : item;
+    });
+
+    var newGroup = new fabric.Group(regroupItems, {
       selectable: true,
       evented: true,
-      subTargetCheck: true,
+      subTargetCheck: false,
       lockRotation: true,
       hasControls: false
     });
@@ -392,9 +448,13 @@ var TagTool = (function() {
         // Make textbox editable and enter editing
         parts.textbox.set({ selectable: true, evented: true, editable: true });
         canvas.setActiveObject(parts.textbox);
-        parts.textbox.enterEditing();
-        parts.textbox.selectAll();
-        canvas.renderAll();
+        if (window._snipEnterEditing) {
+          window._snipEnterEditing(parts.textbox);
+        } else {
+          parts.textbox.enterEditing();
+          parts.textbox.selectAll();
+          canvas.renderAll();
+        }
 
         // On editing exit, create linked objects (label group + separate tip/line)
         var onExitEditing = function() {
@@ -412,11 +472,24 @@ var TagTool = (function() {
           // Generate unique tag ID for linkage
           var tagId = ToolUtils.nextTagId();
 
-          // Create label group (bubble + textbox only) — movable
-          var labelGroup = new fabric.Group([parts.bubble, parts.textbox], {
+          // Create label group (bubble + text display) — movable
+          // Replace Textbox with non-editable FabricText for display inside group
+          var displayText = new fabric.FabricText(parts.textbox.text, {
+            left: parts.textbox.left,
+            top: parts.textbox.top,
+            fontSize: parts.textbox.fontSize,
+            fontFamily: parts.textbox.fontFamily,
+            fill: parts.textbox.fill,
+            originX: 'left',
+            originY: 'top',
+            selectable: false,
+            evented: false
+          });
+
+          var labelGroup = new fabric.Group([parts.bubble, displayText], {
             selectable: true,
             evented: true,
-            subTargetCheck: true,
+            subTargetCheck: false,
             lockRotation: true,
             hasControls: false
           });
