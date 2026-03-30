@@ -313,8 +313,12 @@ const SegmentTool = (() => {
             // Enter editing and show segment toolbar controls
             textbox.set({ selectable: true, evented: true, editable: true });
             canvas.setActiveObject(textbox);
-            textbox.enterEditing();
-            textbox.selectAll();
+            if (window._snipEnterEditing) {
+              window._snipEnterEditing(textbox);
+            } else {
+              textbox.enterEditing();
+              textbox.selectAll();
+            }
 
             // Show segment color swatches + font controls during initial tag creation
             document.getElementById('segment-color-group').classList.remove('hidden');
@@ -360,11 +364,24 @@ const SegmentTool = (() => {
               // Use the current overlay (recolored) if available, else the original
               var overlayToAdd = currentOverlay || fabricOverlay;
 
-              // Create label group (bubble + textbox only) — movable
-              var labelGroup = new fabric.Group([bubble, textbox], {
+              // Replace Textbox with non-editable FabricText for display inside group
+              var displayText = new fabric.FabricText(textbox.text, {
+                left: textbox.left,
+                top: textbox.top,
+                fontSize: textbox.fontSize,
+                fontFamily: textbox.fontFamily,
+                fill: textbox.fill,
+                originX: textbox.originX || 'left',
+                originY: textbox.originY || 'top',
+                selectable: false,
+                evented: false
+              });
+
+              // Create label group (bubble + text display only) — movable
+              var labelGroup = new fabric.Group([bubble, displayText], {
                 selectable: true,
                 evented: true,
-                subTargetCheck: true,
+                subTargetCheck: false,
                 lockRotation: true,
                 hasControls: false
               });

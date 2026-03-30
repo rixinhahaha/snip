@@ -52,8 +52,12 @@ const TextTool = (() => {
 
       canvas.add(textbox);
       canvas.setActiveObject(textbox);
-      textbox.enterEditing();
-      textbox.selectAll();
+      if (window._snipEnterEditing) {
+        window._snipEnterEditing(textbox);
+      } else {
+        textbox.enterEditing();
+        textbox.selectAll();
+      }
     }
 
     return {

@@ -18,6 +18,8 @@
     document.documentElement.dataset.theme = theme;
   });
 
+  var _clipboard = null; // stores cloned object(s) for copy/paste
+
   let _editorReady = false; // DOM + tools initialized
   let _editorInitialized = false; // image data loaded
   let _mcpUpload = false; // true when editor was opened by MCP upload_image
@@ -621,6 +623,86 @@
   }
 
 
+  // ── Copy / Paste helpers ──
+
+  var SNIP_PROPS = ['_snipTagId', '_snipTagType', '_snipTagRole', '_snipTagColor', '_snipSegmentTag', '_snipMaskURL'];
+
+  function _getSnipProps(obj) {
+    var props = { left: obj.left, top: obj.top };
+    SNIP_PROPS.forEach(function(k) { if (obj[k] !== undefined) props[k] = obj[k]; });
+    return props;
+  }
+
+  function _applySnipProps(cloned, props) {
+    SNIP_PROPS.forEach(function(k) { if (props[k] !== undefined) cloned[k] = props[k]; });
+  }
+
+  function _copyToClipboard(obj) {
+    var tagId = obj._snipTagId;
+    if (tagId) {
+      // Tag: collect all linked parts in z-order
+      _clipboard = [];
+      canvas.getObjects().forEach(function(o) {
+        if (o._snipTagId === tagId) {
+          _clipboard.push({ obj: o, props: _getSnipProps(o) });
+        }
+      });
+    } else {
+      _clipboard = [{ obj: obj, props: _getSnipProps(obj) }];
+    }
+  }
+
+  function _pasteFromClipboard() {
+    if (!_clipboard || !_clipboard.length) return;
+
+    var OFFSET = 20;
+    var isTag = _clipboard.some(function(e) { return e.props._snipTagId; });
+    var newTagId = isTag
+      ? 'tag-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7)
+      : null;
+
+    var clonePromises = _clipboard.map(function(entry) {
+      return entry.obj.clone().then(function(cloned) {
+        // Restore custom _snip* properties (not preserved by Fabric clone)
+        _applySnipProps(cloned, entry.props);
+
+        // Assign new tag ID so pasted parts link to each other
+        if (newTagId) cloned._snipTagId = newTagId;
+
+        // Tag line: offset via endpoints only, keep non-interactive
+        if (cloned._snipTagRole === 'line') {
+          var origObj = entry.obj;
+          cloned.set({
+            selectable: false, evented: false,
+            x1: origObj.x1 + OFFSET,
+            y1: origObj.y1 + OFFSET,
+            x2: origObj.x2 + OFFSET,
+            y2: origObj.y2 + OFFSET
+          });
+          cloned.setCoords();
+        } else {
+          // Offset position for all other objects
+          cloned.set({ left: entry.props.left + OFFSET, top: entry.props.top + OFFSET });
+        }
+
+        return cloned;
+      });
+    });
+
+    Promise.all(clonePromises).then(function(clones) {
+      var selectable = null;
+      clones.forEach(function(cloned) {
+        canvas.add(cloned);
+        // Select the label group or main (non-tag) object
+        if (cloned._snipTagType || !cloned._snipTagRole) {
+          selectable = cloned;
+        }
+      });
+      if (selectable) canvas.setActiveObject(selectable);
+      canvas.renderAll();
+    });
+  }
+
   /**
    * Re-render the highlight overlay for a segment tag when color changes.
    * Uses recolorMaskWithOutline to produce a translucent fill + outline ring.
@@ -936,11 +1018,39 @@
       }
     });
 
-    // Global double-click handler for editing tag text
+    // Prevent Fabric from auto-entering editing on click.
+    // Single click = select, double click = edit.
+    // Override enterEditing to gate on a flag — only allow when explicitly requested.
+    var _snipEditAllowed = false;
+    var _origEnterEditing = fabric.Textbox.prototype.enterEditing;
+    fabric.Textbox.prototype.enterEditing = function(e) {
+      if (!_snipEditAllowed) return;
+      return _origEnterEditing.call(this, e);
+    };
+
+    // Helper: call enterEditing with the gate open
+    function enterEditingAllowed(textbox) {
+      _snipEditAllowed = true;
+      textbox.enterEditing();
+      textbox.selectAll();
+      _snipEditAllowed = false;
+      canvas.renderAll();
+    }
+
+    // Expose so text tool and tag tool can use it for new objects
+    window._snipEnterEditing = function(textbox) {
+      enterEditingAllowed(textbox);
+    };
+
+    // Double-click to enter editing on textboxes and tags
     canvas.on('mouse:dblclick', function(opt) {
       var target = opt.target;
-      if (!target || !target._snipTagType) return;
-      TagTool.enterTagEditing(canvas, target);
+      if (!target) return;
+      if (target._snipTagType) {
+        TagTool.enterTagEditing(canvas, target);
+      } else if (target.type === 'textbox') {
+        enterEditingAllowed(target);
+      }
     });
 
     // Show contextual toolbar controls when selecting objects in any mode
@@ -1034,42 +1144,6 @@
       }
     });
 
-    // Click-to-edit: clicking an already-selected textbox or tag enters editing
-    var _clickEditState = { wasSelected: false, downX: 0, downY: 0 };
-
-    canvas.on('mouse:down', function(opt) {
-      _clickEditState.wasSelected = false;
-      if (Toolbar.getActiveTool() !== TOOLS.SELECT) return;
-      var target = opt.target;
-      if (!target) return;
-      var active = canvas.getActiveObject();
-      if (target === active) {
-        _clickEditState.wasSelected = true;
-        _clickEditState.downX = opt.e.clientX;
-        _clickEditState.downY = opt.e.clientY;
-      }
-    });
-
-    canvas.on('mouse:up', function(opt) {
-      if (!_clickEditState.wasSelected) return;
-      _clickEditState.wasSelected = false;
-      if (Toolbar.getActiveTool() !== TOOLS.SELECT) return;
-
-      // Skip if it was a drag (mouse moved more than 5px)
-      var dx = opt.e.clientX - _clickEditState.downX;
-      var dy = opt.e.clientY - _clickEditState.downY;
-      if (Math.sqrt(dx * dx + dy * dy) > 5) return;
-
-      var target = opt.target;
-      if (!target) return;
-
-      if (target.type === 'textbox' && !target.isEditing) {
-        target.enterEditing();
-        canvas.renderAll();
-      } else if (target._snipTagType) {
-        TagTool.enterTagEditing(canvas, target);
-      }
-    });
 
     // Update leader line when a tag label group or tip anchor is dragged
     canvas.on('object:moving', function(opt) {
@@ -1325,6 +1399,46 @@
       }
       if (undoUpscale()) return;
       EditorCanvasManager.removeLastObject();
+    }
+
+    // Copy (Cmd+C)
+    if ((e.metaKey || e.ctrlKey) && e.key === 'c') {
+      if (canvas) {
+        var copyObj = canvas.getActiveObject();
+        if (copyObj && !copyObj._isBrushCursor && !copyObj._isBlurPreview) {
+          e.preventDefault();
+          _copyToClipboard(copyObj);
+        }
+      }
+    }
+
+    // Cut (Cmd+X)
+    if ((e.metaKey || e.ctrlKey) && e.key === 'x') {
+      if (canvas) {
+        var cutObj = canvas.getActiveObject();
+        if (cutObj && !cutObj._isBrushCursor && !cutObj._isBlurPreview) {
+          e.preventDefault();
+          _copyToClipboard(cutObj);
+          // Delete the object (same logic as Delete key)
+          if (cutObj._snipTagId) {
+            canvas.getObjects().slice().forEach(function(obj) {
+              if (obj._snipTagId === cutObj._snipTagId) canvas.remove(obj);
+            });
+          } else {
+            canvas.remove(cutObj);
+          }
+          canvas.discardActiveObject();
+          canvas.renderAll();
+        }
+      }
+    }
+
+    // Paste (Cmd+V)
+    if ((e.metaKey || e.ctrlKey) && e.key === 'v') {
+      if (canvas && _clipboard) {
+        e.preventDefault();
+        _pasteFromClipboard();
+      }
     }
 
     if (e.key === 'Delete' || (e.key === 'Backspace' && !e.target.closest('input, textarea, select'))) {
