@@ -1643,24 +1643,32 @@ select:hover {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 7px 16px;
-  border: none;
+  padding: 7px 18px;
+  border: 1px solid transparent;
   border-radius: 8px;
   font-size: 13px;
   font-weight: 500;
   font-family: inherit;
   cursor: pointer;
-  transition: background 0.15s, filter 0.15s;
+  transition: background 0.12s ease, border-color 0.12s ease, transform 0.1s ease, box-shadow 0.12s ease;
   flex-shrink: 0;
 }
 
+.mcp-review-btn:active {
+  transform: scale(0.96);
+}
+
 .mcp-review-btn.approve {
-  background: var(--success);
+  background: var(--accent);
   color: #fff;
+  border-color: var(--accent);
+  box-shadow: 0 1px 4px rgba(139, 92, 246, 0.25);
 }
 
 .mcp-review-btn.approve:hover {
-  filter: brightness(0.9);
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+  box-shadow: var(--accent-glow);
 }
 
 .mcp-review-btn.approve kbd {
@@ -1668,20 +1676,21 @@ select:hover {
   padding: 1px 5px;
   font-family: inherit;
   font-size: 11px;
-  border-radius: 3px;
-  background: rgba(255, 255, 255, 0.2);
-  color: #fff;
-  opacity: 0.7;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.18);
+  color: rgba(255, 255, 255, 0.8);
 }
 
 .mcp-review-btn.changes {
-  background: rgba(239, 68, 68, 0.1);
-  color: var(--error);
-  border: 1px solid var(--error);
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+  border-color: var(--glass-specular);
 }
 
 .mcp-review-btn.changes:hover {
-  background: rgba(239, 68, 68, 0.2);
+  background: var(--bg-hover-strong);
+  color: var(--text-primary);
+  border-color: var(--text-muted);
 }
 
 /* Review mode: hide cancel, keep copy/save as non-closing utilities */
