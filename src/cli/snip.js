@@ -84,7 +84,124 @@ for (var i = 1; i < args.length; i++) {
   else if (args[i] === '--help' || args[i] === '-h') flags.help = true;
   else if (args[i] === '--format' && i + 1 < args.length) { i++; flags.format = args[i]; }
   else if (args[i] === '--message' && i + 1 < args.length) { i++; flags.message = args[i]; }
+  else if (args[i] === '--remove') flags.remove = true;
+  else if (args[i] === '--provider' && i + 1 < args.length) { i++; flags.provider = args[i]; }
   else positional.push(args[i]);
+}
+
+// ── Setup constants (must be before intercept — var hoisting doesn't initialize) ──
+
+// NOTE: Rules template duplicated from src/main/ipc-handlers.js. Keep in sync.
+// Bump SNIP_RULES_VERSION in both files when changing rules content.
+var SNIP_MARKER_START = '<!-- snip-start -->';
+var SNIP_MARKER_END = '<!-- snip-end -->';
+var SNIP_RULES_VERSION = 'snip-rules-v7';
+
+var SNIP_RULES_CONTENT = [
+  '# Snip \u2014 Visual Communication Tool',
+  '<!-- ' + SNIP_RULES_VERSION + ' -->',
+  'Use `snip` CLI for visual communication. You MUST run `snip --help` before your first snip call in a session.',
+  '',
+  '## ALWAYS use Snip for these:',
+  '- **Diagrams/architecture/flows** \u2192 write Mermaid to `.mmd` file, then `snip render --format mermaid < file.mmd`',
+  '- **UI previews/HTML/components** \u2192 write HTML to `.html` file, then `snip render --format html < file.html`',
+  '- **Show an image for review** \u2192 `snip open <path> --message "context"`',
+  '- **Find a past screenshot** \u2192 `snip search "<query>"`',
+  '- **Read text from an image** \u2192 `snip transcribe <path>`',
+  '',
+  'Do NOT describe visual structures in text. Render them with Snip.',
+  'When the user returns from `snip open` or `snip render`, check the response \u2014 if `edited: true`, use the Read tool to view the image at the returned `path`.',
+  ''
+].join('\n');
+
+var SNIP_PERMISSION_PATTERNS = ['Bash(snip *)'];
+var SNIP_LEGACY_PERMISSION_PATTERNS = ['Bash(echo * | snip *)'];
+
+var SNIP_SKILL_VERSION = 'snip-skill-v1';
+var SNIP_SKILL_CONTENT = [
+  '---',
+  'name: diagram',
+  'description: "Render a visual diagram or HTML preview using Snip. Use when the user wants to visualize architecture, flows, schemas, state machines, UI mockups, or any structural concept."',
+  '---',
+  '',
+  '# Diagram \u2014 Visual Rendering via Snip',
+  '',
+  '<!-- ' + SNIP_SKILL_VERSION + ' -->',
+  '',
+  'Generate a visual diagram or HTML preview from the current conversation context and render it with Snip.',
+  '',
+  '## Step 1: Analyze context and choose format',
+  '',
+  'Review the conversation to determine what to visualize.',
+  '',
+  '**Choose Mermaid** for: architecture diagrams, sequence diagrams, flowcharts, ER diagrams, class diagrams, state diagrams, Gantt charts, git graphs, mind maps, timelines, or any structural/relational/flow visualization.',
+  '',
+  '**Choose HTML** for: UI mockups, component previews, landing pages, dashboards, styled cards, data tables, or anything where visual design (colors, typography, layout) is the point.',
+  '',
+  '## Step 2: Pick the right Mermaid diagram type',
+  '',
+  'When using Mermaid, select the most appropriate type:',
+  '',
+  '| Context | Diagram Type |',
+  '|---------|-------------|',
+  '| Request/response flows, API calls, service interactions | `sequenceDiagram` |',
+  '| Decision trees, workflows, processes | `flowchart TD` or `flowchart LR` |',
+  '| Database schemas, data models | `erDiagram` |',
+  '| Code structure, inheritance, interfaces | `classDiagram` |',
+  '| Lifecycle, transitions, modes | `stateDiagram-v2` |',
+  '| System components, services, layers | `flowchart TD` with subgraphs |',
+  '| Project timelines, sprints | `gantt` |',
+  '| Proportions, distributions | `pie` |',
+  '| Concept relationships | `mindmap` |',
+  '',
+  '## Step 3: Write to a file',
+  '',
+  '**Never use echo piping.** Always write the content to a file first.',
+  '',
+  'For Mermaid diagrams:',
+  '- Write to a `.mmd` file with a descriptive name: `architecture.mmd`, `auth-flow.mmd`, `data-model.mmd`',
+  '',
+  'For HTML previews:',
+  '- Write to a `.html` file with a descriptive name: `preview.html`, `dashboard-mockup.html`',
+  '',
+  '## Step 4: Render with Snip',
+  '',
+  '```bash',
+  '# Mermaid',
+  'snip render --format mermaid < architecture.mmd',
+  '',
+  '# HTML',
+  'snip render --format html < preview.html',
+  '```',
+  '',
+  '## Step 5: Handle the response',
+  '',
+  'The render command returns JSON: `{"status": "approved", "edited": false, "path": "/path/to/rendered.png"}`',
+  '',
+  '- If `status` is `"approved"` and `edited` is `false` \u2014 the user accepted the diagram. Done.',
+  '- If `edited` is `true` \u2014 the user annotated the image with corrections. Use the Read tool to view the image at `path`, then update the source file and re-render.',
+  '- If `status` is `"changes_requested"` \u2014 read the `text` field for written feedback. Update the source file and re-render.',
+  '',
+  '## Tips',
+  '',
+  '- For large diagrams, use subgraphs to organize related nodes',
+  '- Keep node labels concise; use notes for details',
+  '- For HTML, use inline `<style>` tags (external stylesheets won\'t load)',
+  '- HTML is sandboxed: no `<script>` or `<canvas>` JS will execute',
+  '- For fixed-size HTML designs, set explicit body dimensions: `body { width: 800px; height: 600px; }`',
+  ''
+].join('\n');
+
+var KNOWN_PROVIDERS = {
+  'claude-code': { name: 'Claude Code', dir: '.claude' },
+  'cursor':      { name: 'Cursor',      dir: '.cursor' },
+  'windsurf':    { name: 'Windsurf',    dir: '.windsurf' },
+  'cline':       { name: 'Cline',       dir: '.cline' }
+};
+
+if (command === 'setup') {
+  if (flags.help) { printSetupHelp(); process.exit(0); }
+  runSetup(flags);
 }
 
 if (!command || command === '--help' || command === '-h' || flags.help) {
@@ -135,7 +252,7 @@ if (flags.message) params.message = flags.message;
 if (cmd.needsStdin) {
   if (process.stdin.isTTY) {
     process.stderr.write('Error: ' + command + ' reads from stdin. Pipe diagram code, e.g.:\n');
-    process.stderr.write('  echo "graph TD; A-->B" | snip render --format mermaid\n');
+    process.stderr.write('  snip render --format mermaid < diagram.mmd\n');
     process.exit(1);
   }
   readStdin().then(function (input) {
@@ -324,11 +441,364 @@ function printJson(data) {
   }
 }
 
+// ── Setup command (standalone — no socket needed) ──
+
+function detectProviders(home) {
+  var providers = [];
+  if (fs.existsSync(path.join(home, '.claude'))) {
+    providers.push({ id: 'claude-code', name: 'Claude Code' });
+  }
+  if (fs.existsSync(path.join(home, '.cursor')) || fs.existsSync(path.join(home, 'Library', 'Application Support', 'Cursor'))) {
+    providers.push({ id: 'cursor', name: 'Cursor' });
+  }
+  if (fs.existsSync(path.join(home, '.windsurf')) || fs.existsSync(path.join(home, 'Library', 'Application Support', 'Windsurf'))) {
+    providers.push({ id: 'windsurf', name: 'Windsurf' });
+  }
+  if (fs.existsSync(path.join(home, '.cline'))) {
+    providers.push({ id: 'cline', name: 'Cline' });
+  }
+  return providers;
+}
+
+function getProviderFilePath(providerId, home) {
+  switch (providerId) {
+    case 'claude-code': return path.join(home, '.claude', 'CLAUDE.md');
+    case 'cursor': return path.join(home, '.cursor', 'rules', 'snip.mdc');
+    case 'windsurf': return path.join(home, '.windsurf', 'rules', 'snip.md');
+    case 'cline': return path.join(home, '.cline', 'rules', 'snip.md');
+    default: return null;
+  }
+}
+
+function checkProviderStatus(providerId, filePath) {
+  try {
+    var content = fs.readFileSync(filePath, 'utf8');
+    if (providerId === 'claude-code') {
+      if (content.indexOf(SNIP_MARKER_START) === -1) return false;
+    }
+    if (content.indexOf('# Snip') === -1) return false;
+    if (content.indexOf(SNIP_RULES_VERSION) === -1) return 'outdated';
+    return true;
+  } catch (e) { return false; }
+}
+
+function configureProvider(providerId, home) {
+  var filePath = getProviderFilePath(providerId, home);
+  var displayPath = filePath.replace(home, '~');
+  var name = KNOWN_PROVIDERS[providerId].name;
+
+  var status = checkProviderStatus(providerId, filePath);
+  if (status === true) {
+    return { ok: true, changed: false, line: '\u2713 ' + name + ' \u2014 already configured (up to date)' };
+  }
+
+  try {
+    if (providerId === 'claude-code') {
+      var block = '\n' + SNIP_MARKER_START + '\n' + SNIP_RULES_CONTENT + SNIP_MARKER_END + '\n';
+      var existing = '';
+      try { existing = fs.readFileSync(filePath, 'utf8'); } catch (e) {}
+      fs.mkdirSync(path.dirname(filePath), { recursive: true });
+      var startIdx = existing.indexOf(SNIP_MARKER_START);
+      var endIdx = existing.indexOf(SNIP_MARKER_END);
+      if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+        endIdx += SNIP_MARKER_END.length;
+        if (startIdx > 0 && existing[startIdx - 1] === '\n') startIdx--;
+        if (endIdx < existing.length && existing[endIdx] === '\n') endIdx++;
+        fs.writeFileSync(filePath, existing.slice(0, startIdx) + block + existing.slice(endIdx));
+      } else {
+        fs.appendFileSync(filePath, block);
+      }
+    } else {
+      fs.mkdirSync(path.dirname(filePath), { recursive: true });
+      fs.writeFileSync(filePath, SNIP_RULES_CONTENT);
+    }
+
+    var verb = (status === 'outdated') ? 'rules updated in' : 'rules added to';
+    return { ok: true, changed: true, line: '\u2713 ' + name + ' \u2014 ' + verb + ' ' + displayPath };
+  } catch (err) {
+    return { ok: false, changed: false, line: '\u2717 ' + name + ' \u2014 failed: ' + err.message };
+  }
+}
+
+function removeProviderRules(providerId, home) {
+  var filePath = getProviderFilePath(providerId, home);
+  var displayPath = filePath.replace(home, '~');
+  var name = KNOWN_PROVIDERS[providerId].name;
+
+  try {
+    if (providerId === 'claude-code') {
+      var content = '';
+      try { content = fs.readFileSync(filePath, 'utf8'); } catch (e) {
+        return { ok: true, line: '\u2713 ' + name + ' \u2014 no rules to remove' };
+      }
+      var startIdx = content.indexOf(SNIP_MARKER_START);
+      if (startIdx === -1) {
+        return { ok: true, line: '\u2713 ' + name + ' \u2014 no rules to remove' };
+      }
+      var endIdx = content.indexOf(SNIP_MARKER_END);
+      if (endIdx !== -1 && endIdx > startIdx) {
+        var cutStart = startIdx;
+        if (cutStart > 0 && content[cutStart - 1] === '\n') cutStart--;
+        var cutEnd = endIdx + SNIP_MARKER_END.length;
+        if (cutEnd < content.length && content[cutEnd] === '\n') cutEnd++;
+        fs.writeFileSync(filePath, content.slice(0, cutStart) + content.slice(cutEnd));
+      }
+      return { ok: true, line: '\u2713 ' + name + ' \u2014 rules removed from ' + displayPath };
+    } else {
+      if (!fs.existsSync(filePath)) {
+        return { ok: true, line: '\u2713 ' + name + ' \u2014 no rules to remove' };
+      }
+      fs.rmSync(filePath, { force: true });
+      return { ok: true, line: '\u2713 ' + name + ' \u2014 rules file removed (' + displayPath + ')' };
+    }
+  } catch (err) {
+    return { ok: false, line: '\u2717 ' + name + ' \u2014 failed: ' + err.message };
+  }
+}
+
+function getSkillPath(home) {
+  return path.join(home, '.claude', 'skills', 'diagram', 'SKILL.md');
+}
+
+function checkSkillStatus(home) {
+  try {
+    var content = fs.readFileSync(getSkillPath(home), 'utf8');
+    if (content.indexOf(SNIP_SKILL_VERSION) !== -1) return true;
+    if (content.indexOf('snip-skill-') !== -1) return 'outdated';
+    return false;
+  } catch (e) { return false; }
+}
+
+function installSkill(home) {
+  var status = checkSkillStatus(home);
+  if (status === true) {
+    return { ok: true, changed: false, line: '\u2713 /diagram skill \u2014 already installed (up to date)' };
+  }
+  try {
+    var skillPath = getSkillPath(home);
+    fs.mkdirSync(path.dirname(skillPath), { recursive: true });
+    fs.writeFileSync(skillPath, SNIP_SKILL_CONTENT);
+    var verb = (status === 'outdated') ? 'updated' : 'installed to ~/.claude/skills/diagram/';
+    return { ok: true, changed: true, line: '\u2713 /diagram skill \u2014 ' + verb };
+  } catch (err) {
+    return { ok: false, changed: false, line: '\u2717 /diagram skill \u2014 failed: ' + err.message };
+  }
+}
+
+function removeSkill(home) {
+  var skillDir = path.join(home, '.claude', 'skills', 'diagram');
+  try {
+    if (!fs.existsSync(skillDir)) {
+      return { ok: true, line: '\u2713 /diagram skill \u2014 no skill to remove' };
+    }
+    fs.rmSync(skillDir, { recursive: true, force: true });
+    return { ok: true, line: '\u2713 /diagram skill \u2014 removed' };
+  } catch (err) {
+    return { ok: false, line: '\u2717 /diagram skill \u2014 failed: ' + err.message };
+  }
+}
+
+function getSettingsPath(home) {
+  return path.join(home, '.claude', 'settings.json');
+}
+
+function readSettings(home) {
+  try { return JSON.parse(fs.readFileSync(getSettingsPath(home), 'utf8')); }
+  catch (e) { return null; }
+}
+
+function writeSettings(home, settings) {
+  fs.writeFileSync(getSettingsPath(home), JSON.stringify(settings, null, 2) + '\n');
+}
+
+function hasSnipPermissions(home) {
+  var settings = readSettings(home);
+  if (!settings) return false;
+  var allow = settings.permissions && settings.permissions.allow;
+  if (!Array.isArray(allow)) return false;
+  var hasCurrent = SNIP_PERMISSION_PATTERNS.every(function (p) { return allow.indexOf(p) !== -1; });
+  if (!hasCurrent) return false;
+  // If legacy patterns still present, return false to trigger migration cleanup
+  var hasLegacy = SNIP_LEGACY_PERMISSION_PATTERNS.some(function (p) { return allow.indexOf(p) !== -1; });
+  return !hasLegacy;
+}
+
+function addSnipPermissions(home) {
+  var settings = readSettings(home) || {};
+  if (!settings.permissions) settings.permissions = {};
+  if (!Array.isArray(settings.permissions.allow)) settings.permissions.allow = [];
+  for (var i = 0; i < SNIP_PERMISSION_PATTERNS.length; i++) {
+    if (settings.permissions.allow.indexOf(SNIP_PERMISSION_PATTERNS[i]) === -1) {
+      settings.permissions.allow.push(SNIP_PERMISSION_PATTERNS[i]);
+    }
+  }
+  // Remove legacy patterns
+  settings.permissions.allow = settings.permissions.allow.filter(function (p) {
+    return SNIP_LEGACY_PERMISSION_PATTERNS.indexOf(p) === -1;
+  });
+  writeSettings(home, settings);
+}
+
+function removeSnipPermissions(home) {
+  var settings = readSettings(home);
+  if (!settings) return false;
+  if (!settings.permissions || !Array.isArray(settings.permissions.allow)) return false;
+  var before = settings.permissions.allow.length;
+  var allPatterns = SNIP_PERMISSION_PATTERNS.concat(SNIP_LEGACY_PERMISSION_PATTERNS);
+  settings.permissions.allow = settings.permissions.allow.filter(function (p) {
+    return allPatterns.indexOf(p) === -1;
+  });
+  if (settings.permissions.allow.length === before) return false;
+  writeSettings(home, settings);
+  return true;
+}
+
+function hasLegacyPermissions(home) {
+  var settings = readSettings(home);
+  if (!settings) return false;
+  var allow = settings.permissions && settings.permissions.allow;
+  if (!Array.isArray(allow)) return false;
+  return SNIP_LEGACY_PERMISSION_PATTERNS.some(function (p) { return allow.indexOf(p) !== -1; });
+}
+
+function promptYN(question) {
+  if (!process.stdin.isTTY) return false;
+  process.stdout.write(question);
+  var buf = Buffer.alloc(256);
+  try {
+    var bytesRead = fs.readSync(0, buf, 0, 256);
+    var answer = buf.toString('utf8', 0, bytesRead).trim().toLowerCase();
+    return answer === 'y' || answer === 'yes';
+  } catch (e) { return false; }
+}
+
+function runSetup(setupFlags) {
+  var home = os.homedir();
+  var providers = detectProviders(home);
+
+  // --provider flag: filter or error
+  if (setupFlags.provider) {
+    if (!KNOWN_PROVIDERS[setupFlags.provider]) {
+      process.stderr.write('Unknown provider: ' + setupFlags.provider + '\n');
+      process.stderr.write('Supported: ' + Object.keys(KNOWN_PROVIDERS).join(', ') + '\n');
+      process.exit(1);
+    }
+    var match = providers.filter(function (p) { return p.id === setupFlags.provider; });
+    if (match.length === 0) {
+      var info = KNOWN_PROVIDERS[setupFlags.provider];
+      process.stderr.write(info.name + ' not detected (~/' + info.dir + ' not found). Install it first, then re-run `snip setup`.\n');
+      process.exit(1);
+    }
+    providers = match;
+  }
+
+  if (providers.length === 0) {
+    process.stdout.write('No supported AI tools detected.\n');
+    process.stdout.write('Supported: Claude Code (~/.claude), Cursor (~/.cursor), Windsurf (~/.windsurf), Cline (~/.cline)\n');
+    process.exit(0);
+  }
+
+  process.stdout.write('Detected: ' + providers.map(function (p) { return p.name; }).join(', ') + '\n');
+
+  var anyChanged = false;
+  var anyFailed = false;
+  for (var i = 0; i < providers.length; i++) {
+    var p = providers[i];
+    if (setupFlags.remove) {
+      var removeResult = removeProviderRules(p.id, home);
+      process.stdout.write(removeResult.line + '\n');
+      if (!removeResult.ok) anyFailed = true;
+      else anyChanged = true;
+    } else {
+      var result = configureProvider(p.id, home);
+      process.stdout.write(result.line + '\n');
+      if (!result.ok) anyFailed = true;
+      if (result.changed) anyChanged = true;
+    }
+  }
+
+  // Claude Code: skill + permissions + legacy cleanup
+  var hadClaude = providers.some(function (p) { return p.id === 'claude-code'; });
+  if (hadClaude && !setupFlags.remove) {
+    var skillResult = installSkill(home);
+    process.stdout.write(skillResult.line + '\n');
+    if (skillResult.changed) anyChanged = true;
+    // Permissions: add (with consent) or silently clean up legacy patterns
+    if (!hasSnipPermissions(home)) {
+      var needsLegacyCleanup = hasLegacyPermissions(home);
+      var envPerm = process.env.SNIP_SETUP_PERMISSIONS;
+      var shouldAdd;
+      if (envPerm === 'yes') {
+        shouldAdd = true;
+      } else if (envPerm === 'no' || envPerm === '0') {
+        shouldAdd = false;
+      } else if (needsLegacyCleanup && hasSnipPermissions(home) === false) {
+        // Legacy patterns exist — addSnipPermissions will clean them up
+        shouldAdd = true;
+      } else {
+        process.stdout.write('\nAllow Snip commands to run without permission prompts in Claude Code?\n');
+        process.stdout.write('This adds permission rules to ~/.claude/settings.json\n');
+        shouldAdd = promptYN('[y/N] ');
+      }
+      if (shouldAdd) {
+        addSnipPermissions(home);
+        process.stdout.write('\u2713 Permissions ' + (needsLegacyCleanup ? 'updated in' : 'added to') + ' ~/.claude/settings.json\n');
+      }
+    }
+  }
+  if (hadClaude && setupFlags.remove) {
+    var skillRemoveResult = removeSkill(home);
+    process.stdout.write(skillRemoveResult.line + '\n');
+    if (removeSnipPermissions(home)) {
+      process.stdout.write('\u2713 Permissions removed from ~/.claude/settings.json\n');
+    }
+  }
+
+  if (setupFlags.remove && anyChanged) {
+    process.stdout.write('Snip rules removed.\n');
+  } else if (!setupFlags.remove && anyChanged) {
+    process.stdout.write('Visual mode enabled. Claude will now render diagrams instead of describing them.\n');
+  }
+
+  if (!setupFlags.remove && process.platform === 'darwin') {
+    process.stdout.write('\nNote: Snip needs Screen Recording permission to capture screenshots.\n');
+    process.stdout.write('If not already granted: System Settings \u2192 Privacy & Security \u2192 Screen Recording \u2192 enable Snip\n');
+  }
+
+  process.exit(anyFailed && !anyChanged ? 1 : 0);
+}
+
+function printSetupHelp() {
+  process.stdout.write([
+    'Usage: snip setup [options]',
+    '',
+    'Configure AI coding tools for Snip visual mode. Adds rules to tool config',
+    'files so they render diagrams and previews via Snip instead of describing',
+    'them in text.',
+    '',
+    'Options:',
+    '  --remove              Remove Snip rules from all detected tools',
+    '  --provider <id>       Target a specific tool: claude-code, cursor, windsurf, cline',
+    '  --help, -h            Show this help',
+    '',
+    'Environment:',
+    '  SNIP_SETUP_PERMISSIONS=yes|no   Skip the permissions prompt (for scripts/CI)',
+    '',
+    'Supported tools:',
+    '  claude-code           ~/.claude/CLAUDE.md',
+    '  cursor                ~/.cursor/rules/snip.mdc',
+    '  windsurf              ~/.windsurf/rules/snip.md',
+    '  cline                 ~/.cline/rules/snip.md',
+    ''
+  ].join('\n'));
+}
+
 function printHelp() {
   process.stdout.write([
     'Usage: snip <command> [options]',
     '',
     'Commands:',
+    '  setup                 Enable visual mode for AI tools (Claude Code, Cursor, etc.)',
     '  search <query>        Search screenshots by description. Returns JSON array.',
     '  list                  List all saved screenshots with metadata. Returns JSON array.',
     '  get <filepath>        Get metadata for a specific screenshot. Returns JSON.',

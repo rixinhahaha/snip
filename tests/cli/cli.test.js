@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mkdtempSync, rmSync, existsSync, writeFileSync, readFileSync, chmodSync } from 'fs';
+import { mkdtempSync, mkdirSync, rmSync, existsSync, writeFileSync, readFileSync, chmodSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { execFile } from 'child_process';
@@ -26,8 +26,10 @@ afterEach(() => {
 
 function runCli(args, opts) {
   return new Promise((resolve) => {
+    var env = { ...process.env, SNIP_SOCKET_PATH: socketPath, SNIP_NO_AUTO_LAUNCH: '1' };
+    if (opts && opts.env) Object.assign(env, opts.env);
     execFile(NODE_PATH, [CLI_PATH].concat(args), {
-      env: { ...process.env, SNIP_SOCKET_PATH: socketPath, SNIP_NO_AUTO_LAUNCH: '1' },
+      env: env,
       timeout: (opts && opts.timeout) || 10000
     }, (err, stdout, stderr) => {
       resolve({
@@ -569,5 +571,423 @@ describe('CLI review mode output', () => {
     });
     await runCliWithStdin(['render', '--format', 'mermaid', '--message', 'Check the flow'], 'graph TD; A-->B');
     expect(receivedParams.message).toBe('Check the flow');
+  });
+});
+
+// ── Setup command ──
+
+describe('CLI setup command', () => {
+  let fakeHome;
+
+  beforeEach(() => {
+    fakeHome = mkdtempSync(join(tmpdir(), 'snip-setup-test-'));
+  });
+
+  afterEach(() => {
+    rmSync(fakeHome, { recursive: true, force: true });
+  });
+
+  function runSetup(args) {
+    return runCli(['setup'].concat(args || []), { env: { HOME: fakeHome } });
+  }
+
+  it('detects Claude Code and adds rules to CLAUDE.md', async () => {
+    mkdirSync(join(fakeHome, '.claude'), { recursive: true });
+    var res = await runSetup();
+    expect(res.code).toBe(0);
+    expect(res.stdout).toContain('Detected: Claude Code');
+    expect(res.stdout).toContain('rules added to');
+    var content = readFileSync(join(fakeHome, '.claude', 'CLAUDE.md'), 'utf8');
+    expect(content).toContain('<!-- snip-start -->');
+    expect(content).toContain('<!-- snip-end -->');
+    expect(content).toContain('snip-rules-v7');
+    expect(content).toContain('# Snip');
+  });
+
+  it('detects multiple providers', async () => {
+    mkdirSync(join(fakeHome, '.claude'), { recursive: true });
+    mkdirSync(join(fakeHome, '.cursor'), { recursive: true });
+    var res = await runSetup();
+    expect(res.code).toBe(0);
+    expect(res.stdout).toContain('Detected: Claude Code, Cursor');
+    expect(res.stdout).toContain('Claude Code');
+    expect(res.stdout).toContain('Cursor');
+    expect(existsSync(join(fakeHome, '.claude', 'CLAUDE.md'))).toBe(true);
+    expect(existsSync(join(fakeHome, '.cursor', 'rules', 'snip.mdc'))).toBe(true);
+  });
+
+  it('no providers detected prints message and exits 0', async () => {
+    var res = await runSetup();
+    expect(res.code).toBe(0);
+    expect(res.stdout).toContain('No supported AI tools detected');
+    expect(res.stdout).toContain('Claude Code (~/.claude)');
+  });
+
+  it('idempotent — already configured shows up to date', async () => {
+    mkdirSync(join(fakeHome, '.claude'), { recursive: true });
+    await runSetup();
+    var res = await runSetup();
+    expect(res.code).toBe(0);
+    expect(res.stdout).toContain('already configured (up to date)');
+    expect(res.stdout).not.toContain('Visual mode enabled');
+  });
+
+  it('updates outdated rules', async () => {
+    mkdirSync(join(fakeHome, '.claude'), { recursive: true });
+    var oldContent = '\n<!-- snip-start -->\n# Snip\n<!-- snip-rules-v6 -->\nold rules\n<!-- snip-end -->\n';
+    writeFileSync(join(fakeHome, '.claude', 'CLAUDE.md'), oldContent);
+    var res = await runSetup();
+    expect(res.code).toBe(0);
+    expect(res.stdout).toContain('rules updated in');
+    var content = readFileSync(join(fakeHome, '.claude', 'CLAUDE.md'), 'utf8');
+    expect(content).toContain('snip-rules-v7');
+    expect(content).not.toContain('snip-rules-v6');
+  });
+
+  it('preserves existing CLAUDE.md content before markers', async () => {
+    mkdirSync(join(fakeHome, '.claude'), { recursive: true });
+    writeFileSync(join(fakeHome, '.claude', 'CLAUDE.md'), '# My Project Rules\n\nSome custom rules here.\n');
+    await runSetup();
+    var content = readFileSync(join(fakeHome, '.claude', 'CLAUDE.md'), 'utf8');
+    expect(content).toContain('# My Project Rules');
+    expect(content).toContain('Some custom rules here.');
+    expect(content).toContain('<!-- snip-start -->');
+  });
+
+  it('preserves existing CLAUDE.md content around markers', async () => {
+    mkdirSync(join(fakeHome, '.claude'), { recursive: true });
+    var original = '# Before\n\n<!-- snip-start -->\nold\n<!-- snip-end -->\n\n# After\n';
+    writeFileSync(join(fakeHome, '.claude', 'CLAUDE.md'), original);
+    await runSetup();
+    var content = readFileSync(join(fakeHome, '.claude', 'CLAUDE.md'), 'utf8');
+    expect(content).toContain('# Before');
+    expect(content).toContain('# After');
+    expect(content).toContain('snip-rules-v7');
+  });
+
+  it('handles empty CLAUDE.md cleanly', async () => {
+    mkdirSync(join(fakeHome, '.claude'), { recursive: true });
+    writeFileSync(join(fakeHome, '.claude', 'CLAUDE.md'), '');
+    await runSetup();
+    var content = readFileSync(join(fakeHome, '.claude', 'CLAUDE.md'), 'utf8');
+    expect(content).toContain('<!-- snip-start -->');
+    expect(content).toContain('snip-rules-v7');
+  });
+
+  it('--remove removes rules from CLAUDE.md', async () => {
+    mkdirSync(join(fakeHome, '.claude'), { recursive: true });
+    await runSetup();
+    var res = await runSetup(['--remove']);
+    expect(res.code).toBe(0);
+    expect(res.stdout).toContain('rules removed from');
+    expect(res.stdout).toContain('Snip rules removed');
+    var content = readFileSync(join(fakeHome, '.claude', 'CLAUDE.md'), 'utf8');
+    expect(content).not.toContain('<!-- snip-start -->');
+    expect(content).not.toContain('# Snip');
+  });
+
+  it('--remove preserves surrounding content in CLAUDE.md', async () => {
+    mkdirSync(join(fakeHome, '.claude'), { recursive: true });
+    writeFileSync(join(fakeHome, '.claude', 'CLAUDE.md'), '# Before\n');
+    await runSetup();
+    await runSetup(['--remove']);
+    var content = readFileSync(join(fakeHome, '.claude', 'CLAUDE.md'), 'utf8');
+    expect(content).toContain('# Before');
+    expect(content).not.toContain('<!-- snip-start -->');
+  });
+
+  it('--remove with no rules shows no rules to remove', async () => {
+    mkdirSync(join(fakeHome, '.claude'), { recursive: true });
+    var res = await runSetup(['--remove']);
+    expect(res.code).toBe(0);
+    expect(res.stdout).toContain('no rules to remove');
+  });
+
+  it('--remove deletes file for non-Claude providers', async () => {
+    mkdirSync(join(fakeHome, '.cursor'), { recursive: true });
+    await runSetup();
+    expect(existsSync(join(fakeHome, '.cursor', 'rules', 'snip.mdc'))).toBe(true);
+    await runSetup(['--remove']);
+    expect(existsSync(join(fakeHome, '.cursor', 'rules', 'snip.mdc'))).toBe(false);
+  });
+
+  it('--remove --provider combined targets only specified provider', async () => {
+    mkdirSync(join(fakeHome, '.claude'), { recursive: true });
+    mkdirSync(join(fakeHome, '.cursor'), { recursive: true });
+    await runSetup();
+    var res = await runSetup(['--remove', '--provider', 'cursor']);
+    expect(res.stdout).toContain('Cursor');
+    expect(res.stdout).not.toContain('Claude Code');
+    // Cursor rules removed, Claude Code untouched
+    expect(existsSync(join(fakeHome, '.cursor', 'rules', 'snip.mdc'))).toBe(false);
+    var claudeContent = readFileSync(join(fakeHome, '.claude', 'CLAUDE.md'), 'utf8');
+    expect(claudeContent).toContain('<!-- snip-start -->');
+  });
+
+  it('--provider filters to specific provider', async () => {
+    mkdirSync(join(fakeHome, '.claude'), { recursive: true });
+    mkdirSync(join(fakeHome, '.cursor'), { recursive: true });
+    var res = await runSetup(['--provider', 'cursor']);
+    expect(res.code).toBe(0);
+    expect(res.stdout).toContain('Cursor');
+    expect(res.stdout).not.toContain('Claude Code');
+    expect(existsSync(join(fakeHome, '.cursor', 'rules', 'snip.mdc'))).toBe(true);
+    expect(existsSync(join(fakeHome, '.claude', 'CLAUDE.md'))).toBe(false);
+  });
+
+  it('--provider with undetected tool exits 1', async () => {
+    // .cursor dir does not exist
+    var res = await runSetup(['--provider', 'cursor']);
+    expect(res.code).toBe(1);
+    expect(res.stderr).toContain('Cursor not detected');
+    expect(res.stderr).toContain('snip setup');
+  });
+
+  it('--provider with unknown id exits 1', async () => {
+    var res = await runSetup(['--provider', 'vscode']);
+    expect(res.code).toBe(1);
+    expect(res.stderr).toContain('Unknown provider');
+    expect(res.stderr).toContain('claude-code');
+  });
+
+  it('global --help includes setup command', async () => {
+    var res = await runCli(['--help']);
+    expect(res.code).toBe(0);
+    expect(res.stdout).toContain('setup');
+  });
+
+  it('setup --help shows setup-specific help', async () => {
+    var res = await runSetup(['--help']);
+    expect(res.code).toBe(0);
+    expect(res.stdout).toContain('Configure AI coding tools');
+    expect(res.stdout).toContain('--remove');
+    expect(res.stdout).toContain('--provider');
+  });
+
+  it('extra positional args are ignored', async () => {
+    mkdirSync(join(fakeHome, '.claude'), { recursive: true });
+    var res = await runCli(['setup', 'foo', 'bar'], { env: { HOME: fakeHome } });
+    expect(res.code).toBe(0);
+    expect(res.stdout).toContain('Claude Code');
+  });
+
+  it('prints Visual mode enabled message when rules change', async () => {
+    mkdirSync(join(fakeHome, '.claude'), { recursive: true });
+    var res = await runSetup();
+    expect(res.stdout).toContain('Visual mode enabled');
+  });
+
+  it('cursor rules file uses .mdc extension', async () => {
+    mkdirSync(join(fakeHome, '.cursor'), { recursive: true });
+    await runSetup();
+    expect(existsSync(join(fakeHome, '.cursor', 'rules', 'snip.mdc'))).toBe(true);
+    var content = readFileSync(join(fakeHome, '.cursor', 'rules', 'snip.mdc'), 'utf8');
+    expect(content).toContain('# Snip');
+  });
+
+  it('--remove on Claude with file but no markers shows no rules to remove', async () => {
+    mkdirSync(join(fakeHome, '.claude'), { recursive: true });
+    writeFileSync(join(fakeHome, '.claude', 'CLAUDE.md'), '# My custom content\nNo snip markers here.\n');
+    var res = await runSetup(['--remove']);
+    expect(res.code).toBe(0);
+    expect(res.stdout).toContain('no rules to remove');
+    // Original content preserved
+    var content = readFileSync(join(fakeHome, '.claude', 'CLAUDE.md'), 'utf8');
+    expect(content).toContain('# My custom content');
+  });
+
+  it('non-Claude provider idempotent — already configured shows up to date', async () => {
+    mkdirSync(join(fakeHome, '.cursor'), { recursive: true });
+    await runSetup(['--provider', 'cursor']);
+    var res = await runSetup(['--provider', 'cursor']);
+    expect(res.code).toBe(0);
+    expect(res.stdout).toContain('already configured (up to date)');
+  });
+
+  it('non-Claude provider updates outdated rules', async () => {
+    mkdirSync(join(fakeHome, '.cursor', 'rules'), { recursive: true });
+    writeFileSync(join(fakeHome, '.cursor', 'rules', 'snip.mdc'), '# Snip\n<!-- snip-rules-v6 -->\nold content\n');
+    var res = await runSetup(['--provider', 'cursor']);
+    expect(res.code).toBe(0);
+    expect(res.stdout).toContain('rules updated in');
+    var content = readFileSync(join(fakeHome, '.cursor', 'rules', 'snip.mdc'), 'utf8');
+    expect(content).toContain('snip-rules-v7');
+    expect(content).not.toContain('snip-rules-v6');
+  });
+
+  it('--remove on non-Claude provider with no file shows no rules to remove', async () => {
+    mkdirSync(join(fakeHome, '.cursor'), { recursive: true });
+    var res = await runSetup(['--remove', '--provider', 'cursor']);
+    expect(res.code).toBe(0);
+    expect(res.stdout).toContain('no rules to remove');
+  });
+
+  it('rules template matches ipc-handlers version marker', async () => {
+    // Verify CLI and ipc-handlers use the same version tag
+    var cliSource = readFileSync(join(__dirname, '..', '..', 'src', 'cli', 'snip.js'), 'utf8');
+    var ipcSource = readFileSync(join(__dirname, '..', '..', 'src', 'main', 'ipc-handlers.js'), 'utf8');
+    var cliVersion = cliSource.match(/SNIP_RULES_VERSION = '([^']+)'/);
+    var ipcVersion = ipcSource.match(/SNIP_RULES_VERSION = '([^']+)'/);
+    expect(cliVersion).not.toBeNull();
+    expect(ipcVersion).not.toBeNull();
+    expect(cliVersion[1]).toBe(ipcVersion[1]);
+  });
+
+  // ── Permissions ──
+
+  it('adds permissions to settings.json when SNIP_SETUP_PERMISSIONS=yes', async () => {
+    mkdirSync(join(fakeHome, '.claude'), { recursive: true });
+    var res = await runCli(['setup'], { env: { HOME: fakeHome, SNIP_SETUP_PERMISSIONS: 'yes' } });
+    expect(res.code).toBe(0);
+    expect(res.stdout).toContain('Permissions added');
+    var settings = JSON.parse(readFileSync(join(fakeHome, '.claude', 'settings.json'), 'utf8'));
+    expect(settings.permissions.allow).toContain('Bash(snip *)');
+    expect(settings.permissions.allow).not.toContain('Bash(echo * | snip *)');
+  });
+
+  it('skips permissions when SNIP_SETUP_PERMISSIONS=no', async () => {
+    mkdirSync(join(fakeHome, '.claude'), { recursive: true });
+    var res = await runCli(['setup'], { env: { HOME: fakeHome, SNIP_SETUP_PERMISSIONS: 'no' } });
+    expect(res.code).toBe(0);
+    expect(res.stdout).not.toContain('Permissions');
+    expect(existsSync(join(fakeHome, '.claude', 'settings.json'))).toBe(false);
+  });
+
+  it('skips permissions prompt when stdin is not a TTY (default in tests)', async () => {
+    mkdirSync(join(fakeHome, '.claude'), { recursive: true });
+    await runSetup();
+    expect(existsSync(join(fakeHome, '.claude', 'settings.json'))).toBe(false);
+  });
+
+  it('merges permissions into existing settings.json', async () => {
+    mkdirSync(join(fakeHome, '.claude'), { recursive: true });
+    writeFileSync(join(fakeHome, '.claude', 'settings.json'), JSON.stringify({
+      permissions: { allow: ['WebSearch', 'WebFetch'], defaultMode: 'default' },
+      effortLevel: 'high'
+    }, null, 2) + '\n');
+    await runCli(['setup'], { env: { HOME: fakeHome, SNIP_SETUP_PERMISSIONS: 'yes' } });
+    var settings = JSON.parse(readFileSync(join(fakeHome, '.claude', 'settings.json'), 'utf8'));
+    expect(settings.permissions.allow).toContain('WebSearch');
+    expect(settings.permissions.allow).toContain('WebFetch');
+    expect(settings.permissions.allow).toContain('Bash(snip *)');
+    expect(settings.permissions.allow).not.toContain('Bash(echo * | snip *)');
+    expect(settings.permissions.defaultMode).toBe('default');
+    expect(settings.effortLevel).toBe('high');
+  });
+
+  it('permissions are idempotent — no duplicates on second run', async () => {
+    mkdirSync(join(fakeHome, '.claude'), { recursive: true });
+    await runCli(['setup'], { env: { HOME: fakeHome, SNIP_SETUP_PERMISSIONS: 'yes' } });
+    await runCli(['setup'], { env: { HOME: fakeHome, SNIP_SETUP_PERMISSIONS: 'yes' } });
+    var settings = JSON.parse(readFileSync(join(fakeHome, '.claude', 'settings.json'), 'utf8'));
+    var snipCount = settings.permissions.allow.filter(function (p) { return p === 'Bash(snip *)'; }).length;
+    expect(snipCount).toBe(1);
+  });
+
+  it('--remove removes permissions from settings.json', async () => {
+    mkdirSync(join(fakeHome, '.claude'), { recursive: true });
+    writeFileSync(join(fakeHome, '.claude', 'settings.json'), JSON.stringify({
+      permissions: { allow: ['WebSearch', 'Bash(snip *)', 'Bash(echo * | snip *)'] },
+      effortLevel: 'high'
+    }, null, 2) + '\n');
+    await runSetup(['--remove']);
+    var settings = JSON.parse(readFileSync(join(fakeHome, '.claude', 'settings.json'), 'utf8'));
+    expect(settings.permissions.allow).toContain('WebSearch');
+    expect(settings.permissions.allow).not.toContain('Bash(snip *)');
+    expect(settings.permissions.allow).not.toContain('Bash(echo * | snip *)');
+    expect(settings.effortLevel).toBe('high');
+  });
+
+  it('--remove with no permissions present does not mention permissions', async () => {
+    mkdirSync(join(fakeHome, '.claude'), { recursive: true });
+    var res = await runSetup(['--remove']);
+    expect(res.stdout).not.toContain('Permissions removed');
+  });
+
+  it('removes legacy echo permission during setup', async () => {
+    mkdirSync(join(fakeHome, '.claude'), { recursive: true });
+    writeFileSync(join(fakeHome, '.claude', 'settings.json'), JSON.stringify({
+      permissions: { allow: ['WebSearch', 'Bash(echo * | snip *)'] }
+    }, null, 2) + '\n');
+    await runCli(['setup'], { env: { HOME: fakeHome, SNIP_SETUP_PERMISSIONS: 'yes' } });
+    var settings = JSON.parse(readFileSync(join(fakeHome, '.claude', 'settings.json'), 'utf8'));
+    expect(settings.permissions.allow).toContain('Bash(snip *)');
+    expect(settings.permissions.allow).not.toContain('Bash(echo * | snip *)');
+    expect(settings.permissions.allow).toContain('WebSearch');
+  });
+
+  it('migrates existing permissions: removes legacy even when current exists', async () => {
+    mkdirSync(join(fakeHome, '.claude'), { recursive: true });
+    writeFileSync(join(fakeHome, '.claude', 'settings.json'), JSON.stringify({
+      permissions: { allow: ['Bash(snip *)', 'Bash(echo * | snip *)'] }
+    }, null, 2) + '\n');
+    await runCli(['setup'], { env: { HOME: fakeHome, SNIP_SETUP_PERMISSIONS: 'yes' } });
+    var settings = JSON.parse(readFileSync(join(fakeHome, '.claude', 'settings.json'), 'utf8'));
+    expect(settings.permissions.allow).toContain('Bash(snip *)');
+    expect(settings.permissions.allow).not.toContain('Bash(echo * | snip *)');
+  });
+
+  // ── Skill installation ──
+
+  it('installs /diagram skill for Claude Code', async () => {
+    mkdirSync(join(fakeHome, '.claude'), { recursive: true });
+    var res = await runSetup();
+    expect(res.code).toBe(0);
+    expect(res.stdout).toContain('/diagram skill');
+    expect(res.stdout).toContain('installed');
+    var skillPath = join(fakeHome, '.claude', 'skills', 'diagram', 'SKILL.md');
+    expect(existsSync(skillPath)).toBe(true);
+    var content = readFileSync(skillPath, 'utf8');
+    expect(content).toContain('snip-skill-v1');
+    expect(content).toContain('name: diagram');
+  });
+
+  it('skill is idempotent — already installed shows up to date', async () => {
+    mkdirSync(join(fakeHome, '.claude'), { recursive: true });
+    await runSetup();
+    var res = await runSetup();
+    expect(res.code).toBe(0);
+    expect(res.stdout).toContain('already installed (up to date)');
+  });
+
+  it('skill updates when outdated', async () => {
+    var skillDir = join(fakeHome, '.claude', 'skills', 'diagram');
+    mkdirSync(skillDir, { recursive: true });
+    writeFileSync(join(skillDir, 'SKILL.md'), '---\nname: diagram\n---\n<!-- snip-skill-v0 -->\nold content\n');
+    mkdirSync(join(fakeHome, '.claude'), { recursive: true });
+    var res = await runSetup();
+    expect(res.code).toBe(0);
+    expect(res.stdout).toContain('updated');
+    var content = readFileSync(join(skillDir, 'SKILL.md'), 'utf8');
+    expect(content).toContain('snip-skill-v1');
+    expect(content).not.toContain('snip-skill-v0');
+  });
+
+  it('--remove removes skill directory', async () => {
+    mkdirSync(join(fakeHome, '.claude'), { recursive: true });
+    await runSetup();
+    expect(existsSync(join(fakeHome, '.claude', 'skills', 'diagram', 'SKILL.md'))).toBe(true);
+    await runSetup(['--remove']);
+    expect(existsSync(join(fakeHome, '.claude', 'skills', 'diagram'))).toBe(false);
+  });
+
+  it('--remove with no skill shows no skill to remove', async () => {
+    mkdirSync(join(fakeHome, '.claude'), { recursive: true });
+    var res = await runSetup(['--remove']);
+    expect(res.stdout).toContain('no skill to remove');
+  });
+
+  it('skill not installed for non-Claude providers', async () => {
+    mkdirSync(join(fakeHome, '.cursor'), { recursive: true });
+    await runSetup();
+    expect(existsSync(join(fakeHome, '.claude', 'skills'))).toBe(false);
+  });
+
+  it('rules use file-based rendering, not echo piping', async () => {
+    mkdirSync(join(fakeHome, '.claude'), { recursive: true });
+    await runSetup();
+    var content = readFileSync(join(fakeHome, '.claude', 'CLAUDE.md'), 'utf8');
+    expect(content).toContain('snip render --format mermaid < file.mmd');
+    expect(content).not.toContain('echo');
   });
 });
