@@ -5,9 +5,9 @@
 
 # Snip
 
-**Visual mode for Claude Code.**
+**Visual mode for Claude Code.** Also works with Cursor, Windsurf, Cline, and any AI coding CLI.
 
-Install Snip, run `snip setup`, and Claude Code starts rendering diagrams and previews instead of describing them in text. Architecture? Sequence diagram. Data model? ER diagram. UI component? Rendered preview. All visual, all automatic.
+Install Snip, run `snip setup`, and your AI coding agent starts rendering diagrams and previews instead of describing them in text. Architecture? Sequence diagram. Data model? ER diagram. UI component? Rendered preview. All visual, all automatic.
 
 You review what Claude renders — approve it, or annotate directly on screen. Circle what's wrong, add an arrow, write a note. Claude sees your annotations and iterates.
 
