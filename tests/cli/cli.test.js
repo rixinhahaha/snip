@@ -600,7 +600,7 @@ describe('CLI setup command', () => {
     var content = readFileSync(join(fakeHome, '.claude', 'CLAUDE.md'), 'utf8');
     expect(content).toContain('<!-- snip-start -->');
     expect(content).toContain('<!-- snip-end -->');
-    expect(content).toContain('snip-rules-v7');
+    expect(content).toContain('snip-rules-v9');
     expect(content).toContain('# Snip');
   });
 
@@ -634,14 +634,14 @@ describe('CLI setup command', () => {
 
   it('updates outdated rules', async () => {
     mkdirSync(join(fakeHome, '.claude'), { recursive: true });
-    var oldContent = '\n<!-- snip-start -->\n# Snip\n<!-- snip-rules-v6 -->\nold rules\n<!-- snip-end -->\n';
+    var oldContent = '\n<!-- snip-start -->\n# Snip\n<!-- snip-rules-v8 -->\nold rules\n<!-- snip-end -->\n';
     writeFileSync(join(fakeHome, '.claude', 'CLAUDE.md'), oldContent);
     var res = await runSetup();
     expect(res.code).toBe(0);
     expect(res.stdout).toContain('rules updated in');
     var content = readFileSync(join(fakeHome, '.claude', 'CLAUDE.md'), 'utf8');
-    expect(content).toContain('snip-rules-v7');
-    expect(content).not.toContain('snip-rules-v6');
+    expect(content).toContain('snip-rules-v9');
+    expect(content).not.toContain('snip-rules-v8');
   });
 
   it('preserves existing CLAUDE.md content before markers', async () => {
@@ -662,7 +662,7 @@ describe('CLI setup command', () => {
     var content = readFileSync(join(fakeHome, '.claude', 'CLAUDE.md'), 'utf8');
     expect(content).toContain('# Before');
     expect(content).toContain('# After');
-    expect(content).toContain('snip-rules-v7');
+    expect(content).toContain('snip-rules-v9');
   });
 
   it('handles empty CLAUDE.md cleanly', async () => {
@@ -671,7 +671,7 @@ describe('CLI setup command', () => {
     await runSetup();
     var content = readFileSync(join(fakeHome, '.claude', 'CLAUDE.md'), 'utf8');
     expect(content).toContain('<!-- snip-start -->');
-    expect(content).toContain('snip-rules-v7');
+    expect(content).toContain('snip-rules-v9');
   });
 
   it('--remove removes rules from CLAUDE.md', async () => {
@@ -806,13 +806,13 @@ describe('CLI setup command', () => {
 
   it('non-Claude provider updates outdated rules', async () => {
     mkdirSync(join(fakeHome, '.cursor', 'rules'), { recursive: true });
-    writeFileSync(join(fakeHome, '.cursor', 'rules', 'snip.mdc'), '# Snip\n<!-- snip-rules-v6 -->\nold content\n');
+    writeFileSync(join(fakeHome, '.cursor', 'rules', 'snip.mdc'), '# Snip\n<!-- snip-rules-v8 -->\nold content\n');
     var res = await runSetup(['--provider', 'cursor']);
     expect(res.code).toBe(0);
     expect(res.stdout).toContain('rules updated in');
     var content = readFileSync(join(fakeHome, '.cursor', 'rules', 'snip.mdc'), 'utf8');
-    expect(content).toContain('snip-rules-v7');
-    expect(content).not.toContain('snip-rules-v6');
+    expect(content).toContain('snip-rules-v9');
+    expect(content).not.toContain('snip-rules-v8');
   });
 
   it('--remove on non-Claude provider with no file shows no rules to remove', async () => {
@@ -842,6 +842,7 @@ describe('CLI setup command', () => {
     expect(res.stdout).toContain('Permissions added');
     var settings = JSON.parse(readFileSync(join(fakeHome, '.claude', 'settings.json'), 'utf8'));
     expect(settings.permissions.allow).toContain('Bash(snip *)');
+    expect(settings.permissions.allow).toContain('Write(~/.snip/**)');
     expect(settings.permissions.allow).not.toContain('Bash(echo * | snip *)');
   });
 
@@ -870,6 +871,7 @@ describe('CLI setup command', () => {
     expect(settings.permissions.allow).toContain('WebSearch');
     expect(settings.permissions.allow).toContain('WebFetch');
     expect(settings.permissions.allow).toContain('Bash(snip *)');
+    expect(settings.permissions.allow).toContain('Write(~/.snip/**)');
     expect(settings.permissions.allow).not.toContain('Bash(echo * | snip *)');
     expect(settings.permissions.defaultMode).toBe('default');
     expect(settings.effortLevel).toBe('high');
@@ -938,7 +940,7 @@ describe('CLI setup command', () => {
     var skillPath = join(fakeHome, '.claude', 'skills', 'diagram', 'SKILL.md');
     expect(existsSync(skillPath)).toBe(true);
     var content = readFileSync(skillPath, 'utf8');
-    expect(content).toContain('snip-skill-v1');
+    expect(content).toContain('snip-rules-v9');
     expect(content).toContain('name: diagram');
   });
 
@@ -953,14 +955,14 @@ describe('CLI setup command', () => {
   it('skill updates when outdated', async () => {
     var skillDir = join(fakeHome, '.claude', 'skills', 'diagram');
     mkdirSync(skillDir, { recursive: true });
-    writeFileSync(join(skillDir, 'SKILL.md'), '---\nname: diagram\n---\n<!-- snip-skill-v0 -->\nold content\n');
+    writeFileSync(join(skillDir, 'SKILL.md'), '---\nname: diagram\n---\n<!-- snip-skill-v1 -->\nold content\n');
     mkdirSync(join(fakeHome, '.claude'), { recursive: true });
     var res = await runSetup();
     expect(res.code).toBe(0);
     expect(res.stdout).toContain('updated');
     var content = readFileSync(join(skillDir, 'SKILL.md'), 'utf8');
-    expect(content).toContain('snip-skill-v1');
-    expect(content).not.toContain('snip-skill-v0');
+    expect(content).toContain('snip-rules-v9');
+    expect(content).not.toContain('snip-skill-v1');
   });
 
   it('--remove removes skill directory', async () => {

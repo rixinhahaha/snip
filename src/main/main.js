@@ -324,6 +324,11 @@ app.whenReady().then(() => {
   var addonManager = require('./addon-manager');
   addonManager.migrateFromBundled();
 
+  // Migrate outdated AI provider configs (rules, skill, permissions)
+  // Deferred so it doesn't block startup (prewarmEditor, startWatcher)
+  var { migrateProviders } = require('./ipc-handlers');
+  setImmediate(migrateProviders);
+
   // Load extension registry and register extension IPC handlers AFTER core
   extensionRegistry.loadAll();
   extensionRegistry.setContext({

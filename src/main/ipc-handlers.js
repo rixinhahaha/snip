@@ -22,6 +22,7 @@ const { getCapturedImage } = require('./capturer');
 let pendingEditorData = null;
 let editorWindowRef = null;
 let toastWindow = null;
+var _migrateProviders = null;
 
 // Theme tokens for the floating toast — mirrors theme.css design language
 const TOAST_THEMES = {
@@ -454,7 +455,7 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
   }
 
   // NOTE: Rules template duplicated in src/cli/snip.js for standalone `snip setup`. Keep in sync.
-  var SNIP_RULES_VERSION = 'snip-rules-v7';
+  var SNIP_RULES_VERSION = 'snip-rules-v9';
 
   var snipRulesContent = [
     '# Snip — Visual Communication Tool',
@@ -474,7 +475,7 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
   ].join('\n');
 
   // Skill content — duplicated from src/cli/snip.js. Keep in sync.
-  var SNIP_SKILL_VERSION = 'snip-skill-v1';
+  // Skill uses same version as rules — one version for everything
   var snipSkillContent = [
     '---',
     'name: diagram',
@@ -483,7 +484,7 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
     '',
     '# Diagram \u2014 Visual Rendering via Snip',
     '',
-    '<!-- ' + SNIP_SKILL_VERSION + ' -->',
+    '<!-- ' + SNIP_RULES_VERSION + ' -->',
     '',
     'Generate a visual diagram or HTML preview from the current conversation context and render it with Snip.',
     '',
@@ -513,22 +514,24 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
     '',
     '## Step 3: Write to a file',
     '',
-    '**Never use echo piping.** Always write the content to a file first.',
+    'Use the **Write tool** to create the file \u2014 not Bash.',
+    'Write to `~/.snip/tmp/` \u2014 not the project directory.',
     '',
     'For Mermaid diagrams:',
-    '- Write to a `.mmd` file with a descriptive name: `architecture.mmd`, `auth-flow.mmd`, `data-model.mmd`',
+    '- Write to a `.mmd` file: `~/.snip/tmp/architecture.mmd`, `~/.snip/tmp/auth-flow.mmd`',
     '',
     'For HTML previews:',
-    '- Write to a `.html` file with a descriptive name: `preview.html`, `dashboard-mockup.html`',
+    '- Write to a `.html` file: `~/.snip/tmp/preview.html`, `~/.snip/tmp/dashboard-mockup.html`',
     '',
     '## Step 4: Render with Snip',
     '',
+    'Then use Bash to render:',
     '```bash',
     '# Mermaid',
-    'snip render --format mermaid < architecture.mmd',
+    'snip render --format mermaid < ~/.snip/tmp/architecture.mmd',
     '',
     '# HTML',
-    'snip render --format html < preview.html',
+    'snip render --format html < ~/.snip/tmp/preview.html',
     '```',
     '',
     '## Step 5: Handle the response',
@@ -550,7 +553,7 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
   ].join('\n');
 
   // Permission patterns — duplicated from src/cli/snip.js. Keep in sync.
-  var SNIP_PERMISSION_PATTERNS = ['Bash(snip *)'];
+  var SNIP_PERMISSION_PATTERNS = ['Bash(snip *)', 'Write(~/.snip/**)'];
   var SNIP_LEGACY_PERMISSION_PATTERNS = ['Bash(echo * | snip *)'];
 
   function getSkillPath() {
@@ -588,7 +591,7 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
       if (providerId === 'claude-code') {
         try {
           var skillContent = fs.readFileSync(getSkillPath(), 'utf8');
-          if (!skillContent.includes(SNIP_SKILL_VERSION)) return 'outdated';
+          if (!skillContent.includes(SNIP_RULES_VERSION)) return 'outdated';
         } catch { return 'outdated'; }
         try {
           var settings = readSettings();
@@ -634,7 +637,7 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
           var skillPath = getSkillPath();
           var skillExisting = '';
           try { skillExisting = fs.readFileSync(skillPath, 'utf8'); } catch {}
-          if (!skillExisting.includes(SNIP_SKILL_VERSION)) {
+          if (!skillExisting.includes(SNIP_RULES_VERSION)) {
             fs.mkdirSync(path.dirname(skillPath), { recursive: true });
             fs.writeFileSync(skillPath, snipSkillContent);
           }
@@ -1245,6 +1248,91 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
     return true;
   });
 
+  // Auto-migrate outdated AI provider configs on app launch
+  function migrateProviders() {
+    var providerIds = ['claude-code', 'cursor', 'windsurf', 'cline'];
+    for (var i = 0; i < providerIds.length; i++) {
+      var providerId = providerIds[i];
+      var filePath = getProviderFilePath(providerId);
+      if (!filePath) continue;
+      try {
+        var content = fs.readFileSync(filePath, 'utf8');
+        if (!content.includes('# Snip')) continue; // not configured
+        if (content.includes(SNIP_RULES_VERSION)) {
+          // Rules current — for Claude Code, also check skill + permissions
+          if (providerId === 'claude-code') {
+            var needsUpdate = false;
+            try {
+              var sc = fs.readFileSync(getSkillPath(), 'utf8');
+              if (!sc.includes(SNIP_RULES_VERSION)) needsUpdate = true;
+            } catch { needsUpdate = true; }
+            // Only check permissions if user previously consented
+            try {
+              var s = readSettings();
+              var allow = s && s.permissions && s.permissions.allow;
+              if (Array.isArray(allow) && allow.some(function (p) { return p.indexOf('snip') !== -1; })) {
+                if (!allow.includes(SNIP_PERMISSION_PATTERNS[0])) needsUpdate = true;
+                for (var k = 0; k < SNIP_LEGACY_PERMISSION_PATTERNS.length; k++) {
+                  if (allow.includes(SNIP_LEGACY_PERMISSION_PATTERNS[k])) needsUpdate = true;
+                }
+              }
+            } catch {}
+            if (!needsUpdate) continue;
+          } else {
+            continue; // non-Claude provider, rules current
+          }
+        }
+        // Outdated — update
+        if (providerId === 'claude-code') {
+          var block = '\n' + SNIP_MARKER_START + '\n' + snipRulesContent + SNIP_MARKER_END + '\n';
+          var startIdx = content.indexOf(SNIP_MARKER_START);
+          var endIdx = content.indexOf(SNIP_MARKER_END);
+          if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+            endIdx += SNIP_MARKER_END.length;
+            if (startIdx > 0 && content[startIdx - 1] === '\n') startIdx--;
+            if (endIdx < content.length && content[endIdx] === '\n') endIdx++;
+            fs.writeFileSync(filePath, content.slice(0, startIdx) + block + content.slice(endIdx));
+          }
+          // Install skill
+          try {
+            var skillPath = getSkillPath();
+            var skillExisting = '';
+            try { skillExisting = fs.readFileSync(skillPath, 'utf8'); } catch {}
+            if (!skillExisting.includes(SNIP_RULES_VERSION)) {
+              fs.mkdirSync(path.dirname(skillPath), { recursive: true });
+              fs.writeFileSync(skillPath, snipSkillContent);
+            }
+          } catch (e) {}
+          // Permissions: only touch if user previously consented
+          try {
+            var settings = readSettings();
+            if (settings && settings.permissions && Array.isArray(settings.permissions.allow)) {
+              var hasAnySnipPerm = settings.permissions.allow.some(function (p) {
+                return p.indexOf('snip') !== -1;
+              });
+              if (hasAnySnipPerm) {
+                for (var j = 0; j < SNIP_PERMISSION_PATTERNS.length; j++) {
+                  if (!settings.permissions.allow.includes(SNIP_PERMISSION_PATTERNS[j])) {
+                    settings.permissions.allow.push(SNIP_PERMISSION_PATTERNS[j]);
+                  }
+                }
+                settings.permissions.allow = settings.permissions.allow.filter(function (p) {
+                  return !SNIP_LEGACY_PERMISSION_PATTERNS.includes(p);
+                });
+                writeSettings(settings);
+              }
+            }
+          } catch (e) {}
+        } else {
+          fs.writeFileSync(filePath, snipRulesContent);
+        }
+        console.log('[Snip] Auto-migrated AI provider config: ' + providerId);
+      } catch { continue; }
+    }
+  }
+
+  _migrateProviders = migrateProviders;
+
 }
 
 function getPendingEditorData() {
@@ -1259,4 +1347,4 @@ function setEditorWindowRef(win) {
   editorWindowRef = win;
 }
 
-module.exports = { registerIpcHandlers, getPendingEditorData, setPendingEditorData, setEditorWindowRef };
+module.exports = { registerIpcHandlers, getPendingEditorData, setPendingEditorData, setEditorWindowRef, migrateProviders: function () { if (_migrateProviders) _migrateProviders(); } };

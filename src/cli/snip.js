@@ -95,7 +95,7 @@ for (var i = 1; i < args.length; i++) {
 // Bump SNIP_RULES_VERSION in both files when changing rules content.
 var SNIP_MARKER_START = '<!-- snip-start -->';
 var SNIP_MARKER_END = '<!-- snip-end -->';
-var SNIP_RULES_VERSION = 'snip-rules-v7';
+var SNIP_RULES_VERSION = 'snip-rules-v9';
 
 var SNIP_RULES_CONTENT = [
   '# Snip \u2014 Visual Communication Tool',
@@ -114,10 +114,9 @@ var SNIP_RULES_CONTENT = [
   ''
 ].join('\n');
 
-var SNIP_PERMISSION_PATTERNS = ['Bash(snip *)'];
+var SNIP_PERMISSION_PATTERNS = ['Bash(snip *)', 'Write(~/.snip/**)'];
 var SNIP_LEGACY_PERMISSION_PATTERNS = ['Bash(echo * | snip *)'];
 
-var SNIP_SKILL_VERSION = 'snip-skill-v1';
 var SNIP_SKILL_CONTENT = [
   '---',
   'name: diagram',
@@ -126,7 +125,7 @@ var SNIP_SKILL_CONTENT = [
   '',
   '# Diagram \u2014 Visual Rendering via Snip',
   '',
-  '<!-- ' + SNIP_SKILL_VERSION + ' -->',
+  '<!-- ' + SNIP_RULES_VERSION + ' -->',
   '',
   'Generate a visual diagram or HTML preview from the current conversation context and render it with Snip.',
   '',
@@ -156,22 +155,24 @@ var SNIP_SKILL_CONTENT = [
   '',
   '## Step 3: Write to a file',
   '',
-  '**Never use echo piping.** Always write the content to a file first.',
+  'Use the **Write tool** to create the file \u2014 not Bash.',
+  'Write to `~/.snip/tmp/` \u2014 not the project directory.',
   '',
   'For Mermaid diagrams:',
-  '- Write to a `.mmd` file with a descriptive name: `architecture.mmd`, `auth-flow.mmd`, `data-model.mmd`',
+  '- Write to a `.mmd` file: `~/.snip/tmp/architecture.mmd`, `~/.snip/tmp/auth-flow.mmd`',
   '',
   'For HTML previews:',
-  '- Write to a `.html` file with a descriptive name: `preview.html`, `dashboard-mockup.html`',
+  '- Write to a `.html` file: `~/.snip/tmp/preview.html`, `~/.snip/tmp/dashboard-mockup.html`',
   '',
   '## Step 4: Render with Snip',
   '',
+  'Then use Bash to render:',
   '```bash',
   '# Mermaid',
-  'snip render --format mermaid < architecture.mmd',
+  'snip render --format mermaid < ~/.snip/tmp/architecture.mmd',
   '',
   '# HTML',
-  'snip render --format html < preview.html',
+  'snip render --format html < ~/.snip/tmp/preview.html',
   '```',
   '',
   '## Step 5: Handle the response',
@@ -563,8 +564,8 @@ function getSkillPath(home) {
 function checkSkillStatus(home) {
   try {
     var content = fs.readFileSync(getSkillPath(home), 'utf8');
-    if (content.indexOf(SNIP_SKILL_VERSION) !== -1) return true;
-    if (content.indexOf('snip-skill-') !== -1) return 'outdated';
+    if (content.indexOf(SNIP_RULES_VERSION) !== -1) return true;
+    if (content.indexOf('snip-skill-') !== -1 || content.indexOf('snip-rules-') !== -1) return 'outdated';
     return false;
   } catch (e) { return false; }
 }
@@ -731,9 +732,9 @@ function runSetup(setupFlags) {
       if (envPerm === 'yes') {
         shouldAdd = true;
       } else if (envPerm === 'no' || envPerm === '0') {
-        shouldAdd = false;
-      } else if (needsLegacyCleanup && hasSnipPermissions(home) === false) {
-        // Legacy patterns exist — addSnipPermissions will clean them up
+        shouldAdd = needsLegacyCleanup; // still clean up legacy even if user declines new
+      } else if (needsLegacyCleanup) {
+        // User previously consented (has legacy patterns) — upgrade silently
         shouldAdd = true;
       } else {
         process.stdout.write('\nAllow Snip commands to run without permission prompts in Claude Code?\n');
