@@ -663,14 +663,24 @@ function hasLegacyPermissions(home) {
 }
 
 function promptYN(question) {
-  if (!process.stdin.isTTY) return false;
   process.stdout.write(question);
-  var buf = Buffer.alloc(256);
+  var fd;
   try {
-    var bytesRead = fs.readSync(0, buf, 0, 256);
+    // Open /dev/tty directly instead of using fd 0.
+    // Accessing process.stdin.isTTY sets O_NONBLOCK on fd 0,
+    // which causes fs.readSync(0, ...) to return 0 bytes immediately.
+    fd = fs.openSync('/dev/tty', 'r');
+  } catch (e) { return false; } // no TTY (piped, CI, etc.)
+  try {
+    var buf = Buffer.alloc(256);
+    var bytesRead = fs.readSync(fd, buf, 0, 256);
+    fs.closeSync(fd);
     var answer = buf.toString('utf8', 0, bytesRead).trim().toLowerCase();
     return answer === 'y' || answer === 'yes';
-  } catch (e) { return false; }
+  } catch (e) {
+    try { fs.closeSync(fd); } catch (e2) {}
+    return false;
+  }
 }
 
 function runSetup(setupFlags) {
