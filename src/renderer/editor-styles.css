@@ -260,59 +260,22 @@ select:hover {
   flex-shrink: 0;
 }
 
-/* Custom tooltips for toolbar buttons */
-.tool-btn,
-.action-btn {
-  position: relative;
-}
-
-.tool-btn[data-tooltip]::after,
-.action-btn[data-tooltip]::after {
-  content: attr(data-tooltip);
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 50%;
-  transform: translateX(-50%) translateY(2px);
+/* JS-positioned tooltip (fixed, escapes overflow:hidden on toolbar) */
+.js-tooltip {
+  position: fixed;
+  z-index: 10000;
   padding: 4px 8px;
   background: var(--tooltip-bg);
   color: #fff;
   font-size: 10px;
   font-weight: 500;
-  border-radius: 5px;
-  white-space: nowrap;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.15s ease, transform 0.15s ease;
-  z-index: 1001;
-}
-
-.tool-btn:hover[data-tooltip]::after,
-.action-btn:hover[data-tooltip]::after {
-  opacity: 1;
-  transform: translateX(-50%) translateY(0);
-}
-
-/* Tooltip for animate button (bottom → top, since button is at the bottom) */
-.animate-btn[data-tooltip]::after {
-  content: attr(data-tooltip);
-  position: absolute;
-  bottom: calc(100% + 8px);
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 4px 10px;
-  background: var(--tooltip-bg);
-  color: #fff;
-  font-size: 11px;
-  font-weight: 400;
   border-radius: 4px;
   white-space: nowrap;
   pointer-events: none;
   opacity: 0;
-  transition: opacity 0.15s;
-  z-index: 2001;
+  transition: opacity 0.15s ease;
 }
-
-.animate-btn:hover[data-tooltip]::after {
+.js-tooltip.visible {
   opacity: 1;
 }
 

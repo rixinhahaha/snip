@@ -34,6 +34,24 @@ const Toolbar = (() => {
       }
     });
 
+    // JS-positioned tooltip for all [data-tooltip] elements
+    var tooltip = document.getElementById('js-tooltip');
+    if (tooltip) {
+      document.querySelectorAll('[data-tooltip]').forEach(function (el) {
+        el.addEventListener('mouseenter', function () {
+          tooltip.textContent = el.getAttribute('data-tooltip');
+          var rect = el.getBoundingClientRect();
+          tooltip.style.left = (rect.left + rect.width / 2) + 'px';
+          tooltip.style.top = (rect.bottom + 6) + 'px';
+          tooltip.style.transform = 'translateX(-50%)';
+          tooltip.classList.add('visible');
+        });
+        el.addEventListener('mouseleave', function () {
+          tooltip.classList.remove('visible');
+        });
+      });
+    }
+
     // Wire action buttons (btn-upscale etc.) — these just click, no tool mode switch
     // They're handled by editor-app.js directly
 
