@@ -1453,18 +1453,26 @@
   // ── CLI + AI Integration ──
 
   function applyCliButtonState(btn, state) {
-    if (state === true) {
-      btn.textContent = 'CLI Installed ✓';
+    if (state && state.homebrew) {
+      btn.textContent = 'CLI Installed (Homebrew) \u2713';
+      btn.className = 'install-cli-btn-installed';
+      btn.title = 'Managed by Homebrew';
+      btn.disabled = true;
+    } else if (state === true) {
+      btn.textContent = 'CLI Installed \u2713';
       btn.className = 'install-cli-btn-installed';
       btn.title = 'Click to remove CLI';
+      btn.disabled = false;
     } else if (state === 'stale') {
       btn.textContent = 'Update CLI';
       btn.className = 'install-cli-btn-primary';
       btn.title = 'CLI path changed — click to fix';
+      btn.disabled = false;
     } else {
       btn.textContent = 'Install CLI';
       btn.className = 'install-cli-btn-primary';
       btn.title = '';
+      btn.disabled = false;
     }
   }
 
@@ -1589,15 +1597,20 @@
     // Check CLI state: true = installed, 'stale' = broken wrapper, false = not installed
     var cliState = await window.snip.checkCliInstalled();
 
+    function isCliAvailable(state) {
+      return state === true || state === 'stale' || (state && state.homebrew);
+    }
+
     function updateCliButton(state) {
       applyCliButtonState(installBtn, state);
       if (state === 'stale') showCliStatus('CLI needs update — app path changed', true);
-      if (state === true || state === 'stale') loadAiProviders();
+      if (isCliAvailable(state)) loadAiProviders();
     }
 
     updateCliButton(cliState);
 
     installBtn.addEventListener('click', async function () {
+      if (cliState && cliState.homebrew) return; // Homebrew-managed, do nothing
       if (cliState === true) {
         // Remove CLI
         await window.snip.uninstallCli();
@@ -2449,7 +2462,7 @@
       applyCliButtonState(installBtn, cliState);
 
       // Refresh AI providers if CLI is available
-      if (cliState === true || cliState === 'stale') {
+      if (cliState === true || cliState === 'stale' || (cliState && cliState.homebrew)) {
         var aiProvidersDiv = document.getElementById('ai-providers');
         if (aiProvidersDiv) {
           var found = await renderProviderRows(aiProvidersDiv, null);

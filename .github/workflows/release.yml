@@ -132,7 +132,7 @@ jobs:
 
             url "https://github.com/rixinhahaha/snip/releases/download/v#{version}/Snip-#{version}-arm64.dmg"
             name "Snip"
-            desc "Screenshot app with annotation, AI-powered organization, and semantic search"
+            desc "Visual mode for Claude Code — diagrams, previews, and screenshots"
             homepage "https://github.com/rixinhahaha/snip"
 
             depends_on macos: ">= :ventura"
@@ -144,12 +144,14 @@ jobs:
             end
 
             app "Snip.app"
+            binary "#{appdir}/Snip.app/Contents/Resources/cli/snip", target: "snip"
 
             zap trash: [
               "~/Library/Application Support/snip",
               "~/Library/Caches/snip",
               "~/Library/Preferences/com.snip.app.plist",
               "~/Library/Saved Application State/com.snip.app.savedState",
+              "~/.snip",
             ]
           end
           EOF

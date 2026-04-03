@@ -709,6 +709,20 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
   });
 
   ipcMain.handle('check-cli-installed', async () => {
+    // Check for Homebrew-installed CLI (symlink into Snip.app bundle)
+    var brewPaths = ['/opt/homebrew/bin/snip', '/usr/local/bin/snip'];
+    for (var bp of brewPaths) {
+      try {
+        var stat = fs.lstatSync(bp);
+        if (stat.isSymbolicLink()) {
+          var target = fs.readlinkSync(bp);
+          if (target.indexOf('Snip.app') !== -1 && target.indexOf('Resources/cli/snip') !== -1) {
+            return { installed: true, path: bp, homebrew: true };
+          }
+        }
+      } catch {}
+    }
+    // Check for app-installed CLI wrapper
     var targets = platform.getCliInstallPaths();
     for (var target of targets) {
       if (fs.existsSync(target)) {
@@ -729,6 +743,19 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
   });
 
   ipcMain.handle('uninstall-cli', async () => {
+    // Skip if CLI is managed by Homebrew (symlink into Snip.app bundle)
+    var brewPaths = ['/opt/homebrew/bin/snip', '/usr/local/bin/snip'];
+    for (var bp of brewPaths) {
+      try {
+        var bstat = fs.lstatSync(bp);
+        if (bstat.isSymbolicLink()) {
+          var btarget = fs.readlinkSync(bp);
+          if (btarget.indexOf('Snip.app') !== -1 && btarget.indexOf('Resources/cli/snip') !== -1) {
+            return { removed: false, homebrew: true };
+          }
+        }
+      } catch {}
+    }
     var targets = platform.getCliInstallPaths();
     var removed = false;
     for (var target of targets) {

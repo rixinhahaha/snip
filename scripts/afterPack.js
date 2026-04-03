@@ -13,6 +13,40 @@
 
 const path = require('path');
 const fs = require('fs');
+
+/**
+ * Generate a CLI wrapper script that resolves symlinks to find the bundled
+ * Node.js binary and CLI script. Homebrew's `binary` stanza symlinks this
+ * into PATH so `snip` works immediately after `brew install --cask`.
+ */
+function generateCliWrapper(cliDir) {
+  var wrapperPath = path.join(cliDir, 'snip');
+  var content = [
+    '#!/bin/sh',
+    '# Snip CLI — bundled wrapper (generated at build time)',
+    'SELF="$0"',
+    'while [ -L "$SELF" ]; do',
+    '  DIR="$(cd "$(dirname "$SELF")" && pwd)"',
+    '  SELF="$(readlink "$SELF")"',
+    '  case "$SELF" in /*) ;; *) SELF="$DIR/$SELF" ;; esac',
+    'done',
+    'SCRIPT_DIR="$(cd "$(dirname "$SELF")" && pwd)"',
+    'RESOURCES_DIR="$(dirname "$SCRIPT_DIR")"',
+    'NODE="$RESOURCES_DIR/node/node"',
+    'CLI="$SCRIPT_DIR/snip.js"',
+    'if [ -x "$NODE" ]; then',
+    '  exec "$NODE" "$CLI" "$@"',
+    'elif command -v node > /dev/null 2>&1; then',
+    '  exec node "$CLI" "$@"',
+    'else',
+    '  echo "Error: Node.js not found. Open Snip.app or install Node.js." >&2',
+    '  exit 1',
+    'fi',
+    ''
+  ].join('\n');
+  fs.writeFileSync(wrapperPath, content, { mode: 0o755 });
+  console.log('[afterPack] Generated bundled CLI wrapper');
+}
 const os = require('os');
 const { execSync } = require('child_process');
 
@@ -62,6 +96,7 @@ module.exports = async function afterPack(context) {
     } else {
       console.warn('[afterPack] No bundled Node.js binary at ' + linuxNodeSrc);
     }
+    generateCliWrapper(path.join(linuxResourcesDir, 'cli'));
     return;
   }
 
@@ -99,6 +134,8 @@ module.exports = async function afterPack(context) {
   } else {
     console.warn('[afterPack] No bundled Node.js binary found at ' + vendorNodeSrc + ' — segment tool may not work');
   }
+
+  generateCliWrapper(path.join(resourcesDir, 'cli'));
 
   // ---------------------------------------------------------------
   // 2. Pre-compile Swift transcription helper
