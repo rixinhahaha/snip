@@ -612,6 +612,11 @@ function runSetup(setupFlags) {
     process.stdout.write('Visual mode enabled. Claude will now render diagrams instead of describing them.\n');
   }
 
+  if (!setupFlags.remove && process.platform === 'darwin') {
+    process.stdout.write('\nNote: Snip needs Screen Recording permission to capture screenshots.\n');
+    process.stdout.write('If not already granted: System Settings \u2192 Privacy & Security \u2192 Screen Recording \u2192 enable Snip\n');
+  }
+
   process.exit(anyFailed && !anyChanged ? 1 : 0);
 }
 
