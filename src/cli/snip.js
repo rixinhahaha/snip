@@ -95,7 +95,7 @@ for (var i = 1; i < args.length; i++) {
 // Bump SNIP_RULES_VERSION in both files when changing rules content.
 var SNIP_MARKER_START = '<!-- snip-start -->';
 var SNIP_MARKER_END = '<!-- snip-end -->';
-var SNIP_RULES_VERSION = 'snip-rules-v6';
+var SNIP_RULES_VERSION = 'snip-rules-v7';
 
 var SNIP_RULES_CONTENT = [
   '# Snip \u2014 Visual Communication Tool',
@@ -103,8 +103,8 @@ var SNIP_RULES_CONTENT = [
   'Use `snip` CLI for visual communication. You MUST run `snip --help` before your first snip call in a session.',
   '',
   '## ALWAYS use Snip for these:',
-  '- **Diagrams/architecture/flows** \u2192 `echo \'<mermaid>\' | snip render --format mermaid`',
-  '- **UI previews/HTML/components** \u2192 `echo \'<html>\' | snip render --format html`',
+  '- **Diagrams/architecture/flows** \u2192 write Mermaid to `.mmd` file, then `snip render --format mermaid < file.mmd`',
+  '- **UI previews/HTML/components** \u2192 write HTML to `.html` file, then `snip render --format html < file.html`',
   '- **Show an image for review** \u2192 `snip open <path> --message "context"`',
   '- **Find a past screenshot** \u2192 `snip search "<query>"`',
   '- **Read text from an image** \u2192 `snip transcribe <path>`',
@@ -114,7 +114,83 @@ var SNIP_RULES_CONTENT = [
   ''
 ].join('\n');
 
-var SNIP_PERMISSION_PATTERNS = ['Bash(snip *)', 'Bash(echo * | snip *)'];
+var SNIP_PERMISSION_PATTERNS = ['Bash(snip *)'];
+var SNIP_LEGACY_PERMISSION_PATTERNS = ['Bash(echo * | snip *)'];
+
+var SNIP_SKILL_VERSION = 'snip-skill-v1';
+var SNIP_SKILL_CONTENT = [
+  '---',
+  'name: diagram',
+  'description: "Render a visual diagram or HTML preview using Snip. Use when the user wants to visualize architecture, flows, schemas, state machines, UI mockups, or any structural concept."',
+  '---',
+  '',
+  '# Diagram \u2014 Visual Rendering via Snip',
+  '',
+  '<!-- ' + SNIP_SKILL_VERSION + ' -->',
+  '',
+  'Generate a visual diagram or HTML preview from the current conversation context and render it with Snip.',
+  '',
+  '## Step 1: Analyze context and choose format',
+  '',
+  'Review the conversation to determine what to visualize.',
+  '',
+  '**Choose Mermaid** for: architecture diagrams, sequence diagrams, flowcharts, ER diagrams, class diagrams, state diagrams, Gantt charts, git graphs, mind maps, timelines, or any structural/relational/flow visualization.',
+  '',
+  '**Choose HTML** for: UI mockups, component previews, landing pages, dashboards, styled cards, data tables, or anything where visual design (colors, typography, layout) is the point.',
+  '',
+  '## Step 2: Pick the right Mermaid diagram type',
+  '',
+  'When using Mermaid, select the most appropriate type:',
+  '',
+  '| Context | Diagram Type |',
+  '|---------|-------------|',
+  '| Request/response flows, API calls, service interactions | `sequenceDiagram` |',
+  '| Decision trees, workflows, processes | `flowchart TD` or `flowchart LR` |',
+  '| Database schemas, data models | `erDiagram` |',
+  '| Code structure, inheritance, interfaces | `classDiagram` |',
+  '| Lifecycle, transitions, modes | `stateDiagram-v2` |',
+  '| System components, services, layers | `flowchart TD` with subgraphs |',
+  '| Project timelines, sprints | `gantt` |',
+  '| Proportions, distributions | `pie` |',
+  '| Concept relationships | `mindmap` |',
+  '',
+  '## Step 3: Write to a file',
+  '',
+  '**Never use echo piping.** Always write the content to a file first.',
+  '',
+  'For Mermaid diagrams:',
+  '- Write to a `.mmd` file with a descriptive name: `architecture.mmd`, `auth-flow.mmd`, `data-model.mmd`',
+  '',
+  'For HTML previews:',
+  '- Write to a `.html` file with a descriptive name: `preview.html`, `dashboard-mockup.html`',
+  '',
+  '## Step 4: Render with Snip',
+  '',
+  '```bash',
+  '# Mermaid',
+  'snip render --format mermaid < architecture.mmd',
+  '',
+  '# HTML',
+  'snip render --format html < preview.html',
+  '```',
+  '',
+  '## Step 5: Handle the response',
+  '',
+  'The render command returns JSON: `{"status": "approved", "edited": false, "path": "/path/to/rendered.png"}`',
+  '',
+  '- If `status` is `"approved"` and `edited` is `false` \u2014 the user accepted the diagram. Done.',
+  '- If `edited` is `true` \u2014 the user annotated the image with corrections. Use the Read tool to view the image at `path`, then update the source file and re-render.',
+  '- If `status` is `"changes_requested"` \u2014 read the `text` field for written feedback. Update the source file and re-render.',
+  '',
+  '## Tips',
+  '',
+  '- For large diagrams, use subgraphs to organize related nodes',
+  '- Keep node labels concise; use notes for details',
+  '- For HTML, use inline `<style>` tags (external stylesheets won\'t load)',
+  '- HTML is sandboxed: no `<script>` or `<canvas>` JS will execute',
+  '- For fixed-size HTML designs, set explicit body dimensions: `body { width: 800px; height: 600px; }`',
+  ''
+].join('\n');
 
 var KNOWN_PROVIDERS = {
   'claude-code': { name: 'Claude Code', dir: '.claude' },
@@ -176,7 +252,7 @@ if (flags.message) params.message = flags.message;
 if (cmd.needsStdin) {
   if (process.stdin.isTTY) {
     process.stderr.write('Error: ' + command + ' reads from stdin. Pipe diagram code, e.g.:\n');
-    process.stderr.write('  echo "graph TD; A-->B" | snip render --format mermaid\n');
+    process.stderr.write('  snip render --format mermaid < diagram.mmd\n');
     process.exit(1);
   }
   readStdin().then(function (input) {
@@ -480,6 +556,48 @@ function removeProviderRules(providerId, home) {
   }
 }
 
+function getSkillPath(home) {
+  return path.join(home, '.claude', 'skills', 'diagram', 'SKILL.md');
+}
+
+function checkSkillStatus(home) {
+  try {
+    var content = fs.readFileSync(getSkillPath(home), 'utf8');
+    if (content.indexOf(SNIP_SKILL_VERSION) !== -1) return true;
+    if (content.indexOf('snip-skill-') !== -1) return 'outdated';
+    return false;
+  } catch (e) { return false; }
+}
+
+function installSkill(home) {
+  var status = checkSkillStatus(home);
+  if (status === true) {
+    return { ok: true, changed: false, line: '\u2713 /diagram skill \u2014 already installed (up to date)' };
+  }
+  try {
+    var skillPath = getSkillPath(home);
+    fs.mkdirSync(path.dirname(skillPath), { recursive: true });
+    fs.writeFileSync(skillPath, SNIP_SKILL_CONTENT);
+    var verb = (status === 'outdated') ? 'updated' : 'installed to ~/.claude/skills/diagram/';
+    return { ok: true, changed: true, line: '\u2713 /diagram skill \u2014 ' + verb };
+  } catch (err) {
+    return { ok: false, changed: false, line: '\u2717 /diagram skill \u2014 failed: ' + err.message };
+  }
+}
+
+function removeSkill(home) {
+  var skillDir = path.join(home, '.claude', 'skills', 'diagram');
+  try {
+    if (!fs.existsSync(skillDir)) {
+      return { ok: true, line: '\u2713 /diagram skill \u2014 no skill to remove' };
+    }
+    fs.rmSync(skillDir, { recursive: true, force: true });
+    return { ok: true, line: '\u2713 /diagram skill \u2014 removed' };
+  } catch (err) {
+    return { ok: false, line: '\u2717 /diagram skill \u2014 failed: ' + err.message };
+  }
+}
+
 function getSettingsPath(home) {
   return path.join(home, '.claude', 'settings.json');
 }
@@ -498,7 +616,11 @@ function hasSnipPermissions(home) {
   if (!settings) return false;
   var allow = settings.permissions && settings.permissions.allow;
   if (!Array.isArray(allow)) return false;
-  return SNIP_PERMISSION_PATTERNS.every(function (p) { return allow.indexOf(p) !== -1; });
+  var hasCurrent = SNIP_PERMISSION_PATTERNS.every(function (p) { return allow.indexOf(p) !== -1; });
+  if (!hasCurrent) return false;
+  // If legacy patterns still present, return false to trigger migration cleanup
+  var hasLegacy = SNIP_LEGACY_PERMISSION_PATTERNS.some(function (p) { return allow.indexOf(p) !== -1; });
+  return !hasLegacy;
 }
 
 function addSnipPermissions(home) {
@@ -510,6 +632,10 @@ function addSnipPermissions(home) {
       settings.permissions.allow.push(SNIP_PERMISSION_PATTERNS[i]);
     }
   }
+  // Remove legacy patterns
+  settings.permissions.allow = settings.permissions.allow.filter(function (p) {
+    return SNIP_LEGACY_PERMISSION_PATTERNS.indexOf(p) === -1;
+  });
   writeSettings(home, settings);
 }
 
@@ -518,12 +644,21 @@ function removeSnipPermissions(home) {
   if (!settings) return false;
   if (!settings.permissions || !Array.isArray(settings.permissions.allow)) return false;
   var before = settings.permissions.allow.length;
+  var allPatterns = SNIP_PERMISSION_PATTERNS.concat(SNIP_LEGACY_PERMISSION_PATTERNS);
   settings.permissions.allow = settings.permissions.allow.filter(function (p) {
-    return SNIP_PERMISSION_PATTERNS.indexOf(p) === -1;
+    return allPatterns.indexOf(p) === -1;
   });
   if (settings.permissions.allow.length === before) return false;
   writeSettings(home, settings);
   return true;
+}
+
+function hasLegacyPermissions(home) {
+  var settings = readSettings(home);
+  if (!settings) return false;
+  var allow = settings.permissions && settings.permissions.allow;
+  if (!Array.isArray(allow)) return false;
+  return SNIP_LEGACY_PERMISSION_PATTERNS.some(function (p) { return allow.indexOf(p) !== -1; });
 }
 
 function promptYN(question) {
@@ -582,27 +717,40 @@ function runSetup(setupFlags) {
     }
   }
 
-  // Claude Code permissions: add on setup (with consent), remove on --remove
+  // Claude Code: skill + permissions + legacy cleanup
   var hadClaude = providers.some(function (p) { return p.id === 'claude-code'; });
+  if (hadClaude && !setupFlags.remove) {
+    var skillResult = installSkill(home);
+    process.stdout.write(skillResult.line + '\n');
+    if (skillResult.changed) anyChanged = true;
+    // Permissions: add (with consent) or silently clean up legacy patterns
+    if (!hasSnipPermissions(home)) {
+      var needsLegacyCleanup = hasLegacyPermissions(home);
+      var envPerm = process.env.SNIP_SETUP_PERMISSIONS;
+      var shouldAdd;
+      if (envPerm === 'yes') {
+        shouldAdd = true;
+      } else if (envPerm === 'no' || envPerm === '0') {
+        shouldAdd = false;
+      } else if (needsLegacyCleanup && hasSnipPermissions(home) === false) {
+        // Legacy patterns exist — addSnipPermissions will clean them up
+        shouldAdd = true;
+      } else {
+        process.stdout.write('\nAllow Snip commands to run without permission prompts in Claude Code?\n');
+        process.stdout.write('This adds permission rules to ~/.claude/settings.json\n');
+        shouldAdd = promptYN('[y/N] ');
+      }
+      if (shouldAdd) {
+        addSnipPermissions(home);
+        process.stdout.write('\u2713 Permissions ' + (needsLegacyCleanup ? 'updated in' : 'added to') + ' ~/.claude/settings.json\n');
+      }
+    }
+  }
   if (hadClaude && setupFlags.remove) {
+    var skillRemoveResult = removeSkill(home);
+    process.stdout.write(skillRemoveResult.line + '\n');
     if (removeSnipPermissions(home)) {
       process.stdout.write('\u2713 Permissions removed from ~/.claude/settings.json\n');
-    }
-  } else if (hadClaude && !setupFlags.remove && !hasSnipPermissions(home)) {
-    var envPerm = process.env.SNIP_SETUP_PERMISSIONS;
-    var shouldAdd;
-    if (envPerm === 'yes') {
-      shouldAdd = true;
-    } else if (envPerm === 'no' || envPerm === '0') {
-      shouldAdd = false;
-    } else {
-      process.stdout.write('\nAllow Snip commands to run without permission prompts in Claude Code?\n');
-      process.stdout.write('This adds permission rules to ~/.claude/settings.json\n');
-      shouldAdd = promptYN('[y/N] ');
-    }
-    if (shouldAdd) {
-      addSnipPermissions(home);
-      process.stdout.write('\u2713 Permissions added to ~/.claude/settings.json\n');
     }
   }
 

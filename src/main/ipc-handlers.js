@@ -454,7 +454,7 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
   }
 
   // NOTE: Rules template duplicated in src/cli/snip.js for standalone `snip setup`. Keep in sync.
-  var SNIP_RULES_VERSION = 'snip-rules-v6';
+  var SNIP_RULES_VERSION = 'snip-rules-v7';
 
   var snipRulesContent = [
     '# Snip — Visual Communication Tool',
@@ -462,8 +462,8 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
     'Use `snip` CLI for visual communication. You MUST run `snip --help` before your first snip call in a session.',
     '',
     '## ALWAYS use Snip for these:',
-    '- **Diagrams/architecture/flows** → `echo \'<mermaid>\' | snip render --format mermaid`',
-    '- **UI previews/HTML/components** → `echo \'<html>\' | snip render --format html`',
+    '- **Diagrams/architecture/flows** → write Mermaid to `.mmd` file, then `snip render --format mermaid < file.mmd`',
+    '- **UI previews/HTML/components** → write HTML to `.html` file, then `snip render --format html < file.html`',
     '- **Show an image for review** → `snip open <path> --message "context"`',
     '- **Find a past screenshot** → `snip search "<query>"`',
     '- **Read text from an image** → `snip transcribe <path>`',
