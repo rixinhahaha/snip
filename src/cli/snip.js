@@ -114,6 +114,8 @@ var SNIP_RULES_CONTENT = [
   ''
 ].join('\n');
 
+var SNIP_PERMISSION_PATTERNS = ['Bash(snip *)', 'Bash(echo * | snip *)'];
+
 var KNOWN_PROVIDERS = {
   'claude-code': { name: 'Claude Code', dir: '.claude' },
   'cursor':      { name: 'Cursor',      dir: '.cursor' },
@@ -478,6 +480,63 @@ function removeProviderRules(providerId, home) {
   }
 }
 
+function getSettingsPath(home) {
+  return path.join(home, '.claude', 'settings.json');
+}
+
+function readSettings(home) {
+  try { return JSON.parse(fs.readFileSync(getSettingsPath(home), 'utf8')); }
+  catch (e) { return null; }
+}
+
+function writeSettings(home, settings) {
+  fs.writeFileSync(getSettingsPath(home), JSON.stringify(settings, null, 2) + '\n');
+}
+
+function hasSnipPermissions(home) {
+  var settings = readSettings(home);
+  if (!settings) return false;
+  var allow = settings.permissions && settings.permissions.allow;
+  if (!Array.isArray(allow)) return false;
+  return SNIP_PERMISSION_PATTERNS.every(function (p) { return allow.indexOf(p) !== -1; });
+}
+
+function addSnipPermissions(home) {
+  var settings = readSettings(home) || {};
+  if (!settings.permissions) settings.permissions = {};
+  if (!Array.isArray(settings.permissions.allow)) settings.permissions.allow = [];
+  for (var i = 0; i < SNIP_PERMISSION_PATTERNS.length; i++) {
+    if (settings.permissions.allow.indexOf(SNIP_PERMISSION_PATTERNS[i]) === -1) {
+      settings.permissions.allow.push(SNIP_PERMISSION_PATTERNS[i]);
+    }
+  }
+  writeSettings(home, settings);
+}
+
+function removeSnipPermissions(home) {
+  var settings = readSettings(home);
+  if (!settings) return false;
+  if (!settings.permissions || !Array.isArray(settings.permissions.allow)) return false;
+  var before = settings.permissions.allow.length;
+  settings.permissions.allow = settings.permissions.allow.filter(function (p) {
+    return SNIP_PERMISSION_PATTERNS.indexOf(p) === -1;
+  });
+  if (settings.permissions.allow.length === before) return false;
+  writeSettings(home, settings);
+  return true;
+}
+
+function promptYN(question) {
+  if (!process.stdin.isTTY) return false;
+  process.stdout.write(question);
+  var buf = Buffer.alloc(256);
+  try {
+    var bytesRead = fs.readSync(0, buf, 0, 256);
+    var answer = buf.toString('utf8', 0, bytesRead).trim().toLowerCase();
+    return answer === 'y' || answer === 'yes';
+  } catch (e) { return false; }
+}
+
 function runSetup(setupFlags) {
   var home = os.homedir();
   var providers = detectProviders(home);
@@ -523,6 +582,30 @@ function runSetup(setupFlags) {
     }
   }
 
+  // Claude Code permissions: add on setup (with consent), remove on --remove
+  var hadClaude = providers.some(function (p) { return p.id === 'claude-code'; });
+  if (hadClaude && setupFlags.remove) {
+    if (removeSnipPermissions(home)) {
+      process.stdout.write('\u2713 Permissions removed from ~/.claude/settings.json\n');
+    }
+  } else if (hadClaude && !setupFlags.remove && !hasSnipPermissions(home)) {
+    var envPerm = process.env.SNIP_SETUP_PERMISSIONS;
+    var shouldAdd;
+    if (envPerm === 'yes') {
+      shouldAdd = true;
+    } else if (envPerm === 'no' || envPerm === '0') {
+      shouldAdd = false;
+    } else {
+      process.stdout.write('\nAllow Snip commands to run without permission prompts in Claude Code?\n');
+      process.stdout.write('This adds permission rules to ~/.claude/settings.json\n');
+      shouldAdd = promptYN('[y/N] ');
+    }
+    if (shouldAdd) {
+      addSnipPermissions(home);
+      process.stdout.write('\u2713 Permissions added to ~/.claude/settings.json\n');
+    }
+  }
+
   if (setupFlags.remove && anyChanged) {
     process.stdout.write('Snip rules removed.\n');
   } else if (!setupFlags.remove && anyChanged) {
@@ -544,6 +627,9 @@ function printSetupHelp() {
     '  --remove              Remove Snip rules from all detected tools',
     '  --provider <id>       Target a specific tool: claude-code, cursor, windsurf, cline',
     '  --help, -h            Show this help',
+    '',
+    'Environment:',
+    '  SNIP_SETUP_PERMISSIONS=yes|no   Skip the permissions prompt (for scripts/CI)',
     '',
     'Supported tools:',
     '  claude-code           ~/.claude/CLAUDE.md',

@@ -832,4 +832,75 @@ describe('CLI setup command', () => {
     expect(ipcVersion).not.toBeNull();
     expect(cliVersion[1]).toBe(ipcVersion[1]);
   });
+
+  // ── Permissions ──
+
+  it('adds permissions to settings.json when SNIP_SETUP_PERMISSIONS=yes', async () => {
+    mkdirSync(join(fakeHome, '.claude'), { recursive: true });
+    var res = await runCli(['setup'], { env: { HOME: fakeHome, SNIP_SETUP_PERMISSIONS: 'yes' } });
+    expect(res.code).toBe(0);
+    expect(res.stdout).toContain('Permissions added');
+    var settings = JSON.parse(readFileSync(join(fakeHome, '.claude', 'settings.json'), 'utf8'));
+    expect(settings.permissions.allow).toContain('Bash(snip *)');
+    expect(settings.permissions.allow).toContain('Bash(echo * | snip *)');
+  });
+
+  it('skips permissions when SNIP_SETUP_PERMISSIONS=no', async () => {
+    mkdirSync(join(fakeHome, '.claude'), { recursive: true });
+    var res = await runCli(['setup'], { env: { HOME: fakeHome, SNIP_SETUP_PERMISSIONS: 'no' } });
+    expect(res.code).toBe(0);
+    expect(res.stdout).not.toContain('Permissions');
+    expect(existsSync(join(fakeHome, '.claude', 'settings.json'))).toBe(false);
+  });
+
+  it('skips permissions prompt when stdin is not a TTY (default in tests)', async () => {
+    mkdirSync(join(fakeHome, '.claude'), { recursive: true });
+    await runSetup();
+    expect(existsSync(join(fakeHome, '.claude', 'settings.json'))).toBe(false);
+  });
+
+  it('merges permissions into existing settings.json', async () => {
+    mkdirSync(join(fakeHome, '.claude'), { recursive: true });
+    writeFileSync(join(fakeHome, '.claude', 'settings.json'), JSON.stringify({
+      permissions: { allow: ['WebSearch', 'WebFetch'], defaultMode: 'default' },
+      effortLevel: 'high'
+    }, null, 2) + '\n');
+    await runCli(['setup'], { env: { HOME: fakeHome, SNIP_SETUP_PERMISSIONS: 'yes' } });
+    var settings = JSON.parse(readFileSync(join(fakeHome, '.claude', 'settings.json'), 'utf8'));
+    expect(settings.permissions.allow).toContain('WebSearch');
+    expect(settings.permissions.allow).toContain('WebFetch');
+    expect(settings.permissions.allow).toContain('Bash(snip *)');
+    expect(settings.permissions.allow).toContain('Bash(echo * | snip *)');
+    expect(settings.permissions.defaultMode).toBe('default');
+    expect(settings.effortLevel).toBe('high');
+  });
+
+  it('permissions are idempotent — no duplicates on second run', async () => {
+    mkdirSync(join(fakeHome, '.claude'), { recursive: true });
+    await runCli(['setup'], { env: { HOME: fakeHome, SNIP_SETUP_PERMISSIONS: 'yes' } });
+    await runCli(['setup'], { env: { HOME: fakeHome, SNIP_SETUP_PERMISSIONS: 'yes' } });
+    var settings = JSON.parse(readFileSync(join(fakeHome, '.claude', 'settings.json'), 'utf8'));
+    var snipCount = settings.permissions.allow.filter(function (p) { return p === 'Bash(snip *)'; }).length;
+    expect(snipCount).toBe(1);
+  });
+
+  it('--remove removes permissions from settings.json', async () => {
+    mkdirSync(join(fakeHome, '.claude'), { recursive: true });
+    writeFileSync(join(fakeHome, '.claude', 'settings.json'), JSON.stringify({
+      permissions: { allow: ['WebSearch', 'Bash(snip *)', 'Bash(echo * | snip *)'] },
+      effortLevel: 'high'
+    }, null, 2) + '\n');
+    await runSetup(['--remove']);
+    var settings = JSON.parse(readFileSync(join(fakeHome, '.claude', 'settings.json'), 'utf8'));
+    expect(settings.permissions.allow).toContain('WebSearch');
+    expect(settings.permissions.allow).not.toContain('Bash(snip *)');
+    expect(settings.permissions.allow).not.toContain('Bash(echo * | snip *)');
+    expect(settings.effortLevel).toBe('high');
+  });
+
+  it('--remove with no permissions present does not mention permissions', async () => {
+    mkdirSync(join(fakeHome, '.claude'), { recursive: true });
+    var res = await runSetup(['--remove']);
+    expect(res.stdout).not.toContain('Permissions removed');
+  });
 });
