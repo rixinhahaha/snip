@@ -5,11 +5,11 @@
 
 # Snip
 
-**A visual whiteboard between you and your AI agent.**
+**Visual mode for Claude Code.**
 
-AI agents are great at generating visuals — HTML layouts, Mermaid diagrams, posters, UI components. And they're increasingly good at analyzing visuals too. So why are we still going back and forth in text trying to describe what's wrong?
+Install Snip, run `snip setup`, and Claude Code starts rendering diagrams and previews instead of describing them in text. Architecture? Sequence diagram. Data model? ER diagram. UI component? Rendered preview. All visual, all automatic.
 
-Snip bridges this gap. The agent renders something and it pops up on your screen. You approve it, or draw directly on it — circle what's wrong, add an arrow, write a note. The agent sees your annotations and iterates.
+You review what Claude renders — approve it, or annotate directly on screen. Circle what's wrong, add an arrow, write a note. Claude sees your annotations and iterates.
 
 <p align="center">
   <img src="assets/demo.gif" alt="Snip demo — agent renders a diagram, user reviews and approves" width="720">
@@ -20,13 +20,13 @@ Snip bridges this gap. The agent renders something and it pops up on your screen
 Snip runs as a menu bar / system tray app with a CLI that any AI coding agent can call directly:
 
 ```bash
-# Agent renders a Mermaid diagram and blocks until you review it
-echo 'graph LR; A-->B-->C' | snip render --format mermaid --message "Does this flow look right?"
+# Claude writes a Mermaid diagram to a file, then renders it for your review
+snip render --format mermaid < architecture.mmd
 
-# Agent renders HTML (components, email templates) for your review
-echo '<h1>Hello</h1><p>Preview this layout</p>' | snip render --format html
+# Claude renders an HTML component preview
+snip render --format html < preview.html
 
-# Agent opens an image for your review
+# Open any image for annotated review
 snip open screenshot.png --message "Is the layout correct?"
 
 # Search your screenshot library
@@ -35,7 +35,7 @@ snip search "login page error"
 
 The agent gets structured JSON back: `{ status: "approved" | "changes_requested", edited, path, text }`. You can annotate spatially, type text feedback, or just approve.
 
-Works with **Claude Code**, **Cursor**, **Aider**, and anything that can run a shell command. Also ships an [MCP server](#mcp-server) for agents without shell access.
+Built for **Claude Code**. Also works with Cursor, Windsurf, Cline, and anything that can run a shell command. Ships an [MCP server](#mcp-server) for agents without shell access.
 
 ## Install
 
@@ -55,14 +55,19 @@ Download from [Releases](https://github.com/rixinhahaha/snip/releases):
 
 ## Use with Claude Code
 
-The CLI works out of the box — Claude Code calls it via Bash. No config needed.
+```bash
+snip setup
+```
 
-Try it: ask Claude *"Render a diagram of this project's architecture using Mermaid and show it to me with snip"*
+That's it. `snip setup` configures Claude Code to use visual output automatically — rules, the `/diagram` skill, and permissions. Next time you ask Claude about architecture, data models, or flows, it renders a diagram instead of describing it in text.
+
+Try `/diagram` in any Claude Code conversation to visualize what you're discussing.
 
 ## CLI Reference
 
 | Command | What it does |
 |---------|-------------|
+| `snip setup` | Enable visual mode for Claude Code (and Cursor, Windsurf, Cline) |
 | `snip render --format mermaid` | Render Mermaid diagram from stdin, open for review |
 | `snip render --format html` | Render HTML from stdin, open for review |
 | `snip open <path>` | Open any image for annotated review |

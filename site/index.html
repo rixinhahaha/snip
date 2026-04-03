@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Snip — Visual Feedback for AI Coding Tools | Screenshot & Annotate for Claude Code, Cursor, Copilot</title>
-  <meta name="description" content="Free, open-source visual feedback tool for AI coding agents. Screenshot a bug, circle it, paste to Claude Code, Cursor, or Copilot. Review agent-generated diagrams. CLI + MCP integration. macOS & Linux.">
+  <title>Snip — Visual Mode for Claude Code | Diagrams, Previews & Screenshots for AI Coding Agents</title>
+  <meta name="description" content="Visual mode for Claude Code. Install Snip and Claude starts rendering diagrams and previews instead of describing them in text. Free, open source. macOS & Linux.">
   <meta name="theme-color" content="#8B5CF6">
 
   <!-- Open Graph -->
-  <meta property="og:title" content="Snip — Visual Feedback for AI Coding Tools">
-  <meta property="og:description" content="Give your AI coding agent eyes. Screenshot bugs, annotate UI, review agent-generated diagrams — then paste straight into Claude Code, Cursor, or Copilot. Free & open source.">
+  <meta property="og:title" content="Snip — Visual Mode for Claude Code">
+  <meta property="og:description" content="Install Snip and Claude Code starts rendering diagrams and previews instead of describing them in text. Review visually, annotate corrections, iterate. Free & open source.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://snipit.dev/">
   <meta property="og:image" content="https://snipit.dev/assets/og-image.png">
@@ -21,8 +21,8 @@
 
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Snip — Visual Feedback for AI Coding Tools">
-  <meta name="twitter:description" content="Give your AI coding agent eyes. Screenshot bugs, annotate UI, paste into Claude Code, Cursor, or Copilot. Free, open source. macOS & Linux.">
+  <meta name="twitter:title" content="Snip — Visual Mode for Claude Code">
+  <meta name="twitter:description" content="Install Snip and Claude Code starts rendering diagrams and previews instead of describing them in text. Review visually, annotate corrections, iterate. Free & open source.">
   <meta name="twitter:image" content="https://snipit.dev/assets/og-image.png">
   <meta name="twitter:image:alt" content="Snip — visual feedback tool for AI coding agents">
 
@@ -45,7 +45,7 @@
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "Snip",
-    "description": "Visual feedback tool for AI coding agents. Screenshot bugs, annotate UI, review agent-generated diagrams, then paste into Claude Code, Cursor, or Copilot. CLI and MCP integration. Local AI organization and semantic search.",
+    "description": "Visual mode for Claude Code. Claude renders diagrams and previews instead of describing them in text. Review visually, annotate corrections, iterate. CLI and MCP integration. Also works with Cursor, Windsurf, and Cline.",
     "url": "https://snipit.dev/",
     "applicationCategory": "UtilitiesApplication",
     "operatingSystem": "macOS 14+, Linux (x86_64, ARM64)",
@@ -58,7 +58,7 @@
     "softwareRequirements": "macOS 14+ (Apple Silicon) or Linux x86_64/ARM64 (Wayland)",
     "downloadUrl": "https://github.com/rixinhahaha/snip/releases",
     "featureList": "Screen capture, Annotation tools, Diagram rendering (Mermaid), HTML rendering (components, email templates), Review Mode (approve/request changes), Agent context messages, Structured feedback, AI-powered organization, Semantic search, CLI for AI agents, MCP server, Object segmentation, AI upscaling, Text transcription (OCR), Extension system",
-    "softwareVersion": "1.2.1"
+    "softwareVersion": "1.3.7"
   }
   </script>
 </head>
@@ -136,11 +136,10 @@
       <div class="sparkle-star sparkle-star-8"></div>
     </div>
     <div class="hero-content">
-      <div class="hero-badge"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> Visual AI Tool for macOS & Linux</div>
-      <h1>Stop describing<br><span class="hero-gradient">what you see.</span></h1>
+      <div class="hero-badge"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> Visual Mode for Claude Code</div>
+      <h1>Visual mode for<br><span class="hero-gradient">Claude Code.</span></h1>
       <p class="hero-subtitle">
-        A screenshot with an arrow beats a paragraph of explanation.
-        Snip is the visual channel between you and AI.
+        Install Snip and Claude starts rendering diagrams and previews instead of describing them in text.
       </p>
       <div class="hero-actions">
         <a href="https://github.com/rixinhahaha/snip/releases/latest" class="btn btn-primary download-link" rel="noopener noreferrer">
@@ -192,7 +191,7 @@
       <div class="section-header">
         <div class="section-badge">AI Workflow</div>
         <h2>Show, don't tell.<br>Review, don't imagine.</h2>
-        <p>Circle a bug and paste to your agent — one screenshot replaces a paragraph. Or let your agent render a diagram and get your spatial feedback. The <code>snip</code> CLI and MCP server let any AI agent use Snip as their visual I/O.</p>
+        <p>Run <code>snip setup</code> and Claude Code starts rendering diagrams, previews, and visual artifacts automatically. Review what Claude renders — approve, annotate corrections, or request changes. Also works with Cursor, Windsurf, and Cline.</p>
       </div>
       <div class="mcp-demo-video-wrapper">
         <video autoplay loop muted playsinline poster="assets/workflow-poster.jpg">

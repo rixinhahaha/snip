@@ -8,7 +8,7 @@
 
 ## Vision
 
-Snip is a **tray-only** cross-platform app (macOS and Linux) that serves as the visual communication layer between humans and AI agents. Capture, annotate, render diagrams, and review visual artifacts — all in one tool. Screenshots are automatically organized by AI and searchable via natural language.
+Snip is a **tray-only** cross-platform app (macOS and Linux) — the visual mode for Claude Code and other AI coding agents. Capture, annotate, render diagrams, and review visual artifacts — all in one tool. Screenshots are automatically organized by AI and searchable via natural language.
 
 The app should feel **invisible until needed** — a global shortcut captures, a quick annotation pass adds context, and the result is instantly on your clipboard or returned to the agent.
 
