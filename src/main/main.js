@@ -381,9 +381,10 @@ app.whenReady().then(() => {
 });
 
 var isQuitting = false;
+var willQuitHandled = false;
 app.on('will-quit', (e) => {
-  if (isQuitting) return; // already shutting down
-  isQuitting = true;
+  if (willQuitHandled) return; // already shutting down
+  willQuitHandled = true;
 
   // If auto-updater is installing, let the quit proceed (it handles relaunch)
   var updatingInstall = false;
