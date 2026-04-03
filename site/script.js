@@ -29,7 +29,7 @@
     'mac-arm64': {
       pattern: /Snip-.*-arm64\.dmg$/,
       label: 'Download for macOS (Apple Silicon)',
-      note: 'Requires macOS 14+ with Apple M-series chip (M1, M2, M3, M4). Free and open source.',
+      note: '<span style="font-size:0.95rem;color:#cbd5e1;">Then run <code style="background:rgba(139,92,246,0.25);padding:2px 8px;border-radius:4px;color:#e2e8f0;">snip setup</code> or open the app to get started.</span><br><span style="display:inline-block;margin-top:16px;">Requires macOS 14+ (Apple Silicon). Free and open source.</span>',
       ctaNote: 'Requires macOS 14+ with Apple M-series chip.',
       showBrew: true
     },
@@ -169,8 +169,8 @@
 
     // Update hero notes
     var heroNotes = document.querySelectorAll('.hero-note');
-    if (heroNotes.length >= 1) heroNotes[0].textContent = PLATFORM.note;
-    if (heroNotes.length >= 2) heroNotes[1].textContent = PLATFORM.ctaNote;
+    if (heroNotes.length >= 1) heroNotes[0].innerHTML = PLATFORM.note;
+    if (heroNotes.length >= 2) heroNotes[1].innerHTML = PLATFORM.ctaNote;
 
     // Show/hide brew install (macOS only)
     var brewInstall = document.querySelector('.brew-install');
