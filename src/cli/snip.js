@@ -84,7 +84,46 @@ for (var i = 1; i < args.length; i++) {
   else if (args[i] === '--help' || args[i] === '-h') flags.help = true;
   else if (args[i] === '--format' && i + 1 < args.length) { i++; flags.format = args[i]; }
   else if (args[i] === '--message' && i + 1 < args.length) { i++; flags.message = args[i]; }
+  else if (args[i] === '--remove') flags.remove = true;
+  else if (args[i] === '--provider' && i + 1 < args.length) { i++; flags.provider = args[i]; }
   else positional.push(args[i]);
+}
+
+// ── Setup constants (must be before intercept — var hoisting doesn't initialize) ──
+
+// NOTE: Rules template duplicated from src/main/ipc-handlers.js. Keep in sync.
+// Bump SNIP_RULES_VERSION in both files when changing rules content.
+var SNIP_MARKER_START = '<!-- snip-start -->';
+var SNIP_MARKER_END = '<!-- snip-end -->';
+var SNIP_RULES_VERSION = 'snip-rules-v6';
+
+var SNIP_RULES_CONTENT = [
+  '# Snip \u2014 Visual Communication Tool',
+  '<!-- ' + SNIP_RULES_VERSION + ' -->',
+  'Use `snip` CLI for visual communication. You MUST run `snip --help` before your first snip call in a session.',
+  '',
+  '## ALWAYS use Snip for these:',
+  '- **Diagrams/architecture/flows** \u2192 `echo \'<mermaid>\' | snip render --format mermaid`',
+  '- **UI previews/HTML/components** \u2192 `echo \'<html>\' | snip render --format html`',
+  '- **Show an image for review** \u2192 `snip open <path> --message "context"`',
+  '- **Find a past screenshot** \u2192 `snip search "<query>"`',
+  '- **Read text from an image** \u2192 `snip transcribe <path>`',
+  '',
+  'Do NOT describe visual structures in text. Render them with Snip.',
+  'When the user returns from `snip open` or `snip render`, check the response \u2014 if `edited: true`, use the Read tool to view the image at the returned `path`.',
+  ''
+].join('\n');
+
+var KNOWN_PROVIDERS = {
+  'claude-code': { name: 'Claude Code', dir: '.claude' },
+  'cursor':      { name: 'Cursor',      dir: '.cursor' },
+  'windsurf':    { name: 'Windsurf',    dir: '.windsurf' },
+  'cline':       { name: 'Cline',       dir: '.cline' }
+};
+
+if (command === 'setup') {
+  if (flags.help) { printSetupHelp(); process.exit(0); }
+  runSetup(flags);
 }
 
 if (!command || command === '--help' || command === '-h' || flags.help) {
@@ -324,11 +363,203 @@ function printJson(data) {
   }
 }
 
+// ── Setup command (standalone — no socket needed) ──
+
+function detectProviders(home) {
+  var providers = [];
+  if (fs.existsSync(path.join(home, '.claude'))) {
+    providers.push({ id: 'claude-code', name: 'Claude Code' });
+  }
+  if (fs.existsSync(path.join(home, '.cursor')) || fs.existsSync(path.join(home, 'Library', 'Application Support', 'Cursor'))) {
+    providers.push({ id: 'cursor', name: 'Cursor' });
+  }
+  if (fs.existsSync(path.join(home, '.windsurf')) || fs.existsSync(path.join(home, 'Library', 'Application Support', 'Windsurf'))) {
+    providers.push({ id: 'windsurf', name: 'Windsurf' });
+  }
+  if (fs.existsSync(path.join(home, '.cline'))) {
+    providers.push({ id: 'cline', name: 'Cline' });
+  }
+  return providers;
+}
+
+function getProviderFilePath(providerId, home) {
+  switch (providerId) {
+    case 'claude-code': return path.join(home, '.claude', 'CLAUDE.md');
+    case 'cursor': return path.join(home, '.cursor', 'rules', 'snip.mdc');
+    case 'windsurf': return path.join(home, '.windsurf', 'rules', 'snip.md');
+    case 'cline': return path.join(home, '.cline', 'rules', 'snip.md');
+    default: return null;
+  }
+}
+
+function checkProviderStatus(providerId, filePath) {
+  try {
+    var content = fs.readFileSync(filePath, 'utf8');
+    if (providerId === 'claude-code') {
+      if (content.indexOf(SNIP_MARKER_START) === -1) return false;
+    }
+    if (content.indexOf('# Snip') === -1) return false;
+    if (content.indexOf(SNIP_RULES_VERSION) === -1) return 'outdated';
+    return true;
+  } catch (e) { return false; }
+}
+
+function configureProvider(providerId, home) {
+  var filePath = getProviderFilePath(providerId, home);
+  var displayPath = filePath.replace(home, '~');
+  var name = KNOWN_PROVIDERS[providerId].name;
+
+  var status = checkProviderStatus(providerId, filePath);
+  if (status === true) {
+    return { ok: true, changed: false, line: '\u2713 ' + name + ' \u2014 already configured (up to date)' };
+  }
+
+  try {
+    if (providerId === 'claude-code') {
+      var block = '\n' + SNIP_MARKER_START + '\n' + SNIP_RULES_CONTENT + SNIP_MARKER_END + '\n';
+      var existing = '';
+      try { existing = fs.readFileSync(filePath, 'utf8'); } catch (e) {}
+      fs.mkdirSync(path.dirname(filePath), { recursive: true });
+      var startIdx = existing.indexOf(SNIP_MARKER_START);
+      var endIdx = existing.indexOf(SNIP_MARKER_END);
+      if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+        endIdx += SNIP_MARKER_END.length;
+        if (startIdx > 0 && existing[startIdx - 1] === '\n') startIdx--;
+        if (endIdx < existing.length && existing[endIdx] === '\n') endIdx++;
+        fs.writeFileSync(filePath, existing.slice(0, startIdx) + block + existing.slice(endIdx));
+      } else {
+        fs.appendFileSync(filePath, block);
+      }
+    } else {
+      fs.mkdirSync(path.dirname(filePath), { recursive: true });
+      fs.writeFileSync(filePath, SNIP_RULES_CONTENT);
+    }
+
+    var verb = (status === 'outdated') ? 'rules updated in' : 'rules added to';
+    return { ok: true, changed: true, line: '\u2713 ' + name + ' \u2014 ' + verb + ' ' + displayPath };
+  } catch (err) {
+    return { ok: false, changed: false, line: '\u2717 ' + name + ' \u2014 failed: ' + err.message };
+  }
+}
+
+function removeProviderRules(providerId, home) {
+  var filePath = getProviderFilePath(providerId, home);
+  var displayPath = filePath.replace(home, '~');
+  var name = KNOWN_PROVIDERS[providerId].name;
+
+  try {
+    if (providerId === 'claude-code') {
+      var content = '';
+      try { content = fs.readFileSync(filePath, 'utf8'); } catch (e) {
+        return { ok: true, line: '\u2713 ' + name + ' \u2014 no rules to remove' };
+      }
+      var startIdx = content.indexOf(SNIP_MARKER_START);
+      if (startIdx === -1) {
+        return { ok: true, line: '\u2713 ' + name + ' \u2014 no rules to remove' };
+      }
+      var endIdx = content.indexOf(SNIP_MARKER_END);
+      if (endIdx !== -1 && endIdx > startIdx) {
+        var cutStart = startIdx;
+        if (cutStart > 0 && content[cutStart - 1] === '\n') cutStart--;
+        var cutEnd = endIdx + SNIP_MARKER_END.length;
+        if (cutEnd < content.length && content[cutEnd] === '\n') cutEnd++;
+        fs.writeFileSync(filePath, content.slice(0, cutStart) + content.slice(cutEnd));
+      }
+      return { ok: true, line: '\u2713 ' + name + ' \u2014 rules removed from ' + displayPath };
+    } else {
+      if (!fs.existsSync(filePath)) {
+        return { ok: true, line: '\u2713 ' + name + ' \u2014 no rules to remove' };
+      }
+      fs.rmSync(filePath, { force: true });
+      return { ok: true, line: '\u2713 ' + name + ' \u2014 rules file removed (' + displayPath + ')' };
+    }
+  } catch (err) {
+    return { ok: false, line: '\u2717 ' + name + ' \u2014 failed: ' + err.message };
+  }
+}
+
+function runSetup(setupFlags) {
+  var home = os.homedir();
+  var providers = detectProviders(home);
+
+  // --provider flag: filter or error
+  if (setupFlags.provider) {
+    if (!KNOWN_PROVIDERS[setupFlags.provider]) {
+      process.stderr.write('Unknown provider: ' + setupFlags.provider + '\n');
+      process.stderr.write('Supported: ' + Object.keys(KNOWN_PROVIDERS).join(', ') + '\n');
+      process.exit(1);
+    }
+    var match = providers.filter(function (p) { return p.id === setupFlags.provider; });
+    if (match.length === 0) {
+      var info = KNOWN_PROVIDERS[setupFlags.provider];
+      process.stderr.write(info.name + ' not detected (~/' + info.dir + ' not found). Install it first, then re-run `snip setup`.\n');
+      process.exit(1);
+    }
+    providers = match;
+  }
+
+  if (providers.length === 0) {
+    process.stdout.write('No supported AI tools detected.\n');
+    process.stdout.write('Supported: Claude Code (~/.claude), Cursor (~/.cursor), Windsurf (~/.windsurf), Cline (~/.cline)\n');
+    process.exit(0);
+  }
+
+  process.stdout.write('Detected: ' + providers.map(function (p) { return p.name; }).join(', ') + '\n');
+
+  var anyChanged = false;
+  var anyFailed = false;
+  for (var i = 0; i < providers.length; i++) {
+    var p = providers[i];
+    if (setupFlags.remove) {
+      var removeResult = removeProviderRules(p.id, home);
+      process.stdout.write(removeResult.line + '\n');
+      if (!removeResult.ok) anyFailed = true;
+      else anyChanged = true;
+    } else {
+      var result = configureProvider(p.id, home);
+      process.stdout.write(result.line + '\n');
+      if (!result.ok) anyFailed = true;
+      if (result.changed) anyChanged = true;
+    }
+  }
+
+  if (setupFlags.remove && anyChanged) {
+    process.stdout.write('Snip rules removed.\n');
+  } else if (!setupFlags.remove && anyChanged) {
+    process.stdout.write('Visual mode enabled. Claude will now render diagrams instead of describing them.\n');
+  }
+
+  process.exit(anyFailed && !anyChanged ? 1 : 0);
+}
+
+function printSetupHelp() {
+  process.stdout.write([
+    'Usage: snip setup [options]',
+    '',
+    'Configure AI coding tools for Snip visual mode. Adds rules to tool config',
+    'files so they render diagrams and previews via Snip instead of describing',
+    'them in text.',
+    '',
+    'Options:',
+    '  --remove              Remove Snip rules from all detected tools',
+    '  --provider <id>       Target a specific tool: claude-code, cursor, windsurf, cline',
+    '  --help, -h            Show this help',
+    '',
+    'Supported tools:',
+    '  claude-code           ~/.claude/CLAUDE.md',
+    '  cursor                ~/.cursor/rules/snip.mdc',
+    '  windsurf              ~/.windsurf/rules/snip.md',
+    '  cline                 ~/.cline/rules/snip.md',
+    ''
+  ].join('\n'));
+}
+
 function printHelp() {
   process.stdout.write([
     'Usage: snip <command> [options]',
     '',
     'Commands:',
+    '  setup                 Enable visual mode for AI tools (Claude Code, Cursor, etc.)',
     '  search <query>        Search screenshots by description. Returns JSON array.',
     '  list                  List all saved screenshots with metadata. Returns JSON array.',
     '  get <filepath>        Get metadata for a specific screenshot. Returns JSON.',

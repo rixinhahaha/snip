@@ -453,6 +453,7 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
     }
   }
 
+  // NOTE: Rules template duplicated in src/cli/snip.js for standalone `snip setup`. Keep in sync.
   var SNIP_RULES_VERSION = 'snip-rules-v6';
 
   var snipRulesContent = [
