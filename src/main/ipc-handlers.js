@@ -473,6 +473,105 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
     ''
   ].join('\n');
 
+  // Skill content — duplicated from src/cli/snip.js. Keep in sync.
+  var SNIP_SKILL_VERSION = 'snip-skill-v1';
+  var snipSkillContent = [
+    '---',
+    'name: diagram',
+    'description: "Render a visual diagram or HTML preview using Snip. Use when the user wants to visualize architecture, flows, schemas, state machines, UI mockups, or any structural concept."',
+    '---',
+    '',
+    '# Diagram \u2014 Visual Rendering via Snip',
+    '',
+    '<!-- ' + SNIP_SKILL_VERSION + ' -->',
+    '',
+    'Generate a visual diagram or HTML preview from the current conversation context and render it with Snip.',
+    '',
+    '## Step 1: Analyze context and choose format',
+    '',
+    'Review the conversation to determine what to visualize.',
+    '',
+    '**Choose Mermaid** for: architecture diagrams, sequence diagrams, flowcharts, ER diagrams, class diagrams, state diagrams, Gantt charts, git graphs, mind maps, timelines, or any structural/relational/flow visualization.',
+    '',
+    '**Choose HTML** for: UI mockups, component previews, landing pages, dashboards, styled cards, data tables, or anything where visual design (colors, typography, layout) is the point.',
+    '',
+    '## Step 2: Pick the right Mermaid diagram type',
+    '',
+    'When using Mermaid, select the most appropriate type:',
+    '',
+    '| Context | Diagram Type |',
+    '|---------|-------------|',
+    '| Request/response flows, API calls, service interactions | `sequenceDiagram` |',
+    '| Decision trees, workflows, processes | `flowchart TD` or `flowchart LR` |',
+    '| Database schemas, data models | `erDiagram` |',
+    '| Code structure, inheritance, interfaces | `classDiagram` |',
+    '| Lifecycle, transitions, modes | `stateDiagram-v2` |',
+    '| System components, services, layers | `flowchart TD` with subgraphs |',
+    '| Project timelines, sprints | `gantt` |',
+    '| Proportions, distributions | `pie` |',
+    '| Concept relationships | `mindmap` |',
+    '',
+    '## Step 3: Write to a file',
+    '',
+    '**Never use echo piping.** Always write the content to a file first.',
+    '',
+    'For Mermaid diagrams:',
+    '- Write to a `.mmd` file with a descriptive name: `architecture.mmd`, `auth-flow.mmd`, `data-model.mmd`',
+    '',
+    'For HTML previews:',
+    '- Write to a `.html` file with a descriptive name: `preview.html`, `dashboard-mockup.html`',
+    '',
+    '## Step 4: Render with Snip',
+    '',
+    '```bash',
+    '# Mermaid',
+    'snip render --format mermaid < architecture.mmd',
+    '',
+    '# HTML',
+    'snip render --format html < preview.html',
+    '```',
+    '',
+    '## Step 5: Handle the response',
+    '',
+    'The render command returns JSON: `{"status": "approved", "edited": false, "path": "/path/to/rendered.png"}`',
+    '',
+    '- If `status` is `"approved"` and `edited` is `false` \u2014 the user accepted the diagram. Done.',
+    '- If `edited` is `true` \u2014 the user annotated the image with corrections. Use the Read tool to view the image at `path`, then update the source file and re-render.',
+    '- If `status` is `"changes_requested"` \u2014 read the `text` field for written feedback. Update the source file and re-render.',
+    '',
+    '## Tips',
+    '',
+    '- For large diagrams, use subgraphs to organize related nodes',
+    '- Keep node labels concise; use notes for details',
+    '- For HTML, use inline `<style>` tags (external stylesheets won\'t load)',
+    '- HTML is sandboxed: no `<script>` or `<canvas>` JS will execute',
+    '- For fixed-size HTML designs, set explicit body dimensions: `body { width: 800px; height: 600px; }`',
+    ''
+  ].join('\n');
+
+  // Permission patterns — duplicated from src/cli/snip.js. Keep in sync.
+  var SNIP_PERMISSION_PATTERNS = ['Bash(snip *)'];
+  var SNIP_LEGACY_PERMISSION_PATTERNS = ['Bash(echo * | snip *)'];
+
+  function getSkillPath() {
+    var home = require('os').homedir();
+    return path.join(home, '.claude', 'skills', 'diagram', 'SKILL.md');
+  }
+
+  function getSettingsPath() {
+    var home = require('os').homedir();
+    return path.join(home, '.claude', 'settings.json');
+  }
+
+  function readSettings() {
+    try { return JSON.parse(fs.readFileSync(getSettingsPath(), 'utf8')); }
+    catch (e) { return null; }
+  }
+
+  function writeSettings(settings) {
+    fs.writeFileSync(getSettingsPath(), JSON.stringify(settings, null, 2) + '\n');
+  }
+
   ipcMain.handle('check-ai-provider-status', async (event, providerId) => {
     var filePath = getProviderFilePath(providerId);
     if (!filePath) return false;
@@ -485,6 +584,21 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
       if (!content.includes('# Snip')) return false;
       // Check version — outdated if rules present but version tag missing
       if (!content.includes(SNIP_RULES_VERSION)) return 'outdated';
+      // Claude Code: also check skill and permissions
+      if (providerId === 'claude-code') {
+        try {
+          var skillContent = fs.readFileSync(getSkillPath(), 'utf8');
+          if (!skillContent.includes(SNIP_SKILL_VERSION)) return 'outdated';
+        } catch { return 'outdated'; }
+        try {
+          var settings = readSettings();
+          var allow = settings && settings.permissions && settings.permissions.allow;
+          if (!Array.isArray(allow) || !allow.includes(SNIP_PERMISSION_PATTERNS[0])) return 'outdated';
+          for (var k = 0; k < SNIP_LEGACY_PERMISSION_PATTERNS.length; k++) {
+            if (allow.includes(SNIP_LEGACY_PERMISSION_PATTERNS[k])) return 'outdated';
+          }
+        } catch { return 'outdated'; }
+      }
       return true;
     } catch { return false; }
   });
@@ -513,6 +627,32 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
       } else {
         fs.mkdirSync(path.dirname(filePath), { recursive: true });
         fs.writeFileSync(filePath, snipRulesContent);
+      }
+      // Claude Code: also install skill + permissions
+      if (providerId === 'claude-code') {
+        try {
+          var skillPath = getSkillPath();
+          var skillExisting = '';
+          try { skillExisting = fs.readFileSync(skillPath, 'utf8'); } catch {}
+          if (!skillExisting.includes(SNIP_SKILL_VERSION)) {
+            fs.mkdirSync(path.dirname(skillPath), { recursive: true });
+            fs.writeFileSync(skillPath, snipSkillContent);
+          }
+        } catch (e) { /* skill install is best-effort */ }
+        try {
+          var settings = readSettings() || {};
+          if (!settings.permissions) settings.permissions = {};
+          if (!Array.isArray(settings.permissions.allow)) settings.permissions.allow = [];
+          for (var j = 0; j < SNIP_PERMISSION_PATTERNS.length; j++) {
+            if (!settings.permissions.allow.includes(SNIP_PERMISSION_PATTERNS[j])) {
+              settings.permissions.allow.push(SNIP_PERMISSION_PATTERNS[j]);
+            }
+          }
+          settings.permissions.allow = settings.permissions.allow.filter(function (p) {
+            return !SNIP_LEGACY_PERMISSION_PATTERNS.includes(p);
+          });
+          writeSettings(settings);
+        } catch (e) { /* permissions are best-effort */ }
       }
       return { configured: true, provider: providerId };
     } catch (err) {
@@ -543,6 +683,21 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
         fs.writeFileSync(filePath, before + after);
       } else {
         fs.rmSync(filePath, { force: true });
+      }
+      // Claude Code: also remove skill + permissions
+      if (providerId === 'claude-code') {
+        var skillDir = path.join(require('os').homedir(), '.claude', 'skills', 'diagram');
+        try { fs.rmSync(skillDir, { recursive: true, force: true }); } catch (e) {}
+        try {
+          var settings = readSettings();
+          if (settings && settings.permissions && Array.isArray(settings.permissions.allow)) {
+            var allPatterns = SNIP_PERMISSION_PATTERNS.concat(SNIP_LEGACY_PERMISSION_PATTERNS);
+            settings.permissions.allow = settings.permissions.allow.filter(function (p) {
+              return !allPatterns.includes(p);
+            });
+            writeSettings(settings);
+          }
+        } catch (e) {}
       }
       return { removed: true };
     } catch (err) {
