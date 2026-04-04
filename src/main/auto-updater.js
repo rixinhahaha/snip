@@ -12,15 +12,21 @@ function initAutoUpdater() {
     timeoutHandle = null;
     try {
       var { autoUpdater } = require('electron-updater');
+      var { app } = require('electron');
       updaterRef = autoUpdater;
-      autoUpdater.autoDownload = true;
+      autoUpdater.autoDownload = false; // manual download after version check
       autoUpdater.autoInstallOnAppQuit = true;
       autoUpdater.allowDowngrade = false;
       autoUpdater.logger = null; // suppress default logging
 
       autoUpdater.on('update-available', function (info) {
-        console.log('[AutoUpdate] Update available:', info.version, '— downloading automatically');
+        if (info.version === app.getVersion()) {
+          console.log('[AutoUpdate] Available version matches current (' + info.version + ') — skipping');
+          return;
+        }
+        console.log('[AutoUpdate] Update available:', info.version, '— downloading');
         isDownloading = true;
+        autoUpdater.downloadUpdate();
       });
 
       autoUpdater.on('update-not-available', function () {

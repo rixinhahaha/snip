@@ -137,6 +137,7 @@ jobs:
 
             depends_on macos: ">= :ventura"
             depends_on arch: :arm64
+            auto_updates true
 
             livecheck do
               url :url
