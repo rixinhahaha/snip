@@ -329,6 +329,13 @@ app.whenReady().then(() => {
   var { migrateProviders } = require('./ipc-handlers');
   setImmediate(migrateProviders);
 
+  // Auto-refresh stale CLI shim after app update (deferred past startup critical path)
+  if (app.isPackaged) {
+    setTimeout(function () {
+      require('./cli-refresh').refreshStaleCliShim();
+    }, 3000);
+  }
+
   // Load extension registry and register extension IPC handlers AFTER core
   extensionRegistry.loadAll();
   extensionRegistry.setContext({

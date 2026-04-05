@@ -384,24 +384,15 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
 
   // CLI + AI Integration
   ipcMain.handle('install-cli', async () => {
-    var { findNodeBinary } = require('./node-binary');
-    var nodePath, cliPath;
-    var nodeBin = platform.getNodeBinaryName();
-    if (app.isPackaged) {
-      nodePath = findNodeBinary() || path.join(platform.getNodeSearchPaths()[0] || '/usr/local/bin', nodeBin);
-      cliPath = path.join(process.resourcesPath, 'cli', 'snip.js');
-    } else {
-      nodePath = findNodeBinary() || path.join(platform.getNodeSearchPaths()[0] || '/usr/local/bin', nodeBin);
-      cliPath = path.join(__dirname, '..', 'cli', 'snip.js');
-    }
+    var { resolveCliPaths } = require('./cli-refresh');
+    var resolved = resolveCliPaths();
 
-    var wrapper = platform.getCliWrapperContent(nodePath, cliPath);
+    var wrapper = platform.getCliWrapperContent(resolved.nodePath, resolved.cliPath);
     if (!wrapper) {
       return { error: 'CLI install is not supported on this platform' };
     }
 
     var targets = platform.getCliInstallPaths();
-    var home = require('os').homedir();
     var commonShellPaths = targets.map(function (t) { return path.dirname(t); });
 
     for (var target of targets) {
@@ -709,52 +700,22 @@ function registerIpcHandlers(getOverlayWindow, createEditorWindowFn, reregisterS
   });
 
   ipcMain.handle('check-cli-installed', async () => {
-    // Check for Homebrew-installed CLI (symlink into Snip.app bundle)
-    var brewPaths = ['/opt/homebrew/bin/snip', '/usr/local/bin/snip'];
-    for (var bp of brewPaths) {
-      try {
-        var stat = fs.lstatSync(bp);
-        if (stat.isSymbolicLink()) {
-          var target = fs.readlinkSync(bp);
-          if (target.indexOf('Snip.app') !== -1 && target.indexOf('Resources/cli/snip') !== -1) {
-            return { installed: true, path: bp, homebrew: true };
-          }
-        }
-      } catch {}
-    }
-    // Check for app-installed CLI wrapper
-    var targets = platform.getCliInstallPaths();
-    for (var target of targets) {
-      if (fs.existsSync(target)) {
-        try {
-          var content = fs.readFileSync(target, 'utf8');
-          // Verify this is our wrapper, not another app's binary
-          if (content.indexOf('Snip CLI') === -1) continue;
-          // Verify the wrapper still points to a valid node binary
-          var match = content.match(/exec ['"]([^'"]+)['"]/);
-          if (match && match[1] && !fs.existsSync(match[1])) {
-            return 'stale'; // wrapper exists but points to deleted app
-          }
-          return true;
-        } catch { continue; }
-      }
+    var { checkCliStatus } = require('./cli-refresh');
+    var statuses = checkCliStatus();
+    if (statuses.length === 0) return false;
+    for (var entry of statuses) {
+      if (entry.status === 'homebrew') return { installed: true, path: entry.path, homebrew: true };
+      if (entry.status === 'stale') return 'stale';
+      if (entry.status === 'ok') return true;
     }
     return false;
   });
 
   ipcMain.handle('uninstall-cli', async () => {
-    // Skip if CLI is managed by Homebrew (symlink into Snip.app bundle)
-    var brewPaths = ['/opt/homebrew/bin/snip', '/usr/local/bin/snip'];
-    for (var bp of brewPaths) {
-      try {
-        var bstat = fs.lstatSync(bp);
-        if (bstat.isSymbolicLink()) {
-          var btarget = fs.readlinkSync(bp);
-          if (btarget.indexOf('Snip.app') !== -1 && btarget.indexOf('Resources/cli/snip') !== -1) {
-            return { removed: false, homebrew: true };
-          }
-        }
-      } catch {}
+    var { checkCliStatus } = require('./cli-refresh');
+    var statuses = checkCliStatus();
+    if (statuses.some(function (s) { return s.status === 'homebrew'; })) {
+      return { removed: false, homebrew: true };
     }
     var targets = platform.getCliInstallPaths();
     var removed = false;
