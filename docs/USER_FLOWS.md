@@ -54,10 +54,11 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 | 2 | -- | Screen capture (`desktopCapturer.getSources()`) and overlay window prep run in parallel; pre-warmed overlay is reused if available |
 | 3 | -- | Fullscreen transparent overlay appears on that display |
 | 4 | -- | Overlay covers entire display including menu bar |
-| 5 | -- | Cursor becomes crosshair, hint text visible: "Click to screenshot the selected window · Drag to capture an area · Esc to cancel" |
-| 5a | Move cursor over a window | Window highlighted with accent border and owner/title label (only windows with ≥50×50 visible area shown) |
+| 5 | -- | Cursor becomes crosshair, hint text visible: "Click to screenshot the selected window · Drag to capture an area · Esc to cancel". Aspect ratio bar visible below hint with presets: Free (default), 1:1, 4:3, 3:2, 16:9, 5:4 |
+| 5a | Move cursor over a window | Window highlighted with accent border and owner/title label (only windows with ≥50×50 visible area shown). Hint text hides when cursor is near the bottom bar area |
+| 5b | Click a ratio preset on the bar | Selected ratio becomes active (purple highlight). Subsequent drags are constrained to that ratio. Clicking the bar does not start a selection |
 | 6a | Click on a highlighted window | Window captured immediately, overlay closes, editor opens with cropped image |
-| 6b | Drag to select a rectangular region | On mouse-up, overlay closes and editor opens with cropped image |
+| 6b | Drag to select a rectangular region | Selection constrained to active aspect ratio (if set). Drag direction determines orientation — horizontal drag = landscape, vertical = portrait. Dimension label shows "W × H (ratio)" (e.g. "640 × 360 (16:9)"). Ratio bar fades during drag, reappears on mouse-up. On mouse-up, overlay closes and editor opens with cropped image |
 | 9 | -- | Editor window is centered on screen, min width 900px |
 | 10 | -- | Toolbar visible at top with all tools |
 
@@ -122,8 +123,8 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 
 | Step | Action | Expected Result |
 |------|--------|-----------------|
-| 1 | Press Cmd+Shift+1 (default) | Same capture overlay appears with window highlight and region selection |
-| 2 | Click a window or drag a region | Cropped image copied directly to clipboard on mouse-up — no annotation editor opens |
+| 1 | Press Cmd+Shift+1 (default) | Same capture overlay appears with window highlight, region selection, and aspect ratio bar |
+| 2 | Click a window or drag a region | Cropped image copied directly to clipboard on mouse-up — no annotation editor opens. Aspect ratio constraints apply if a ratio preset is selected |
 | 3 | -- | Floating toast "✓ Copied to clipboard" appears top-center, auto-dismisses after ~1.4s |
 
 **Edge cases:**

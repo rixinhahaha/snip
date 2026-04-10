@@ -36,7 +36,8 @@ Power users on macOS and Linux who take 5-50 screenshots per day: developers, de
 ### Capture
 - **Global shortcut** (Cmd+Shift+2 on macOS, Ctrl+Shift+2 on Linux): Fullscreen overlay, click a window to snap-select it, or drag to select a custom region — completes immediately on mouse-up
 - **Quick Snip** (Cmd+Shift+1 / Ctrl+Shift+1): Same overlay with window/region selection, copies result directly to clipboard without opening the annotation editor
-- **Full-screen capture**: Press Enter without selecting
+- **Aspect ratio selector**: Bottom-centered toolbar on the overlay with ratio presets (Free, 1:1, 4:3, 3:2, 16:9, 5:4). Drag direction determines orientation automatically — horizontal drag gives landscape (e.g. 4:3), vertical drag gives portrait (e.g. 3:4). Free mode is unconstrained. Dimension label appends ratio name when active (e.g. "640 × 360 (16:9)")
+- **Full-screen capture**: Press Enter without selecting (ignores aspect ratio)
 - Works across macOS Spaces without switching desktops (macOS only)
 - Home window hides during capture to stay out of the way
 
