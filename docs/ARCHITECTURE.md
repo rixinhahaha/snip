@@ -105,8 +105,8 @@ src/
     diagram-preload.js       # Minimal preload for diagram renderer window (2 IPC methods)
 
   renderer/                  # Renderer processes (no modules, globals via IIFEs)
-    index.html / app.js      # Capture overlay — fullscreen transparent region selector
-    styles.css               # Overlay-specific styles (capture selection UI)
+    index.html / app.js      # Capture overlay — fullscreen transparent region selector with aspect ratio bar
+    styles.css               # Overlay-specific styles (capture selection UI, ratio bar)
     home.html / home.js      # Gallery, search, settings UI (main window)
     home.css                 # Home window styles
     editor.html / editor-app.js  # Annotation editor
@@ -195,7 +195,7 @@ vendor/                      # Downloaded at dev time (NOT bundled in binary)
 
 | Window | File | Purpose | Lifecycle |
 |--------|------|---------|-----------|
-| **Overlay** | `index.html` | Fullscreen transparent region selection | Pre-warmed hidden at startup; reused per capture, destroyed after crop, then re-pre-warmed |
+| **Overlay** | `index.html` | Fullscreen transparent region selection with aspect ratio presets | Pre-warmed hidden at startup; reused per capture, destroyed after crop, then re-pre-warmed |
 | **Home** | `home.html` | Gallery, search, settings | Persistent singleton, hidden during capture |
 | **Editor** | `editor.html` | Annotation canvas + toolbar | Pre-warmed hidden at startup; reused per capture (resized + shown), destroyed on close, then re-pre-warmed |
 
