@@ -31,7 +31,7 @@ body {
 
 #selection-hint {
   position: fixed;
-  bottom: 60px;
+  bottom: 170px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 701;
@@ -44,6 +44,54 @@ body {
   font-size: 14px;
   white-space: nowrap;
   pointer-events: none;
+}
+
+#ratio-bar {
+  position: fixed;
+  bottom: 110px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 702;
+  display: flex;
+  gap: 4px;
+  padding: 5px 6px;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  pointer-events: auto;
+  opacity: 1;
+  transition: opacity 0.15s ease;
+}
+
+#ratio-bar.ratio-bar-faded {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ratio-btn {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 6px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.ratio-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.ratio-btn.active {
+  background: var(--accent, #8B5CF6);
+  color: #fff;
 }
 
 .hidden {

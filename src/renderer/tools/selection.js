@@ -5,6 +5,13 @@ const SelectionTool = (() => {
     return getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#8B5CF6';
   }
 
+  // Parse ratio string like "4:3" into { w: 4, h: 3 }, or null for "free"
+  function parseRatio(str) {
+    if (!str || str === 'free') return null;
+    var parts = str.split(':');
+    return { w: parseInt(parts[0], 10), h: parseInt(parts[1], 10) };
+  }
+
   // States: 'idle' | 'drawing'
   function attach(canvasEl, fullWidth, fullHeight, onComplete, onCancel, windowList) {
     const overlay = document.getElementById('selection-overlay');
@@ -32,10 +39,28 @@ const SelectionTool = (() => {
     var pendingClickX = 0, pendingClickY = 0;
     var DRAG_THRESHOLD = 5; // CSS pixels (clientX/Y space)
 
+    // Aspect ratio state
+    var activeRatio = null; // null = free, or { w, h }
+    var activeRatioName = null; // display string like "16:9"
+    var ratioBar = document.getElementById('ratio-bar');
+    var ratioButtons = ratioBar ? ratioBar.querySelectorAll('.ratio-btn') : [];
+    var hint = document.getElementById('selection-hint');
+
+    function onRatioClick(e) {
+      e.stopPropagation();
+      e.preventDefault();
+      var btn = e.currentTarget;
+      var ratioStr = btn.getAttribute('data-ratio');
+      activeRatio = parseRatio(ratioStr);
+      activeRatioName = ratioStr === 'free' ? null : ratioStr;
+      // Toggle active class
+      for (var i = 0; i < ratioButtons.length; i++) {
+        ratioButtons[i].classList.remove('active');
+      }
+      btn.classList.add('active');
+    }
+
     function findWindowAt(mx, my) {
-      // Windows are in CGWindowList front-to-back z-order (frontmost first).
-      // Modern macOS reports each app window as a single entry, so no sub-window
-      // merging is needed. Just return the frontmost window containing the cursor.
       for (var i = 0; i < windows.length; i++) {
         var w = windows[i];
         if (mx >= w.x && mx < w.x + w.width && my >= w.y && my < w.y + w.height) {
@@ -43,6 +68,53 @@ const SelectionTool = (() => {
         }
       }
       return null;
+    }
+
+    function constrainToRatio(startX, startY, currentX, currentY) {
+      if (!activeRatio) return { x: currentX, y: currentY };
+
+      var dx = currentX - startX;
+      var dy = currentY - startY;
+      var absDx = Math.abs(dx);
+      var absDy = Math.abs(dy);
+
+      // Determine orientation from dominant drag direction
+      var ratioW, ratioH;
+      if (absDx >= absDy) {
+        // Landscape: use ratio as-is
+        ratioW = activeRatio.w;
+        ratioH = activeRatio.h;
+      } else {
+        // Portrait: swap ratio
+        ratioW = activeRatio.h;
+        ratioH = activeRatio.w;
+      }
+
+      // Constrain: fit the rectangle inside the drag box
+      // Try width-driven: given absDx, compute required height
+      var hFromW = absDx * ratioH / ratioW;
+      // Try height-driven: given absDy, compute required width
+      var wFromH = absDy * ratioW / ratioH;
+
+      var finalW, finalH;
+      if (hFromW <= absDy) {
+        // Width-driven fits inside drag box
+        finalW = absDx;
+        finalH = hFromW;
+      } else {
+        // Height-driven
+        finalW = wFromH;
+        finalH = absDy;
+      }
+
+      // Apply direction signs
+      var signX = dx >= 0 ? 1 : -1;
+      var signY = dy >= 0 ? 1 : -1;
+
+      return {
+        x: startX + finalW * signX,
+        y: startY + finalH * signY
+      };
     }
 
     function draw() {
@@ -58,7 +130,6 @@ const SelectionTool = (() => {
         w = Math.abs(drawCurrentX - drawStartX);
         h = Math.abs(drawCurrentY - drawStartY);
       } else if (state === 'idle' && hoveredWindow) {
-        // Highlight the window under cursor
         x = hoveredWindow.x; y = hoveredWindow.y;
         w = hoveredWindow.width; h = hoveredWindow.height;
       } else {
@@ -90,7 +161,6 @@ const SelectionTool = (() => {
 
       // Window hover: add subtle accent fill
       if (state === 'idle' && hoveredWindow) {
-        // Parse accent hex to rgba for reliable opacity
         var a = accent.trim();
         var r = parseInt(a.slice(1, 3), 16) || 139;
         var g = parseInt(a.slice(3, 5), 16) || 92;
@@ -107,6 +177,9 @@ const SelectionTool = (() => {
         if (!label) label = Math.round(w) + ' \u00d7 ' + Math.round(h);
       } else {
         label = Math.round(w) + ' \u00d7 ' + Math.round(h);
+        if (activeRatioName) {
+          label += ' (' + activeRatioName + ')';
+        }
       }
       if (w > 30 && h > 20) {
         ctx.font = '12px -apple-system, BlinkMacSystemFont, sans-serif';
@@ -138,6 +211,10 @@ const SelectionTool = (() => {
       drawCurrentX = mx;
       drawCurrentY = my;
       overlay.style.cursor = 'crosshair';
+
+      // Fade ratio bar while drawing
+      if (ratioBar) ratioBar.classList.add('ratio-bar-faded');
+
       draw();
     }
 
@@ -154,15 +231,34 @@ const SelectionTool = (() => {
             hoveredWindow = null;
           }
         }
-        drawCurrentX = mx;
-        drawCurrentY = my;
+
+        // Apply aspect ratio constraint
+        if (activeRatio) {
+          var constrained = constrainToRatio(drawStartX, drawStartY, mx, my);
+          drawCurrentX = constrained.x;
+          drawCurrentY = constrained.y;
+        } else {
+          drawCurrentX = mx;
+          drawCurrentY = my;
+        }
         draw();
-      } else if (state === 'idle' && windows.length > 0) {
-        // Highlight window under cursor
-        var win = findWindowAt(mx, my);
-        if (win !== hoveredWindow) {
-          hoveredWindow = win;
-          draw();
+      } else if (state === 'idle') {
+        // Hide hint when cursor is near the bottom bar area
+        if (hint) {
+          if (my > fullHeight - 80) {
+            hint.classList.add('hidden');
+          } else {
+            hint.classList.remove('hidden');
+          }
+        }
+
+        if (windows.length > 0) {
+          // Highlight window under cursor
+          var win = findWindowAt(mx, my);
+          if (win !== hoveredWindow) {
+            hoveredWindow = win;
+            draw();
+          }
         }
       }
     }
@@ -171,6 +267,9 @@ const SelectionTool = (() => {
       var mx = e.clientX, my = e.clientY;
 
       if (state !== 'drawing') return;
+
+      // Unfade ratio bar
+      if (ratioBar) ratioBar.classList.remove('ratio-bar-faded');
 
       // Check for window snap click (small drag = click on window)
       if (pendingClick && hoveredWindow) {
@@ -235,6 +334,16 @@ const SelectionTool = (() => {
       state = 'idle';
       overlay.classList.remove('hidden');
       overlay.style.cursor = 'crosshair';
+
+      // Show ratio bar and attach listeners
+      if (ratioBar) {
+        ratioBar.classList.remove('hidden');
+        ratioBar.classList.remove('ratio-bar-faded');
+        for (var i = 0; i < ratioButtons.length; i++) {
+          ratioButtons[i].addEventListener('click', onRatioClick);
+        }
+      }
+
       draw();
       overlay.addEventListener('mousedown', onMouseDown);
       overlay.addEventListener('mousemove', onMouseMove);
@@ -248,6 +357,24 @@ const SelectionTool = (() => {
       overlay.style.cursor = 'crosshair';
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.clearRect(0, 0, overlay.width, overlay.height);
+
+      // Hide ratio bar and remove listeners
+      if (ratioBar) {
+        ratioBar.classList.add('hidden');
+        for (var i = 0; i < ratioButtons.length; i++) {
+          ratioButtons[i].removeEventListener('click', onRatioClick);
+        }
+      }
+
+      // Reset ratio to free for next session
+      activeRatio = null;
+      activeRatioName = null;
+      if (ratioButtons.length) {
+        for (var j = 0; j < ratioButtons.length; j++) {
+          ratioButtons[j].classList.remove('active');
+        }
+        ratioButtons[0].classList.add('active');
+      }
     }
 
     return { activate, cleanup };

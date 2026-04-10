@@ -11,6 +11,14 @@
 <body>
   <img id="frozen-screen" class="hidden" />
   <canvas id="selection-overlay" class="hidden"></canvas>
+  <div id="ratio-bar" class="hidden">
+    <button class="ratio-btn active" data-ratio="free">Free</button>
+    <button class="ratio-btn" data-ratio="1:1">1:1</button>
+    <button class="ratio-btn" data-ratio="4:3">4:3</button>
+    <button class="ratio-btn" data-ratio="3:2">3:2</button>
+    <button class="ratio-btn" data-ratio="16:9">16:9</button>
+    <button class="ratio-btn" data-ratio="5:4">5:4</button>
+  </div>
   <div id="selection-hint" class="hidden">Click to screenshot the selected window · Drag to capture an area · Esc to cancel</div>
 
   <script src="tools/selection.js"></script>
