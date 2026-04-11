@@ -13,7 +13,7 @@ const CropTool = (() => {
     var cropRect = null;
     var startX = 0, startY = 0;
     var keyHandler = null;
-    var preCropState = null;
+    var cropUndoStack = []; // stack of { state, postObjectCount }
 
     // Aspect ratio state
     var activeRatio = null;
@@ -210,17 +210,13 @@ const CropTool = (() => {
       var dims = getCssDims();
 
       // Save pre-crop state — filter out crop overlay objects from JSON
+      var preBgDataURL = callbacks.getBackground();
+      var preCssW = dims.w;
+      var preCssH = dims.h;
       var cropOverlayObjs = canvas.getObjects().filter(function(o) { return o._snipCropOverlay; });
       cropOverlayObjs.forEach(function(o) { canvas.remove(o); });
       var cleanJSON = canvas.toJSON();
       cropOverlayObjs.forEach(function(o) { canvas.add(o); });
-
-      preCropState = {
-        bgDataURL: callbacks.getBackground(),
-        cssW: dims.w,
-        cssH: dims.h,
-        canvasJSON: cleanJSON
-      };
 
       var cropX = Math.max(0, Math.round(cropRect.left));
       var cropY = Math.max(0, Math.round(cropRect.top));
@@ -276,6 +272,15 @@ const CropTool = (() => {
       canvas.setDimensions({ width: cropW, height: cropH });
       callbacks.scaleImageToFit(cropW, cropH);
       canvas.renderAll();
+
+      // Push pre-crop state to undo stack with post-crop object count
+      cropUndoStack.push({
+        bgDataURL: preBgDataURL,
+        cssW: preCssW,
+        cssH: preCssH,
+        canvasJSON: cleanJSON,
+        postObjectCount: canvas.getObjects().length
+      });
 
       state = 'idle';
       callbacks.onComplete();
@@ -511,9 +516,11 @@ const CropTool = (() => {
       },
 
       undoCrop: function() {
-        if (!preCropState) return false;
-        var s = preCropState;
-        preCropState = null;
+        if (cropUndoStack.length === 0) return false;
+        var top = cropUndoStack[cropUndoStack.length - 1];
+        // Only undo crop when all post-crop annotations have been undone
+        if (canvas.getObjects().length > top.postObjectCount) return false;
+        var s = cropUndoStack.pop();
 
         // Restore background and dimensions
         callbacks.replaceBackgroundWithResize(s.bgDataURL, s.cssW, s.cssH);

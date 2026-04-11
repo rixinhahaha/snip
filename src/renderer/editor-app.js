@@ -991,12 +991,12 @@
         window.snip.closeEditor();
       },
       onUndo: function() {
-        // Annotations first, then crop, then segment, then upscale
-        if (canvas && canvas.getObjects().length > 0) {
-          EditorCanvasManager.removeLastObject();
+        // Crop undo checks internally if post-crop annotations are cleared
+        if (tools['crop'] && tools['crop'].undoCrop && tools['crop'].undoCrop()) {
           return;
         }
-        if (tools['crop'] && tools['crop'].undoCrop && tools['crop'].undoCrop()) {
+        if (canvas && canvas.getObjects().length > 0) {
+          EditorCanvasManager.removeLastObject();
           return;
         }
         if (tools[TOOLS.SEGMENT] && tools[TOOLS.SEGMENT].undoCutout && tools[TOOLS.SEGMENT].undoCutout()) {
@@ -1401,11 +1401,11 @@
 
     if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
       e.preventDefault();
-      if (canvas && canvas.getObjects().length > 0) {
-        EditorCanvasManager.removeLastObject();
+      if (tools['crop'] && tools['crop'].undoCrop && tools['crop'].undoCrop()) {
         return;
       }
-      if (tools['crop'] && tools['crop'].undoCrop && tools['crop'].undoCrop()) {
+      if (canvas && canvas.getObjects().length > 0) {
+        EditorCanvasManager.removeLastObject();
         return;
       }
       if (tools[TOOLS.SEGMENT] && tools[TOOLS.SEGMENT].undoCutout && tools[TOOLS.SEGMENT].undoCutout()) {
