@@ -831,6 +831,14 @@
       getFontSize: Toolbar.getActiveFontSize
     });
 
+    tools['crop'] = CropTool.attach(canvas, {
+      replaceBackgroundWithResize: EditorCanvasManager.replaceBackgroundWithResize,
+      getBackground: EditorCanvasManager.getBackgroundDataURL,
+      getCssDimensions: function() { return { w: _zoomState.imgW, h: _zoomState.imgH }; },
+      scaleImageToFit: scaleImageToFit,
+      onComplete: function() { Toolbar.setTool(TOOLS.SELECT); }
+    });
+
     // Initialize animate tool (2GIF)
     AnimateTool.init();
 
@@ -983,9 +991,12 @@
         window.snip.closeEditor();
       },
       onUndo: function() {
-        // Undo annotations first, then segment, then upscale (only when canvas is empty)
+        // Annotations first, then crop, then segment, then upscale
         if (canvas && canvas.getObjects().length > 0) {
           EditorCanvasManager.removeLastObject();
+          return;
+        }
+        if (tools['crop'] && tools['crop'].undoCrop && tools['crop'].undoCrop()) {
           return;
         }
         if (tools[TOOLS.SEGMENT] && tools[TOOLS.SEGMENT].undoCutout && tools[TOOLS.SEGMENT].undoCutout()) {
@@ -1357,7 +1368,7 @@
     if (e.key === 'Enter') {
       e.preventDefault();
       var currentTool = Toolbar.getActiveTool();
-      if (currentTool === TOOLS.RECT || currentTool === TOOLS.ARROW || currentTool === TOOLS.BLUR_BRUSH) {
+      if (currentTool === TOOLS.RECT || currentTool === TOOLS.ARROW || currentTool === TOOLS.BLUR_BRUSH || currentTool === 'crop') {
         // Finish drawing session: switch to select mode
         Toolbar.setTool(TOOLS.SELECT);
       } else if (_mcpUpload) {
@@ -1392,6 +1403,9 @@
       e.preventDefault();
       if (canvas && canvas.getObjects().length > 0) {
         EditorCanvasManager.removeLastObject();
+        return;
+      }
+      if (tools['crop'] && tools['crop'].undoCrop && tools['crop'].undoCrop()) {
         return;
       }
       if (tools[TOOLS.SEGMENT] && tools[TOOLS.SEGMENT].undoCutout && tools[TOOLS.SEGMENT].undoCutout()) {

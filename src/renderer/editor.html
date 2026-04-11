@@ -84,6 +84,17 @@
             <option value="40">Large</option>
           </select>
         </div>
+        <div id="crop-ratio-group" class="toolbar-group hidden">
+          <span class="toolbar-label">Ratio</span>
+          <div id="crop-ratio-bar">
+            <button class="crop-ratio-btn active" data-ratio="free">Free</button>
+            <button class="crop-ratio-btn" data-ratio="1:1">1:1</button>
+            <button class="crop-ratio-btn" data-ratio="4:3">4:3</button>
+            <button class="crop-ratio-btn" data-ratio="3:2">3:2</button>
+            <button class="crop-ratio-btn" data-ratio="16:9">16:9</button>
+            <button class="crop-ratio-btn" data-ratio="5:4">5:4</button>
+          </div>
+        </div>
         <div class="toolbar-separator"></div>
         <button id="btn-undo" class="tool-btn" data-tooltip="Undo (⌘Z)">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -127,6 +138,12 @@
           </svg>
         </button>
       </div>
+    </div>
+
+    <!-- Crop action bar -->
+    <div id="crop-actions" class="segment-actions hidden">
+      <button id="crop-cancel" class="segment-action-btn reject">Cancel <kbd>Esc</kbd></button>
+      <button id="crop-apply" class="segment-action-btn accept">Apply Crop <kbd>Enter</kbd></button>
     </div>
 
     <!-- Segment accept/reject/tag action bar -->
@@ -443,6 +460,7 @@
   <script src="extension-loader.js"></script>
   <script src="toolbar.js"></script>
   <script src="tools/tool-utils.js"></script>
+  <script src="tools/crop.js"></script>
   <script src="tools/rectangle.js"></script>
   <script src="tools/textbox.js"></script>
   <script src="tools/arrow.js"></script>

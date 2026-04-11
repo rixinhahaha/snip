@@ -164,9 +164,15 @@ const EditorCanvasManager = (() => {
 
   function getCanvas() { return canvas; }
 
+  function replaceBackgroundWithResize(dataURL, newCssW, newCssH) {
+    cssW = newCssW;
+    cssH = newCssH;
+    applyBackground(dataURL, newCssW, newCssH);
+  }
+
   function getBackgroundDataURL() {
     return physImageEl ? physImageEl.src : null;
   }
 
-  return { initCanvas, setBackgroundImage, replaceBackground, resetToOriginal, exportAsDataURL, clearAnnotations, removeLastObject, redoLastObject, getCanvas, getBackgroundDataURL };
+  return { initCanvas, setBackgroundImage, replaceBackground, replaceBackgroundWithResize, resetToOriginal, exportAsDataURL, clearAnnotations, removeLastObject, redoLastObject, getCanvas, getBackgroundDataURL };
 })();

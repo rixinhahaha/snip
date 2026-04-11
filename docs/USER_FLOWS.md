@@ -137,6 +137,26 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 
 ## 3. Annotation Editor
 
+### 3.0 Crop Tool
+
+**Preconditions:** Editor open with a captured image.
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Press C (or click Crop in toolbar) | Crop tool active, cursor becomes crosshair. Ratio selector appears in toolbar (Free, 1:1, 4:3, 3:2, 16:9, 5:4) |
+| 2 | (Optional) Click a ratio preset | Selected ratio highlighted with accent color |
+| 3 | Drag on the image | Crop region drawn with dashed accent border. If ratio is set, drag direction determines orientation — horizontal = landscape, vertical = portrait |
+| 4 | Release mouse | Crop region becomes adjustable (move, resize via corner handles). Dimmed overlay appears outside crop area. Action bar shows "Cancel" and "Apply Crop" buttons |
+| 5a | Press Enter or click "Apply Crop" | Image cropped to selection. Canvas resizes to new dimensions. Annotations outside crop area removed, inside ones repositioned. Tool switches to Select |
+| 5b | Press Escape or click "Cancel" | Crop cancelled, image unchanged |
+| 6 | Press Cmd+Z after crop | Crop undone — original image, dimensions, and annotations restored |
+
+**Edge cases:**
+- Crop rect < 10px in either dimension is discarded (too small)
+- Annotations are undone before crop when pressing Cmd+Z (correct priority order)
+- Changing ratio while adjusting re-constrains the existing crop rect
+- Enter key during crop adjustment does NOT trigger copy & close (capture-phase handler blocks it)
+
 ### 3.1 Rectangle Tool
 
 | Step | Action | Expected Result |
