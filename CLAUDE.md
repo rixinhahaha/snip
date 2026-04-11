@@ -61,6 +61,9 @@ These are non-negotiable rules. Violating them causes crashes or broken UX:
 - Two themes exist: `dark`, `light`. Changes must work in both + the solid fallback.
 - **All new UI must align with the glass design language** documented in `docs/DESIGN.md`. Before writing CSS, read the design doc for the correct variables, component patterns, and glass effect specs. Reuse existing patterns (e.g. tutorial-modal, toast pill, toolbar button states) rather than inventing new ones.
 
+### Undo Flow
+- **Every new tool must consider the undo flow.** The editor has a layered undo system: annotations undo first (object stack), then crop (crop undo stack), then segment cutout, then upscale. New tools that modify the background image or canvas dimensions must implement their own undo method (like `undoCrop()` or `undoCutout()`), save pre-operation state, and integrate into the undo priority chain in both `onUndo` callback and the Cmd+Z keydown handler in `editor-app.js`. Tools that only add Fabric objects get undo for free via the annotation stack.
+
 ### Renderer Code Style
 - **No ES modules** in renderer JS: prefer `var`, no `import`/`export`. All tools attach to `window` via IIFEs.
 - Main process uses standard CommonJS `require()`.
