@@ -151,9 +151,13 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 | 5b | Press Escape or click "Cancel" | Crop cancelled, image unchanged |
 | 6 | Press Cmd+Z after crop | Crop undone — original image, dimensions, and annotations restored |
 
+**Undo behavior:**
+- Cmd+Z undoes **post-crop annotations first**, then the crop itself
+- Multiple crops stack: crop → annotate → crop again → Cmd+Z undoes second crop (restoring first crop + annotation), Cmd+Z undoes annotation, Cmd+Z undoes first crop
+- Crop undo restores the full pre-crop state: background image, canvas dimensions, and all annotations
+
 **Edge cases:**
 - Crop rect < 10px in either dimension is discarded (too small)
-- Annotations are undone before crop when pressing Cmd+Z (correct priority order)
 - Changing ratio while adjusting re-constrains the existing crop rect
 - Enter key during crop adjustment does NOT trigger copy & close (capture-phase handler blocks it)
 
