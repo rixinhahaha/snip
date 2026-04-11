@@ -120,7 +120,8 @@ On Linux, replace Cmd with Ctrl.
 | Cmd+Shift+S | Open semantic search |
 | Cmd+S | Save to disk (in editor) |
 | Esc / Enter | Copy to clipboard & close (in editor) |
-| V / R / T / A / G / B / S | Select / Rectangle / Text / Arrow / Tag / Blur / Segment tools |
+| V / C / R / T / A / G / B / S | Select / Crop / Rectangle / Text / Arrow / Tag / Blur / Segment tools |
+| Cmd+Z | Undo (annotations first, then crop, then segment cutout) |
 
 ## Development
 

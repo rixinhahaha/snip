@@ -427,6 +427,37 @@ select:hover {
   color: var(--segment-reject-hover-text);
 }
 
+/* Crop ratio selector in toolbar */
+#crop-ratio-bar {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  background: var(--bg-input);
+  border-radius: 6px;
+}
+
+.crop-ratio-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 500;
+  padding: 3px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.crop-ratio-btn:hover {
+  color: var(--text-primary);
+}
+
+.crop-ratio-btn.active {
+  background: var(--accent);
+  color: white;
+}
+
 .segment-action-btn.tag-segment {
   background: var(--accent);
   color: white;

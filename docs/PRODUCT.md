@@ -45,6 +45,7 @@ Power users on macOS and Linux who take 5-50 screenshots per day: developers, de
 | Tool | Key | Description |
 |------|-----|-------------|
 | Select | V | Move, resize, delete annotations |
+| Crop | C | Crop the captured image with optional aspect ratio presets (Free, 1:1, 4:3, 3:2, 16:9, 5:4). Drag direction determines orientation. Enter to apply, Esc to cancel. Undoable via Cmd+Z |
 | Rectangle | R | Outline, highlight, or blur modes |
 | Text | T | Editable text with font/size pickers |
 | Arrow | A | Point at things |

@@ -118,6 +118,7 @@ src/
     tools/
       tool-utils.js          # Shared: SEGMENT_OUTLINE_WIDTH, SEGMENT_OVERLAY_OPACITY, getAccentColor(), hexToRgba(), createMosaicImage(), recolorMaskWithOutline() (highlight fill + dilation outline), nextTagId(), lineEndpointForTag()
       selection.js           # Selection tool (move, resize, multi-select)
+      crop.js                # Crop tool (draw/adjust region, aspect ratio presets, undo support)
       rectangle.js           # Rectangle tool (outline/highlight/blur modes)
       textbox.js             # Text annotation tool
       arrow.js               # Arrow annotation tool

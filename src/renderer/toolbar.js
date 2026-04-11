@@ -190,7 +190,7 @@ const Toolbar = (() => {
     }
 
     // Show/hide contextual controls based on extension toolbar groups
-    var allGroups = ['rect-mode-group', 'stroke-group', 'font-group', 'tag-color-group', 'brush-group', 'segment-color-group'];
+    var allGroups = ['rect-mode-group', 'stroke-group', 'font-group', 'tag-color-group', 'brush-group', 'segment-color-group', 'crop-ratio-group'];
     var activeGroups = (typeof ExtensionLoader !== 'undefined')
       ? ExtensionLoader.getToolbarGroups(tool)
       : [];
