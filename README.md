@@ -153,7 +153,7 @@ All AI runs locally — no cloud APIs needed for core features.
 
 ## Sponsor
 
-Snip is free, open source, and built by one developer. If it's useful to your workflow, consider [sponsoring the project](https://github.com/sponsors/rixinhahaha).
+Snip is free, open source, and built by two developers. If it's useful to your workflow, consider [sponsoring the project](https://github.com/sponsors/rixinhahaha).
 
 Sponsorships help cover:
 
