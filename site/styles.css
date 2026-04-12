@@ -213,6 +213,9 @@ kbd {
   border-radius: var(--radius-sm);
   font-size: 0.85rem !important;
   transition: all var(--transition) !important;
+  cursor: pointer;
+  position: relative;
+  z-index: 1;
 }
 
 .nav-sponsor:hover {
