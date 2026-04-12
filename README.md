@@ -151,7 +151,7 @@ Electron 33 / Fabric.js 7 / Mermaid.js 11 / Ollama (local LLM) / HuggingFace Tra
 
 All AI runs locally — no cloud APIs needed for core features.
 
-## Sponsor <a href="https://github.com/sponsors/rixinhahaha"><img src="https://img.shields.io/badge/Sponsor-%E2%9D%A4-pink?logo=github&style=for-the-badge&logoSize=auto" alt="Sponsor" height="28"></a>
+## Sponsor
 
 Snip is free, open source, and built by one developer. If it's useful to your workflow, consider [sponsoring the project](https://github.com/sponsors/rixinhahaha).
 
