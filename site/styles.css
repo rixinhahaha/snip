@@ -203,6 +203,23 @@ kbd {
   color: #fff;
 }
 
+.nav-sponsor {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: rgba(219, 97, 162, 0.1);
+  border: 1px solid rgba(219, 97, 162, 0.3);
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem !important;
+  transition: all var(--transition) !important;
+}
+
+.nav-sponsor:hover {
+  background: rgba(219, 97, 162, 0.2);
+  border-color: rgba(219, 97, 162, 0.5);
+}
+
 .nav-cta {
   display: inline-flex;
   align-items: center;
@@ -2125,6 +2142,11 @@ kbd {
 
   .nav-links a:last-child {
     border-bottom: none;
+  }
+
+  .nav-sponsor {
+    align-self: center;
+    margin-top: 8px;
   }
 
   .nav-cta {
