@@ -2,7 +2,7 @@
   <img src="assets/icon.png" alt="Snip" width="128" height="128"><br><br>
   <a href="https://www.producthunt.com/products/snip-ai-powered-macos-screenshot-tool?utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-snip-ai-powered-macos-screenshot-tool-2" target="_blank"><img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1089620&theme=dark" alt="Snip on Product Hunt" height="40"></a>
   <br><br>
-  <a href="https://github.com/sponsors/rixinhahaha"><img src="https://img.shields.io/badge/Sponsor-%E2%9D%A4-pink?logo=github&style=for-the-badge&logoSize=auto" alt="Sponsor" height="54"></a>
+  <a href="https://github.com/sponsors/rixinhahaha"><img src="https://img.shields.io/badge/Sponsor-%E2%9D%A4-pink?logo=github&style=for-the-badge&logoSize=auto" alt="Sponsor" height="32"></a>
 </p>
 
 # Snip
