@@ -381,6 +381,17 @@ Only app-saved files trigger AI processing. The `pendingFiles` Set in `watcher.j
 - `ToolUtils.SEGMENT_OUTLINE_WIDTH` — outline ring thickness (10px) for segment highlights
 - `ToolUtils.SEGMENT_OVERLAY_OPACITY` — opacity (0.35) for segment highlight overlays
 
+### Shape Color Auto-Cycle (Rectangle + Arrow)
+`Toolbar.getNextShapeColor()` returns the next color for a new box/arrow draw, cycling through `SHAPE_COLOR_PALETTE` (six hexes — see `docs/DESIGN.md`). State lives in `toolbar.js`:
+
+- `shapeColorIndex` — wraps mod palette length each draw
+- `manualColorOverride` — set when the user picks via `#color-picker`; consumed (one-shot) on the next `getNextShapeColor()` call without advancing the cycle
+- After each *cycle-advance* call, `#color-picker.value` is written to the next palette color so the picker swatch previews the next cycled shape's color (writing `.value` programmatically does NOT fire the `input` event, so this is non-recursive). When consuming a manual override, the picker is intentionally left untouched — the user's pick already set its value via the native `<input type="color">` behavior, and overwriting it would visually discard their choice.
+
+`Toolbar.getActiveColor()` is unchanged and still serves text-tool draws and rect-mode conversions in `editor-app.js` (lines ~933, ~948) — those callers are *not* new draws and intentionally do not consume cycle slots. Only the `RectangleTool.attach` and `ArrowTool.attach` wirings in `setupTools()` use `getNextShapeColor`.
+
+`rectangle.js` has three mode branches: `highlight` and `outline` call `getColor()` (consuming a cycle slot); `blur` does not call `getColor()` because the rect is replaced by a mosaic image with no visible color. `arrow.js` captures the color at mouse-down into `currentColor` so the dashed temp line and the final arrow share one color and `getColor()` is consumed exactly once per arrow.
+
 ### Tag Linkage System
 Tags (both regular and segment tags) consist of multiple Fabric.js objects linked by a shared `_snipTagId` (e.g., `'snip-tag-1'`). Each part has a `_snipTagRole` to identify it:
 

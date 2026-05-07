@@ -812,9 +812,9 @@
   }
 
   function setupTools() {
-    tools[TOOLS.RECT] = RectangleTool.attach(canvas, Toolbar.getActiveColor, Toolbar.getActiveStrokeWidth, Toolbar.getRectMode);
+    tools[TOOLS.RECT] = RectangleTool.attach(canvas, Toolbar.getNextShapeColor, Toolbar.getActiveStrokeWidth, Toolbar.getRectMode);
     tools[TOOLS.TEXT] = TextTool.attach(canvas, Toolbar.getActiveColor, Toolbar.getActiveFont, Toolbar.getActiveFontSize);
-    tools[TOOLS.ARROW] = ArrowTool.attach(canvas, Toolbar.getActiveColor, Toolbar.getActiveStrokeWidth);
+    tools[TOOLS.ARROW] = ArrowTool.attach(canvas, Toolbar.getNextShapeColor, Toolbar.getActiveStrokeWidth);
     tools[TOOLS.TAG] = TagTool.attach(canvas, Toolbar.getActiveTagColor, Toolbar.getActiveFont, Toolbar.getActiveFontSize);
     tools[TOOLS.BLUR_BRUSH] = BlurBrushTool.attach(canvas, Toolbar.getActiveBrushSize);
     tools[TOOLS.SEGMENT] = SegmentTool.attach(canvas, {

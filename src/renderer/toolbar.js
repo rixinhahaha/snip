@@ -5,7 +5,13 @@ const Toolbar = (() => {
   let TOOLS = { SELECT: 'select', RECT: 'rect', TEXT: 'text', ARROW: 'arrow', TAG: 'tag', BLUR_BRUSH: 'blur-brush', SEGMENT: 'segment' };
 
   let activeTool = 'select';
-  let activeColor = '#ff3b30';
+  // Auto-cycling palette so adjacent box/arrow annotations are visually distinct
+  // and easy to reference ("the red box", "the blue arrow"). A manual color pick
+  // overrides the next shape only, then cycling resumes.
+  const SHAPE_COLOR_PALETTE = ['#EF4444', '#3B82F6', '#22C55E', '#EAB308', '#7C3AED', '#F97316'];
+  let shapeColorIndex = 0;
+  let manualColorOverride = null;
+  let activeColor = SHAPE_COLOR_PALETTE[0];
   let activeStrokeWidth = 4;
   let activeFont = 'Plus Jakarta Sans';
   let activeFontSize = 16;
@@ -57,6 +63,7 @@ const Toolbar = (() => {
 
     document.getElementById('color-picker').addEventListener('input', (e) => {
       activeColor = e.target.value;
+      manualColorOverride = activeColor;
       if (callbacks.onColorChange) callbacks.onColorChange(activeColor);
     });
 
@@ -243,6 +250,24 @@ const Toolbar = (() => {
     enableUpscaleTool,
     getActiveTool: () => activeTool,
     getActiveColor: () => activeColor,
+    // Returns the next color for a new box/arrow draw. Honors a one-shot manual
+    // override (set by the color picker), otherwise cycles the palette. When
+    // cycling, the picker swatch is advanced to preview the next palette color.
+    // When consuming a manual override, the picker is left alone — the user's
+    // pick already set its value via the native <input type="color"> behavior,
+    // and overwriting it would visually discard their choice.
+    getNextShapeColor: () => {
+      if (manualColorOverride) {
+        var override = manualColorOverride;
+        manualColorOverride = null;
+        return override;
+      }
+      var color = SHAPE_COLOR_PALETTE[shapeColorIndex];
+      shapeColorIndex = (shapeColorIndex + 1) % SHAPE_COLOR_PALETTE.length;
+      var picker = document.getElementById('color-picker');
+      if (picker) picker.value = SHAPE_COLOR_PALETTE[shapeColorIndex];
+      return color;
+    },
     getActiveStrokeWidth: () => activeStrokeWidth,
     getActiveFont: () => activeFont,
     getActiveFontSize: () => activeFontSize,

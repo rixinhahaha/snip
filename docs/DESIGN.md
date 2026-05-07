@@ -54,6 +54,21 @@ Snip uses a **Liquid Glass** aesthetic — translucent surfaces with subtle blur
 | **Accent glow** | `0 2px 8px rgba(139, 92, 246, 0.3)` (dark) / `0 2px 8px rgba(124, 58, 237, 0.3)` (light) |
 | **Font** | Plus Jakarta Sans (variable weight 200-800) |
 
+### Annotation Shape Palette (`SHAPE_COLOR_PALETTE`)
+
+Auto-cycled through for new box (rectangle) and arrow annotations so adjacent shapes are visually distinct and individually referenceable. Defined in `src/renderer/toolbar.js`. Six colors, drawn from the existing tag/segment swatches for consistency:
+
+| Slot | Hex | Name |
+|------|-----|------|
+| 0 | `#EF4444` | Red |
+| 1 | `#3B82F6` | Blue |
+| 2 | `#22C55E` | Green |
+| 3 | `#EAB308` | Yellow |
+| 4 | `#7C3AED` | Violet |
+| 5 | `#F97316` | Orange |
+
+Cycles in order, wraps. A manual color picker pick overrides the next shape only, then cycling resumes. Yellow has weak contrast on light/yellow screenshot backgrounds — known palette weakness, accepted because predictable cycling outweighs perfect contrast on every possible source image.
+
 ---
 
 ## App Icon
