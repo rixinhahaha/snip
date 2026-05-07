@@ -17,20 +17,27 @@ const RectangleTool = (() => {
 
       var mode = getMode();
 
+      var baseProps = {
+        left: startX, top: startY, width: 0, height: 0,
+        originX: 'left', originY: 'top',
+        selectable: false, evented: false
+      };
+
       if (mode === 'highlight') {
-        activeRect = new fabric.Rect({
-          left: startX, top: startY, width: 0, height: 0,
-          originX: 'left', originY: 'top',
-          fill: ToolUtils.hexToRgba(getColor(), 0.3), stroke: '', strokeWidth: 0,
-          selectable: false, evented: false
-        });
+        activeRect = new fabric.Rect(Object.assign({}, baseProps, {
+          fill: ToolUtils.hexToRgba(getColor(), 0.3), stroke: '', strokeWidth: 0
+        }));
+      } else if (mode === 'blur') {
+        // Color is irrelevant — this rect is removed at mouse-up and replaced
+        // by a mosaic image. Skip getColor() so we don't burn a palette slot.
+        activeRect = new fabric.Rect(Object.assign({}, baseProps, {
+          fill: 'transparent', stroke: '', strokeWidth: 0
+        }));
       } else {
-        activeRect = new fabric.Rect({
-          left: startX, top: startY, width: 0, height: 0,
-          originX: 'left', originY: 'top',
+        activeRect = new fabric.Rect(Object.assign({}, baseProps, {
           fill: 'transparent', stroke: getColor(), strokeWidth: getStrokeWidth(),
-          strokeUniform: true, selectable: false, evented: false
-        });
+          strokeUniform: true
+        }));
       }
       canvas.add(activeRect);
     }

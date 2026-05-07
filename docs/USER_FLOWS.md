@@ -166,9 +166,14 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 | Step | Action | Expected Result |
 |------|--------|-----------------|
 | 1 | Press R (or click Rectangle in toolbar) | Rectangle tool active, cursor changes |
-| 2 | Drag on canvas | Rectangle outline drawn in active color |
+| 2 | Drag on canvas | Rectangle drawn in the next palette color (auto-cycles each new draw) |
 | 3 | -- | Mode dropdown visible: Outline (default), Highlight, Blur |
 | 4 | -- | Thickness dropdown visible: Thin (2px), Medium (4px), Thick (8px) |
+| 5 | -- | Color picker reflects the color the *next* shape will use |
+| 6 | Pick a color manually | That color is used for the next shape only; cycling resumes after |
+
+**Auto-cycling colors:**
+Box (and arrow) annotations cycle through `SHAPE_COLOR_PALETTE` so adjacent shapes are visually distinct and easy to reference verbally ("the red box vs. the blue box"). Palette: Red → Blue → Green → Yellow → Violet → Orange → wraps. A manual pick via the color picker overrides the next shape only, then the cycle resumes from where it was. Blur mode does not consume a palette slot (the rectangle is replaced by a mosaic image).
 
 **Rectangle Modes:**
 
@@ -179,7 +184,7 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 | Blur | Pixelated/mosaic effect inside rectangle |
 
 **Edge cases:**
-- Switching mode while a rectangle is selected updates that rectangle's mode
+- Switching mode while a rectangle is selected updates that rectangle's mode (does NOT consume a cycle slot — only new draws do)
 - Very small drags (< 5px) should still create a visible rectangle
 
 ### 3.2 Text Tool
@@ -204,9 +209,10 @@ Detailed user flows for every feature in Snip. Each flow describes preconditions
 | Step | Action | Expected Result |
 |------|--------|-----------------|
 | 1 | Press A | Arrow tool active |
-| 2 | Drag on canvas | Arrow drawn from start to end with arrowhead |
+| 2 | Drag on canvas | Arrow drawn in the next palette color (auto-cycles like rectangles — see §3.1) |
 | 3 | -- | Thickness dropdown visible |
-| 4 | Change color via picker | Next arrow uses new color |
+| 4 | Change color via picker | That color is used for the next arrow only; cycling resumes after |
+| 5 | -- | Dashed temp line during drag and the final arrow share one color (no flicker) |
 
 ### 3.4 Tag Tool
 

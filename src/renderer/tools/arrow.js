@@ -6,6 +6,9 @@ const ArrowTool = (() => {
     let isDrawing = false;
     let startX, startY;
     let tempLine = null;
+    // Captured at mouse-down so the dashed temp line and the final arrow share
+    // one color, and getColor() (which may auto-cycle) is consumed once per arrow.
+    let currentColor = null;
 
     function createArrow(fromX, fromY, toX, toY, color, sw) {
       const angle = Math.atan2(toY - fromY, toX - fromX) * (180 / Math.PI);
@@ -29,8 +32,9 @@ const ArrowTool = (() => {
       startX = pointer.x;
       startY = pointer.y;
 
+      currentColor = getColor();
       tempLine = new fabric.Line([startX, startY, startX, startY], {
-        stroke: getColor(), strokeWidth: getStrokeWidth(),
+        stroke: currentColor, strokeWidth: getStrokeWidth(),
         selectable: false, evented: false, strokeDashArray: [5, 5]
       });
       canvas.add(tempLine);
@@ -53,9 +57,10 @@ const ArrowTool = (() => {
       tempLine = null;
 
       const dist = Math.sqrt(Math.pow(px - startX, 2) + Math.pow(py - startY, 2));
-      if (dist < 15) return;
+      if (dist < 15) { currentColor = null; return; }
 
-      const arrow = createArrow(startX, startY, px, py, getColor(), getStrokeWidth());
+      const arrow = createArrow(startX, startY, px, py, currentColor, getStrokeWidth());
+      currentColor = null;
       canvas.add(arrow);
       canvas.setActiveObject(arrow);
       canvas.renderAll();
@@ -77,7 +82,7 @@ const ArrowTool = (() => {
         canvas.off('mouse:up', onMouseUp);
         canvas.selection = true;
         canvas.defaultCursor = 'default';
-        if (tempLine) { canvas.remove(tempLine); tempLine = null; isDrawing = false; }
+        if (tempLine) { canvas.remove(tempLine); tempLine = null; isDrawing = false; currentColor = null; }
         canvas.renderAll();
       }
     };
